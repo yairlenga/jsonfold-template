@@ -47,16 +47,16 @@ class Engine(ABC):
     _datasets: dict[str, Any] = field(default_factory=dict)
 
     @abstractmethod
-    def compile(self, source: dict) -> tuple[Template, list[Error]]: ...
+    def compile(self, source: str | dict) -> tuple[Template, list[Error]]: ...
 
     @abstractmethod
     def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[Error]]: ...
 
     @abstractmethod
-    def eval(self, template: Template, input: Any, *, entry: Optional[str] = None) -> tuple[Status, Any]: ...
+    def render(self, template: Template, input: Any, *, entry: Optional[str] = None) -> tuple[Status, Any]: ...
         
     @abstractmethod
-    def eval_to(self, output: TextIO, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
+    def render_to(self, output: TextIO, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
 
     def add_dataset(self, name: str, data: Any) -> None:
         self._datasets[name] = data
@@ -69,10 +69,3 @@ def create_engine(*, strict: bool = True) -> Engine:
     Global per-engine for now; per-call override may be added later if needed."""
     pass
 
-# TODO: promote to a proper _MissingType class with self-returning
-# __getattr__/__getitem__ and __bool__ = False, once navigation chains
-# need that behavior. Plain object() for now — just a unique marker.
-MISSING = object()
-
-
-ERROR = object()

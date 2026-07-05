@@ -3,7 +3,16 @@
         "jsonfold",
         "JFTL",
     ],
+    "cSpell.enabledFileTypes": {
+        "*": false,
+        "markdown": true,
+        "java": true,
+        "python": true,
+    },
     "ltex.dictionary": {
-        "en-US": [ "jsonfold", "JFTL"]
-    }
+        "en-US": [ "jsonfold", "JFTL", "JSONFold", "falsy", "truthy"]
+    },
+    "python.analysis.extraPaths": [
+        "python/src"
+    ]
 }

@@ -1,4 +1,4 @@
-# jsonfold-template (JFTL)
+# JSONFold template (JFTL)
 
 Python reference implementation of **JFTL (JSONFold Template Language)** —
 a JSON-to-JSON transformation language where templates are themselves valid

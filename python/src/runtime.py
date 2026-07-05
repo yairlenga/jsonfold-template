@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, Union
 
-from core import Frame, ExprEngine, CompileError
+from core import Frame, Expression, CompileError
 from template import Error, Missing
 
 @dataclass
@@ -31,7 +31,7 @@ _SEGMENT_RE = re.compile(r"""
   | \['(?P<sq>[^']*)'\]
 """, re.VERBOSE)
 
-class NavigationExprEngine(ExprEngine):
+class NavigationExprEngine(Expression):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
     def __init__(self, path: str, where: str | None = None):

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, TextIO
 from abc import ABC, abstractmethod
 
-from template import Template, Error
+from template import Template, Error, Missing
 # Template Class - represent compiled templates
 
 @dataclass(slots=True)
@@ -14,10 +14,6 @@ class JFTLTemplate(Template):
 #    expr_engines: dict[str, ExprEngine] = field(default_factory=dict)
 
 # Single compiled Statement 
-
-class Statement(ABC):
-    @abstractmethod
-    def eval(self, frame: Frame) -> Any | Error : ...
 
 # Runtime Objects
 
@@ -51,16 +47,30 @@ class Frame:
     _cache:  dict[str, Any] = field(default_factory=dict)
 
 # Draft - NIY
-class ExprEngine:
-    def eval(self, frame: Frame) -> Any | Error: ...
-    def eval_bool(self, frame: Frame) -> Any | Error: ...
+
+class Evaluator(ABC):
+    @abstractmethod
+    def eval(self, frame: Frame) -> Any | Error | Missing : ...
+
+class Condition(ABC):
+    @abstractmethod
+    def eval_bool(self, frame: Frame) -> bool: ...
+
+class Statement(Evaluator): ...
+
+class Expression(Evaluator, Condition): ...
 
 # Draft - NYI
-class Macro(ABC):
-    @abstractmethod
-    def eval(self, frame: Frame, args: dict[str, Any]) -> Any | Error: ...
+class Macro(Evaluator): ...
 
 # core.py (or wherever feels like the right shared home — maybe alongside Diagnostic/Error in template.py)
+
+class Compiler(ABC):
+
+    @abstractmethod
+    def condition(self, compiler: Compiler, source: str) -> tuple[Condition, list[Error]]: ...
+    def expression(self, compiler: Compiler, source: str | dict) -> tuple[Expression, list[Error]]: ...
+    def statement(self, compiler: Compiler, source: dict | str) -> tuple[Statement, list[Error]]: ...
 
 class CompileError(Exception):
     """Raised for any defect discovered while compiling a template.
