@@ -1,14 +1,32 @@
-from typing import Any, Optional, TextIO, Literal
+from typing import Any, ClassVar, Optional, TextIO, Literal
 from abc import ABC, abstractmethod
 from pathlib import Path
 from dataclasses import dataclass, field
 
 @dataclass
-class Error:
-    severity: Literal["ERROR", "WARNING", "INFO"]
+class Diagnostic:
     code: str
     message: str
+    where: Optional[str]
     location: Optional[str]
+
+@dataclass
+class Error(Diagnostic):
+    severity: Literal["ERROR", "WARNING", "INFO"]
+
+@dataclass
+class Missing(Diagnostic):
+    severity: ClassVar[Literal["MISSING"]] = "MISSING"
+    code: ClassVar[Literal["MISSING"]] = "MISSING"
+    
+    def __bool__(self):
+        return False
+    
+    def __getattr__(self, name: str) -> "Missing":
+        return self
+    
+    def __getitem__(self, key: Any) -> "Missing":
+        return self
 
 
 @dataclass
@@ -42,5 +60,19 @@ class Engine(ABC):
 
     def add_dataset(self, name: str, data: Any) -> None:
         self._datasets[name] = data
-    
 
+def create_engine(*, strict: bool = True) -> Engine:
+    """strict=False (default) treats recoverable issues (over-'^' past root,
+    unsafe navigation, etc.) as WARNING-severity and continues execution —
+    useful during development when many such issues may surface at once.
+    strict=True escalates the same conditions to ERROR and halts.
+    Global per-engine for now; per-call override may be added later if needed."""
+    pass
+
+# TODO: promote to a proper _MissingType class with self-returning
+# __getattr__/__getitem__ and __bool__ = False, once navigation chains
+# need that behavior. Plain object() for now — just a unique marker.
+MISSING = object()
+
+
+ERROR = object()

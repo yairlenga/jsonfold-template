@@ -59,3 +59,13 @@ class ExprEngine:
 class Macro(ABC):
     @abstractmethod
     def eval(self, frame: Frame, args: dict[str, Any]) -> Any | Error: ...
+
+# core.py (or wherever feels like the right shared home — maybe alongside Diagnostic/Error in template.py)
+
+class CompileError(Exception):
+    """Raised for any defect discovered while compiling a template.
+    Carries the actual Error to report — no separate/duplicate fields.
+    Caught by the compiler and appended directly to compile()'s error list."""
+    def __init__(self, error: "Error"):
+        super().__init__(error.message)
+        self.error = error
