@@ -4,8 +4,9 @@ from pathlib import Path
 from dataclasses import dataclass
 
 from logic import LogicStatement
+from py_expr import PyRunExprEngine
 from template import Template, Status, Error, Engine, Missing
-from core import Condition, Environment, Evaluator, Expression, Statement, Frame, Compiler, JFTLTemplate
+from core import CompileError, Condition, Environment, Evaluator, Expression, Statement, Frame, Compiler, JFTLTemplate
 from runtime import NavigationExprNode
 
 from typing import Any, Union
@@ -71,10 +72,23 @@ class JFTLEngine(Engine, Compiler):
             items = [self._compile(v, where=f"{where}[{i}]") for i, v in enumerate(source)]
             return ArrayStatement(items)
 
-        if isinstance(source, str) and source.startswith(EXPR_PREFIX):
-            path_text = source[1:]   # strip just "$", keep the "." — matches grammar directly
-            engine = NavigationExprNode(path_text, where=where)
-            return PathStatement(engine)
+        if isinstance(source, str) and source.startswith("$"):
+            if source.startswith('$$'):
+                source = source[1:]
+                pass
+            elif source.startswith(EXPR_PREFIX):
+                path_text = source[1:]   # strip just "$", keep the "." — matches grammar directly
+                engine = NavigationExprNode(path_text, where=where)
+                return PathStatement(engine)
+            elif source.startswith(EXPR_PYTHON):
+                expr = source[len(EXPR_PYTHON):].strip()
+                engine = PyRunExprEngine()
+                return engine.compile(expr)
+            else:
+                raise CompileError(Error(
+                    code="INVALID_PYTHON", severity="ERROR", where=where, location=None,
+                    message=f"lambda expressions are not allowed in {source!r}",
+                ))
 
         return LiteralStatement(source)
     
@@ -114,6 +128,7 @@ class JFTLEngine(Engine, Compiler):
         return self._compile(source), None
 
 EXPR_PREFIX = "$."  # e.g. "$.user.name" — later: other prefixes (e.g. $cel., $^) route to other engines
+EXPR_PYTHON = "$pyrun:"
 
 @dataclass
 class LiteralStatement(Statement):

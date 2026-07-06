@@ -43,6 +43,7 @@ class Template(ABC):
     @abstractmethod
     def valid(): bool: ...
 
+
 @dataclass
 class Engine(ABC):
     _datasets: dict[str, Any] = field(default_factory=dict)

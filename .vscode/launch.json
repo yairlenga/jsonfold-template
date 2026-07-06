@@ -8,7 +8,7 @@
             "name": "Python: test",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/python/tests/test_logic_simple.py",
+            "program": "${workspaceFolder}/python/tests/test_pyrun.py",
             "console": "integratedTerminal",
             "args": [],
             "env": {
