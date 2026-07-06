@@ -12,24 +12,22 @@ setup:
 	@echo "Updating pyproject.toml to $(VERSION)"
 	sed -i -E 's/^(version *= *")[^"]*(")/\1$(VERSION)\2/' pyproject.toml
 
-build:
-	$(PYTHON) -m py_compile jsonfold.py
-	$(PYTHON) -m py_compile benchmark.py
-	$(PYTHON) -m py_compile cli.py
+SRCS = src/core.py src/engine.py src/logic.py src/runtime.py src/template.py
+
+%.py.check: %.py
+	$(PYTHON) -m py_compile $<
+
+build: $(SRCS:=.check)
 
 .PHONY: %.t
 
+TESTS = $(wildcard tests/test_*.py)
+
 run-test:
-	./api_test.py
-	./jsonfold.py --demo
-	./cli.py --demo
-	./benchmark.py 10
-	cd ../tests/unit && ../run_tests.sh -mpython
-	cd ../tests/samples && ../run_tests.sh -mpython
-	cd ../tests/future && ../run_tests.sh -mpython
+	pytest
 
 test:
-	$(MAKE) run-test > test.log
+	$(MAKE) run-test | tee test.log
 
 package:
 	rm -f dist/jsonfold-$(VERSION)[.-]*

@@ -20,9 +20,10 @@ constants at every level.
 Run with:  python -m unittest test_reshape.py -v
 """
 import json
+from typing import cast
 import unittest
 
-from core import Frame, Environment
+from core import Frame, Environment, JFTLTemplate
 from engine import JFTLEngine
 
 
@@ -171,8 +172,9 @@ def check_provenance(value, path=""):
 class TestReshape(unittest.TestCase):
 
     def setUp(self):
-        stmt = JFTLEngine().compile(TEMPLATE)
+        compiled, _ = JFTLEngine().compile( { "main": TEMPLATE })
         frame = make_root(INPUT_DOCUMENT)
+        stmt = cast(JFTLTemplate, compiled).main
         self.result = stmt.eval(frame)
 
     def test_pretty_print_for_visual_inspection(self):

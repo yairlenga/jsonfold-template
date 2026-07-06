@@ -8,7 +8,12 @@ from template import Template, Error, Missing
 
 @dataclass(slots=True)
 class JFTLTemplate(Template):
+
     main: Statement
+
+    def valid() -> bool:
+        return True
+
 #    macros: dict[str, Macro] = field(default_factory=dict)
 #    functions: dict[str, Function] = field(default_factory=dict)
 #    expr_engines: dict[str, ExprEngine] = field(default_factory=dict)
@@ -26,9 +31,9 @@ class Environment:
     # Original input document
     input: Any
     # Destination - for streaming mode. only relevant if level = 0.
-    to: Optional[TextIO]
-    # Reference to top frame.
-    top: Frame
+    to: Optional[TextIO] = None
+    # Reference to top frame. Set later, as top frame and top environment point to each other.
+    top: Frame | None = None
 
 @dataclass
 class Frame:
@@ -53,10 +58,10 @@ class Frame:
         return result        
     
     def eval_bool(self, cond: Condition | Any, default_val) -> bool:
-        result = cond.eval_bool(self) if isinstance(cond, Condition) else default_val
+        if cond is None:
+            return default_val
+        result = cond.eval_bool(self)        
         return result
-
-        
 
 # Draft - NIY
 
@@ -65,28 +70,31 @@ class Evaluator(ABC):
     def eval(self, frame: Frame) -> Any | Error | Missing : ...
 
 class Condition(ABC):
-    @abstractmethod
-    def eval_bool(self, frame: Frame) -> bool: ...
+    def eval_bool(self, frame: Frame) -> bool:
+        result = self.eval(frame)
+        if result is False or result is None or isinstance(result, Missing):
+            return False
+        return True
 
-class Statement(Evaluator): ...
+class Statement(Evaluator, Condition): ...
 
 class Expression(Evaluator, Condition): ...
 
 # Draft - NYI
-class Macro(Evaluator): ...
+class Macro(Evaluator, Condition): ...
 
 # core.py (or wherever feels like the right shared home — maybe alongside Diagnostic/Error in template.py)
 
 class Compiler(ABC):
 
     @abstractmethod
-    def condition(self, compiler: Compiler, source: str) -> tuple[Condition, list[Error]]: ...
+    def condition(self, source: str) -> tuple[Condition, list[Error]]: ...
 
     @abstractmethod
-    def expression(self, compiler: Compiler, source: str | dict) -> tuple[Expression, list[Error]]: ...
+    def expression(self, source: str | dict) -> tuple[Expression, list[Error]]: ...
 
     @abstractmethod
-    def statement(self, compiler: Compiler, source: dict | str) -> tuple[Statement, list[Error]]: ...
+    def statement(self, source: dict | str) -> tuple[Statement, list[Error]]: ...
 
 class CompileError(Exception):
     """Raised for any defect discovered while compiling a template.

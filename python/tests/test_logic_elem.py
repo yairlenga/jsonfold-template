@@ -10,6 +10,7 @@ Adjust the import below if LogicStatement/Case live in a different module.
 
 Run with:  python -m unittest test_logic_compile.py -v
 """
+from dataclasses import asdict
 import unittest
 
 from logic import LogicStatement, Case
@@ -31,14 +32,14 @@ class Tagged:
 
 
 class FakeCompiler:
-    def expression(self, raw):
-        return Tagged("expression", raw)
+    def expression(self, raw, source):
+        return Tagged("expression", raw), None
 
-    def condition(self, raw):
-        return Tagged("condition", raw)
+    def condition(self, raw, source):
+        return Tagged("condition", raw), None
 
-    def statement(self, raw):
-        return Tagged("statement", raw)
+    def statement(self, raw, source):
+        return Tagged("statement", raw), None
 
 
 def compile_logic(args: dict) -> LogicStatement:
@@ -49,9 +50,9 @@ class TestEmptyInput(unittest.TestCase):
 
     def test_empty_dict_all_fields_none(self):
         stmt = compile_logic({})
-        self.assertIsNone(stmt._set)
+        self.assertIsNone(stmt._defines)
         self.assertIsNone(stmt._if)
-        self.assertIsNone(stmt._data)
+        self.assertIsNone(stmt._set_current)
         self.assertIsNone(stmt._cases)
         self.assertFalse(stmt._foreach)
         self.assertIsNone(stmt._foreach_key)
@@ -68,27 +69,28 @@ class TestSet(unittest.TestCase):
 
     def test_single_set_binding(self):
         stmt = compile_logic({"set": {"total": "$.price"}})
-        self.assertEqual(stmt._set, {"total": Tagged("expression", "$.price")})
+
+        self.assertEqual(asdict(stmt)["_defines"],
+                         [{"_name": "total", "_expr": Tagged("expression", "$.price")}])
 
     def test_multiple_set_bindings_preserve_all_keys(self):
         stmt = compile_logic({"set": {"a": "$.x", "b": "$.y", "c": "$.z"}})
-        self.assertEqual(
-            stmt._set,
-            {
-                "a": Tagged("expression", "$.x"),
-                "b": Tagged("expression", "$.y"),
-                "c": Tagged("expression", "$.z"),
-            },
-        )
+
+        self.assertEqual(asdict(stmt)["_defines"],
+            [
+                { "_name": "a", "_expr": Tagged("expression", "$.x")},
+                { "_name": "b", "_expr": Tagged("expression", "$.y")},
+                { "_name": "c", "_expr": Tagged("expression", "$.z")},
+            ])
 
     def test_missing_set_key_is_none(self):
         stmt = compile_logic({"data": "$.x"})
-        self.assertIsNone(stmt._set)
+        self.assertIsNone(stmt._defines)
 
     def test_empty_set_dict_is_still_compiled_as_empty(self):
         # "set": {} is present but has no bindings — distinct from absent "set"
         stmt = compile_logic({"set": {}})
-        self.assertEqual(stmt._set, None)
+        self.assertEqual(stmt._defines, None)
 
 
 class TestIf(unittest.TestCase):
@@ -106,11 +108,11 @@ class TestData(unittest.TestCase):
 
     def test_data_compiled_as_expression(self):
         stmt = compile_logic({"data": "$.user.name"})
-        self.assertEqual(stmt._data, Tagged("expression", "$.user.name"))
+        self.assertEqual(stmt._set_current, Tagged("expression", "$.user.name"))
 
     def test_missing_data_is_none(self):
         stmt = compile_logic({})
-        self.assertIsNone(stmt._data)
+        self.assertIsNone(stmt._set_current)
 
 
 class TestForeach(unittest.TestCase):
@@ -233,7 +235,8 @@ class TestFullRealisticBlock(unittest.TestCase):
         }
         stmt = compile_logic(args)
 
-        self.assertEqual(stmt._set, {"total": Tagged("expression", "$.price")})
+        self.assertEqual(asdict(stmt)["_defines"],
+                         [{"_name": "total", "_expr": Tagged("expression", "$.price")}])
         self.assertEqual(stmt._if, Tagged("condition", "$.enabled"))
         self.assertTrue(stmt._foreach)
         self.assertEqual(stmt._foreach_key, "idx")
@@ -243,7 +246,7 @@ class TestFullRealisticBlock(unittest.TestCase):
         self.assertEqual(stmt._body, Tagged("statement", "$.output"))
         self.assertEqual(stmt._transform, "MERGE")
         self.assertEqual(stmt._error_val, Tagged("statement", "$.onError"))
-        self.assertIsNone(stmt._data)
+        self.assertIsNone(stmt._set_current)
         self.assertIsNone(stmt._default_val)
 
 

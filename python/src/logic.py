@@ -33,16 +33,16 @@ class Case:
     _body: Statement
 
 @dataclass
-class SetVar:
+class DefineVar:
     _name: str
     _expr: Expression
 
 @dataclass
 class LogicStatement(Statement):
 
-    _set_vars: Optional[list[SetVar]]
+    _defines: Optional[list[DefineVar]]
     _if: Optional[Condition]
-    _current_val: Optional[Expression]
+    _set_current: Optional[Expression]
     _cases: Optional[list[Case]]
     _foreach: Optional[bool]
     _foreach_key: Optional[str]
@@ -58,8 +58,8 @@ class LogicStatement(Statement):
     def compile(cls, compiler: Compiler, args: dict[str, Any]):
 
         source = ""
-        v_set_vars = [
-            SetVar(_name = name, _expr = compiler.expression(expr, source)[0])
+        v_defines = [
+            DefineVar(_name = name, _expr = compiler.expression(expr, source)[0])
             for name, expr in v.items()
             ] if ( v := args.get("set", None)) else None
 
@@ -85,9 +85,9 @@ class LogicStatement(Statement):
         v_transform = args.get("transform", None) 
 
         self = cls(
-            _set_vars = v_set_vars,
+            _defines = v_defines,
             _if = v_if,
-            _current_val = v_data,
+            _set_current = v_data,
             _foreach = v_foreach,
             _foreach_var = v_foreach_var,
             _foreach_key = v_foreach_key,
@@ -156,7 +156,7 @@ class LogicStatement(Statement):
 
         new_frame = replace(prev_frame, parent = prev_frame, level = prev_frame.level+1, vars = new_vars, _cache = {})
         # Build local vars, inside the new frame.
-        if (set_vars := self._set_vars):
+        if (set_vars := self._defines):
             for set_var in set_vars:
                 name = set_var._name
                 value = new_frame.eval_value(set_var._expr)
@@ -167,7 +167,7 @@ class LogicStatement(Statement):
             return new_frame.eval_value(self._default_val)
             
         # Consider new data object.
-        if ( v_data := self._current_val):
+        if ( v_data := self._set_current):
             new_frame.current = new_frame.eval_value(v_data)
         
         # Choose body to execute

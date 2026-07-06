@@ -15,7 +15,7 @@ import unittest
 
 from core import Frame, Environment, CompileError
 from template import Error, Missing
-from runtime import NavigationExprEngine
+from runtime import NavigationExprNode
 
 
 def make_root(current):
@@ -31,8 +31,8 @@ def make_child(parent: Frame, current):
     return Frame(env=parent.env, current=current, parent=parent, level=parent.level + 1)
 
 
-def nav(text: str, where=None) -> NavigationExprEngine:
-    return NavigationExprEngine(text, where=where)
+def nav(text: str, where=None) -> NavigationExprNode:
+    return NavigationExprNode(text, where=where)
 
 
 class TestBasicNavigation(unittest.TestCase):

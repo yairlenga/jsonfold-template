@@ -7,40 +7,44 @@ Run with:  python -m unittest test_compile.py -v
 import unittest
 
 from core import CompileError
-from runtime import NavigationExprEngine
-from engine import JFTLEngine, Literal, PathStatement, ObjectStatement, ArrayStatement
+from runtime import NavigationExprNode
+from engine import JFTLEngine, Literal, LiteralStatement, PathStatement, ObjectStatement, ArrayStatement
 
 
 def compile(source, where: str = ""):
-    return JFTLEngine().compile(source, where)
+    template = {
+        "main": source
+    }
+    template, errors = JFTLEngine().compile(template, where)
+    return template.main
 
 
 class TestLiterals(unittest.TestCase):
 
     def test_plain_string_is_literal(self):
         stmt = compile("hello")
-        self.assertIsInstance(stmt, Literal)
+        self.assertIsInstance(stmt, LiteralStatement)
         self.assertEqual(stmt.value, "hello")
 
     def test_int_is_literal(self):
         stmt = compile(42)
-        self.assertIsInstance(stmt, Literal)
+        self.assertIsInstance(stmt, LiteralStatement)
         self.assertEqual(stmt.value, 42)
 
     def test_bool_is_literal(self):
         stmt = compile(True)
-        self.assertIsInstance(stmt, Literal)
+        self.assertIsInstance(stmt, LiteralStatement)
         self.assertIs(stmt.value, True)
 
     def test_none_is_literal(self):
         stmt = compile(None)
-        self.assertIsInstance(stmt, Literal)
+        self.assertIsInstance(stmt, LiteralStatement)
         self.assertIsNone(stmt.value)
 
     def test_string_not_starting_with_prefix_is_literal(self):
         # starts with '$' but not '$.' — should NOT be treated as a path
         stmt = compile("$5.00")
-        self.assertIsInstance(stmt, Literal)
+        self.assertIsInstance(stmt, LiteralStatement)
         self.assertEqual(stmt.value, "$5.00")
 
 
@@ -49,7 +53,7 @@ class TestPathStatements(unittest.TestCase):
     def test_dollar_dot_string_becomes_path_statement(self):
         stmt = compile("$.user.name")
         self.assertIsInstance(stmt, PathStatement)
-        self.assertIsInstance(stmt.engine, NavigationExprEngine)
+        self.assertIsInstance(stmt.engine, NavigationExprNode)
 
     def test_stripped_prefix_keeps_leading_dot(self):
         stmt = compile("$.user.name")
@@ -80,8 +84,8 @@ class TestObjectStatements(unittest.TestCase):
         stmt = compile({"a": "x", "b": 1})
         self.assertIsInstance(stmt, ObjectStatement)
         self.assertEqual(set(stmt.entries.keys()), {"a", "b"})
-        self.assertIsInstance(stmt.entries["a"], Literal)
-        self.assertIsInstance(stmt.entries["b"], Literal)
+        self.assertIsInstance(stmt.entries["a"], LiteralStatement)
+        self.assertIsInstance(stmt.entries["b"], LiteralStatement)
 
     def test_dict_value_with_path_expression(self):
         stmt = compile({"name": "$.user.name"})
@@ -114,8 +118,8 @@ class TestArrayStatements(unittest.TestCase):
     def test_flat_list(self):
         stmt = compile([1, "x", "$.y"])
         self.assertIsInstance(stmt, ArrayStatement)
-        self.assertIsInstance(stmt.items[0], Literal)
-        self.assertIsInstance(stmt.items[1], Literal)
+        self.assertIsInstance(stmt.items[0], LiteralStatement)
+        self.assertIsInstance(stmt.items[1], LiteralStatement)
         self.assertIsInstance(stmt.items[2], PathStatement)
 
     def test_list_of_dicts(self):
@@ -149,11 +153,11 @@ class TestMixedNesting(unittest.TestCase):
         self.assertIsInstance(stmt, ObjectStatement)
         self.assertIsInstance(stmt.entries["name"], PathStatement)
         self.assertIsInstance(stmt.entries["tags"], ArrayStatement)
-        self.assertIsInstance(stmt.entries["tags"].items[0], Literal)
+        self.assertIsInstance(stmt.entries["tags"].items[0], LiteralStatement)
         self.assertIsInstance(stmt.entries["tags"].items[1], PathStatement)
         self.assertIsInstance(stmt.entries["address"], ObjectStatement)
         self.assertIsInstance(stmt.entries["address"].entries["city"], PathStatement)
-        self.assertIsInstance(stmt.entries["address"].entries["zip"], Literal)
+        self.assertIsInstance(stmt.entries["address"].entries["zip"], LiteralStatement)
 
 
 if __name__ == "__main__":

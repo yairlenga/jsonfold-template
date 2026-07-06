@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, Union
 
-from core import Frame, Statement, CompileError
+from core import Expression, Frame, Statement, CompileError
 from template import Error, Missing
 
 @dataclass
@@ -31,7 +31,7 @@ _SEGMENT_RE = re.compile(r"""
   | \['(?P<sq>[^']*)'\]
 """, re.VERBOSE)
 
-class NavigationExprEngine(Statement):
+class NavigationExprNode(Statement, Expression):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
     def __init__(self, path: str, where: str | None = None):
@@ -110,4 +110,4 @@ class NavigationExprEngine(Statement):
         result = self.eval(frame)
         if isinstance(result, (Error, Missing)):
             return result
-        return result not in (False, None) and not isinstance(result, Missing)
+        return result not in (False, None)

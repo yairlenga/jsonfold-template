@@ -3,12 +3,16 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from dataclasses import dataclass, field
 
-@dataclass
+@dataclass(kw_only=True)
 class Diagnostic:
+    severity: str
     code: str
     message: str
     where: Optional[str]
     location: Optional[str]
+    details: list["Diagnostic"] = None
+    value: Any = None
+    hasValue: bool = False
 
 @dataclass
 class Error(Diagnostic):
@@ -35,11 +39,9 @@ class Status:
     error: Optional[Error] = None
     # TODO: Add statistics, runtime, ...
 
-@dataclass
 class Template(ABC):
-    valid: bool
-
-
+    @abstractmethod
+    def valid(): bool: ...
 
 @dataclass
 class Engine(ABC):
@@ -57,6 +59,15 @@ class Engine(ABC):
     @abstractmethod
     def render_to(self, output: TextIO, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
 
+    # Execute a simple template (not wrapped in macros) as a top level item
+    def compile_and_render(self, source: dict | Any, input: Any) -> tuple[Status, Any, list[Error]]:
+        template, errors = self.compile(source)
+        result = None
+        status = None
+        if template and template.valid:
+            status, result = self.render(template, input)
+        return status, result, errors
+
     def add_dataset(self, name: str, data: Any) -> None:
         self._datasets[name] = data
 
@@ -66,6 +77,7 @@ def create_engine(*, strict: bool = True) -> Engine:
     useful during development when many such issues may surface at once.
     strict=True escalates the same conditions to ERROR and halts.
     Global per-engine for now; per-call override may be added later if needed."""
-    pass
+    from engine import JFTLEngine
+    return JFTLEngine()
 
-MISSING_VALUE = Missing("MISSING", "Unspecific MISSING")
+MISSING_VALUE = Missing(code="MISSING", message="Unspecific MISSING", where=None, location=None)

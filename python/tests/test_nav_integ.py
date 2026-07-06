@@ -15,9 +15,10 @@ per the constraint given. Covers:
 
 Run with:  python -m unittest test_navigation_integration.py -v
 """
+from typing import cast
 import unittest
 
-from core import Frame, Environment
+from core import Frame, Environment, JFTLTemplate
 from engine import JFTLEngine
 
 
@@ -74,8 +75,9 @@ def make_root(current):
 def extract(path_expr: str):
     """Compile a tiny template wrapping one '$.'-prefixed path, evaluate it
     against INPUT_DOCUMENT, and return the extracted 'result' value."""
-    template = {"result": path_expr}
-    stmt = JFTLEngine().compile(template)
+    template = { "main": { "result": path_expr}}
+    compiled, _ = JFTLEngine().compile(template)
+    stmt = cast(JFTLTemplate, compiled).main
     frame = make_root(INPUT_DOCUMENT)
     result = stmt.eval(frame)
     return result["result"]
