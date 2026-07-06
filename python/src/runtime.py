@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, Union
 
-from core import Frame, Expression, CompileError
+from core import Frame, Statement, CompileError
 from template import Error, Missing
 
 @dataclass
@@ -31,7 +31,7 @@ _SEGMENT_RE = re.compile(r"""
   | \['(?P<sq>[^']*)'\]
 """, re.VERBOSE)
 
-class NavigationExprEngine(Expression):
+class NavigationExprEngine(Statement):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
     def __init__(self, path: str, where: str | None = None):
@@ -41,8 +41,10 @@ class NavigationExprEngine(Expression):
 
     def _compile(self, path_text: str) -> list[PathSegment]:
         up_match = _UP_RE.match(path_text)
+        assert up_match is not None  # \^* always matches (possibly zero-width), never None
+
         up_count = len(up_match.group())
-        rest = path_text[up_match.end():]
+        rest = path_text[up_match.end():] 
 
         segments: list[PathSegment] = [Up() for _ in range(up_count)]
 
@@ -90,7 +92,7 @@ class NavigationExprEngine(Expression):
                 if isinstance(value, dict) and seg.name in value:
                     value = value[seg.name]
                 else:
-                    return Missing(message=f"key {seg.name!r} not found",
+                    return Missing(code="MISSING", message=f"key {seg.name!r} not found",
                                     where=self._where, location=f"{traveled}.{seg.name}")
                 traveled += f".{seg.name}"
 
@@ -98,7 +100,7 @@ class NavigationExprEngine(Expression):
                 if isinstance(value, list) and -len(value) <= seg.i < len(value):
                     value = value[seg.i]
                 else:
-                    return Missing(message=f"index {seg.i} out of range",
+                    return Missing(code="Missing", message=f"index {seg.i} out of range",
                                     where=self._where, location=f"{traveled}[{seg.i}]")
                 traveled += f"[{seg.i}]"
 

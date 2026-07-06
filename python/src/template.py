@@ -17,7 +17,6 @@ class Error(Diagnostic):
 @dataclass
 class Missing(Diagnostic):
     severity: ClassVar[Literal["MISSING"]] = "MISSING"
-    code: ClassVar[Literal["MISSING"]] = "MISSING"
     
     def __bool__(self):
         return False
@@ -69,3 +68,4 @@ def create_engine(*, strict: bool = True) -> Engine:
     Global per-engine for now; per-call override may be added later if needed."""
     pass
 
+MISSING_VALUE = Missing("MISSING", "Unspecific MISSING")

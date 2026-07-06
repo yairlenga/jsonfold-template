@@ -46,6 +46,18 @@ class Frame:
     # Cached value, including inherited, calculated, ...
     _cache:  dict[str, Any] = field(default_factory=dict)
 
+    def eval_value(self, expr: Evaluator | Any) -> Any:
+
+        # if it can be evaluated, then use the current frame
+        result = expr.eval(self) if isinstance(expr, Evaluator) else expr
+        return result        
+    
+    def eval_bool(self, cond: Condition | Any, default_val) -> bool:
+        result = cond.eval_bool(self) if isinstance(cond, Condition) else default_val
+        return result
+
+        
+
 # Draft - NIY
 
 class Evaluator(ABC):
@@ -69,7 +81,11 @@ class Compiler(ABC):
 
     @abstractmethod
     def condition(self, compiler: Compiler, source: str) -> tuple[Condition, list[Error]]: ...
+
+    @abstractmethod
     def expression(self, compiler: Compiler, source: str | dict) -> tuple[Expression, list[Error]]: ...
+
+    @abstractmethod
     def statement(self, compiler: Compiler, source: dict | str) -> tuple[Statement, list[Error]]: ...
 
 class CompileError(Exception):
