@@ -1,0 +1,13 @@
+{
+  "customer": { "name": "Dave", "vip": true },
+  "vipMessage": "Welcome back, valued VIP customer!",
+  "standardMessage": "Welcome!",
+  "hasOrder": true,
+  "order": { "amount": 250 },
+  "noOrderMessage": "No current order",
+  "items": [
+    { "name": "Widget" },
+    { "name": "Gadget" },
+    { "name": "Gizmo" }
+  ]
+}

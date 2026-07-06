@@ -1,0 +1,11 @@
+{
+  "customer": {
+    "name": "Alice",
+    "contact": { "email": "alice@example.com" },
+    "account type": "premium"
+  },
+  "items": [
+    { "name": "Widget", "qty": 3 },
+    { "name": "Gadget", "qty": 5 }
+  ]
+}

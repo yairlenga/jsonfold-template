@@ -1,0 +1,10 @@
+{
+  "customer": {
+    "name": "Carol",
+    "contact": { "email": "carol@example.com" },
+    "account type": "gold"
+  },
+  "items": [
+    { "name": "Solo Item", "qty": 10 }
+  ]
+}

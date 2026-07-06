@@ -1,0 +1,9 @@
+{
+  "customer": { "name": "Eve", "vip": false },
+  "vipMessage": "Welcome back, valued VIP customer!",
+  "standardMessage": "Welcome!",
+  "hasOrder": false,
+  "order": { "amount": 0 },
+  "noOrderMessage": "No current order",
+  "items": []
+}

@@ -1,0 +1,11 @@
+{
+  "customer": {
+    "name": "Bob",
+    "contact": {},
+    "account type": "basic"
+  },
+  "items": [
+    { "name": "Thingamajig", "qty": 1 },
+    { "name": "Doohickey", "qty": 2 }
+  ]
+}

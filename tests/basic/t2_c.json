@@ -1,0 +1,11 @@
+{
+  "customer": { "name": "Frank" },
+  "vipMessage": "Welcome back, valued VIP customer!",
+  "standardMessage": "Welcome!",
+  "hasOrder": true,
+  "order": { "amount": 75 },
+  "noOrderMessage": "No current order",
+  "items": [
+    { "name": "Solo Widget" }
+  ]
+}

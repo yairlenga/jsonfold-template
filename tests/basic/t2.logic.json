@@ -1,0 +1,21 @@
+{
+  "customerName": "$.customer.name",
+  "greeting": {
+    "$": true,
+    "case": [
+      { "when": "$.customer.vip", "then": "$.vipMessage" }
+    ],
+    "body": "$.standardMessage"
+  },
+  "orderTotal": {
+    "$": true,
+    "if": "$.hasOrder",
+    "body": "$.order.amount",
+    "default": "$.noOrderMessage"
+  },
+  "itemNames": {
+    "$": true,
+    "foreach": { "in": "$.items" },
+    "body": "$.name"
+  }
+}
