@@ -8,8 +8,8 @@ class Diagnostic:
     severity: str
     code: str
     message: str
-    where: Optional[str]
-    location: Optional[str]
+    where: Optional[str] = None
+    location: Optional[str] = None
     details: list["Diagnostic"] = None
     value: Any = None
     hasValue: bool = False
@@ -49,7 +49,7 @@ class Engine(ABC):
     _datasets: dict[str, Any] = field(default_factory=dict)
 
     @abstractmethod
-    def compile(self, source: str | dict) -> tuple[Template, list[Error]]: ...
+    def compile(self, source: str | dict, *, main_only: bool = False, **kwargs) -> tuple[Template, list[Error]]: ...
 
     @abstractmethod
     def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[Error]]: ...
@@ -61,12 +61,9 @@ class Engine(ABC):
     def render_to(self, output: TextIO, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
 
     # Execute a simple template (not wrapped in macros) as a top level item
-    def compile_and_render(self, source: dict | Any, input: Any) -> tuple[Status, Any, list[Error]]:
-        template, errors = self.compile(source)
-        result = None
-        status = None
-        if template and template.valid:
-            status, result = self.render(template, input)
+    def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Status, Any, list[Error]]:
+        template, errors = self.compile(source, main_only = main_only)
+        status, result = self.render(template, input) if template and template.valid else (None, None)
         return status, result, errors
 
     def add_dataset(self, name: str, data: Any) -> None:

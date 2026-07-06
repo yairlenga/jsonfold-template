@@ -10,15 +10,6 @@ Order:
 
 Run with:  python -m unittest test_public_logic.py -v
 
-ASSUMPTIONS (flag if wrong):
-  - The whole template document may itself be a logic object — i.e.
-    {"$": true, "body": "$.name"} is a valid top-level template, with no
-    separate "main" wrapper required.
-  - engine.compile(dict) -> (Template, list[Error])
-  - engine.render(template, input) -> (Status, Any)
-  - Status has .ok (bool) and .error (Optional[Error])
-  - When "if" is false and no "default" is specified, the result value is
-    None (not MISSING, not an Error) — per current logic.py behavior.
 """
 import unittest
 
@@ -27,10 +18,9 @@ from template import create_engine
 
 def compile_and_render(top: dict, input_doc):
     engine = create_engine()
-    template = { "main": top }
-    compiled, errors = engine.compile(template)
+
+    status, result, errors = engine.compile_and_render(top, input_doc, main_only=True)
     assert not errors, f"unexpected compile errors: {errors}"
-    status, result = engine.render(compiled, input_doc)
     return status, result
 
 

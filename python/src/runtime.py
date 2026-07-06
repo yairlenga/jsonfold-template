@@ -100,7 +100,7 @@ class NavigationExprNode(Statement, Expression):
                 if isinstance(value, list) and -len(value) <= seg.i < len(value):
                     value = value[seg.i]
                 else:
-                    return Missing(code="Missing", message=f"index {seg.i} out of range",
+                    return Missing(code="MISSING", message=f"index {seg.i} out of range",
                                     where=self._where, location=f"{traveled}[{seg.i}]")
                 traveled += f"[{seg.i}]"
 

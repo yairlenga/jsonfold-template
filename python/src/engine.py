@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from logic import LogicStatement
 from py_expr import PyRunExprEngine
 from template import Template, Status, Error, Engine, Missing
-from core import CompileError, Condition, Environment, Evaluator, Expression, Statement, Frame, Compiler, JFTLTemplate
+from core import CompileError, Condition, Environment, Evaluator, Expression, RenderError, Statement, Frame, Compiler, JFTLTemplate
 from runtime import NavigationExprNode
 
 from typing import Any, Union
@@ -41,18 +41,26 @@ TYPE_ANY_REC = Union[
 
 class JFTLEngine(Engine, Compiler):
 
-    def compile(self, source: str | dict | list, where: str = "") -> tuple[Template, list[Error]]:
-        top = self._compile(source.get("main"), where)
-        return JFTLTemplate(main=top), None
+    def compile(self, source: str | dict | list, where: str = "", *, main_only: bool = False) -> tuple[Template, list[Error]]:
+        top = source if main_only else source.get("main")
+        compiled = self._compile(top, where)
+        return JFTLTemplate(main=compiled), None
     
     def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[Error]]: ...
 
     def render(self, template: Template, input: Any, *, entry: Optional[str] = None) -> tuple[Status, Any]:
-        body = template.main
-        env = Environment(template, input)
-        frame = Frame(env=env, current=env.input, level=0, parent = None)
-        env.top = frame
-        return Status(ok=True), self._render(body, frame)
+        try:
+            body = template.main
+            frame = Frame.top_frame(template, input)
+            result = self._render(body, frame)
+            status = None
+            result = self._render(body, frame)
+            status = Status(ok=True)
+        except RenderError as re:
+            status = re.error
+        finally:
+            frame.reset()
+        return status, result
         
     def render_to(self, output: TextIO, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
 
@@ -91,7 +99,7 @@ class JFTLEngine(Engine, Compiler):
                 ))
 
         return LiteralStatement(source)
-    
+
     # Returning JSON friendly types
     def _render(self, source: Any | Evaluator, frame: Frame) -> tuple[TYPE_ANY_REC, list[Error] | None]:
         if isinstance(source, Evaluator):

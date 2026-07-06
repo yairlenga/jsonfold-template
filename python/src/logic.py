@@ -1,7 +1,7 @@
 from typing import Any, ItemsView, Iterator, Literal, Optional
 from dataclasses import dataclass, replace
 
-from core import Statement, Error, Missing, Frame, Expression, Evaluator, Condition, Compiler
+from core import RenderError, Statement, Error, Missing, Frame, Expression, Evaluator, Condition, Compiler
 from template import MISSING_VALUE
 
 """ {
@@ -107,10 +107,16 @@ class LogicStatement(Statement):
             loop_iter = enumerate(items)
         elif isinstance(items, dict):
             loop_iter = iter(items.items())
-        elif items is None:
-            return None ;
+        elif items is None or isinstance(items, Missing):
+            return None
 
-            v_body = None
+        else:
+            raise RenderError(Error(
+                code="NOT_ITERABLE", severity="ERROR",
+                message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
+            ))
+
+
         new_vars = frame.vars
         # Process foreach loop
         if loop_iter:

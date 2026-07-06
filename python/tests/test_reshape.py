@@ -172,7 +172,7 @@ def check_provenance(value, path=""):
 class TestReshape(unittest.TestCase):
 
     def setUp(self):
-        compiled, _ = JFTLEngine().compile( { "main": TEMPLATE })
+        compiled, _ = JFTLEngine().compile( TEMPLATE, main_only=True)
         frame = make_root(INPUT_DOCUMENT)
         stmt = cast(JFTLTemplate, compiled).main
         self.result = stmt.eval(frame)

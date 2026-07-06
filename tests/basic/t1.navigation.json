@@ -1,7 +1,0 @@
-{
-  "customerName": "$.customer.name",
-  "email": "$.customer.contact.email",
-  "accountType": "$.customer[\"account type\"]",
-  "firstItemName": "$.items[0].name",
-  "secondItemQty": "$.items[1].qty"
-}

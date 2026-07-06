@@ -12,10 +12,7 @@ from engine import JFTLEngine, Literal, LiteralStatement, PathStatement, ObjectS
 
 
 def compile(source, where: str = ""):
-    template = {
-        "main": source
-    }
-    template, errors = JFTLEngine().compile(template, where)
+    template, errors = JFTLEngine().compile(source, where, main_only=True)
     return template.main
 
 
@@ -43,7 +40,7 @@ class TestLiterals(unittest.TestCase):
 
     def test_string_not_starting_with_prefix_is_literal(self):
         # starts with '$' but not '$.' — should NOT be treated as a path
-        stmt = compile("$5.00")
+        stmt = compile("$$5.00")
         self.assertIsInstance(stmt, LiteralStatement)
         self.assertEqual(stmt.value, "$5.00")
 

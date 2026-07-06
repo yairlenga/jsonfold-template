@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Optional, TextIO
 from abc import ABC, abstractmethod
 
@@ -62,6 +62,35 @@ class Frame:
             return default_val
         result = cond.eval_bool(self)        
         return result
+    
+    def reset(self) -> None:
+        self.env = None
+        self.current = None
+        self.parent = None
+        self.level = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self):
+        self.reset(self)
+
+    @classmethod
+    def top_frame(cls, template: Template, input: Any) -> Frame:
+        env = Environment(template, input)
+        frame = cls(env=env, current=env.input, level=0, parent = None)
+        env.top = frame
+        return frame
+
+    def child_frame(self, vars: dict[str, Any] = {} ) -> Frame:
+        return replace(
+            self,
+            parent = self,
+            level = self.level+1,
+            vars = vars,
+            _cache = {},
+        )
+ 
 
 # Draft - NIY
 
@@ -100,6 +129,11 @@ class CompileError(Exception):
     """Raised for any defect discovered while compiling a template.
     Carries the actual Error to report — no separate/duplicate fields.
     Caught by the compiler and appended directly to compile()'s error list."""
-    def __init__(self, error: "Error"):
+    def __init__(self, error: Error):
+        super().__init__(error.message)
+        self.error = error
+
+class RenderError(Exception):
+    def __init__(self, error: Error):
         super().__init__(error.message)
         self.error = error

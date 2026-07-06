@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-jf-template — apply a JFTL template to one or more inputs.
+jf-template — apply a JFTL template on input files.
 
 Usage:
     jf-template template [file1 file2 file3 ...]
@@ -18,29 +18,9 @@ Output:
     of stdout. (If the input came from stdin and -t is given, the output
     file is named 'stdin.out' — there's no real basename to derive.)
 
-Options:
-  -s, --sections     Prepend a '//' comment line (on stdout) before each
-                      result, with input/output size and timing info.
-                      Sizes require the result to be fully rendered first,
-                      so this disables incremental/streaming output.
-  -t, --target DIR   Write each result to DIR/<basename>.out instead of
-                      stdout. Uses only the basename of the input path.
-  -q, --quiet        Suppress informational stderr output (the compile-time
-                      line and, implicitly, anything -v would add). Error
-                      messages are still always printed to stderr.
-  -v, --verbose      On error, print full exception details (traceback)
-                      instead of a minimal one-line summary.
-  --indent N         Pretty-print indent width when not using --raw
-                      (default: 2). Note: Python's json.dumps(indent=0)
-                      still inserts newlines between elements — it does
-                      NOT collapse to a single line. Use --raw for that.
-  --raw              Fully compact, single-line output. Independent of
-                      --indent; if both are given, --raw wins.
-  -e, --entry NAME   Macro entry point to render (passed to engine.render).
-  --strict           Use strict engine mode (see create_engine(strict=...)).
-
 Exit code: 0 if every input succeeded, 1 if any failed.
 """
+
 import sys
 import argparse
 import json
@@ -99,21 +79,26 @@ def _output_target(input_label: str, target_dir: Optional[str]) -> tuple[Optiona
 def main() -> int:
     parser = argparse.ArgumentParser(prog="jf-template", description=__doc__,
                                       formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("template", nargs="?", default=None,
-                         help="Template JSON file (omit to read template from stdin)")
-    parser.add_argument("files", nargs="*", default=None,
-                         help="Input JSON files (omit to read one input from stdin)")
-    parser.add_argument("-s", "--sections", action="store_true")
-    parser.add_argument("-t", "--target", default=None, metavar="DIR")
-    parser.add_argument("-q", "--quiet", action="store_true")
-    parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("-s", "--sections", action="store_true",
+                        help="Prepend a '//' comment line before each result, with "
+                            "input/output size and timing info. Requires the result "
+                            "to be fully rendered first (disables streaming).")
+    parser.add_argument("-t", "--target", default=None, metavar="DIR",
+                        help="Write each result to DIR/<basename>.out instead of stdout.")
+    parser.add_argument("-q", "--quiet", action="store_true",
+                        help="Suppress informational stderr output. Error messages "
+                            "are still always printed.")
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="On error, print full exception details (traceback) "
+                            "instead of a minimal one-line summary.")
     parser.add_argument("--indent", type=int, default=2, metavar="N",
-                         help="Pretty-print indent width when not using --raw (default: 2).")
+                        help="Pretty-print indent width when not using --raw (default: 2).")
     parser.add_argument("--raw", action="store_true",
-                         help="Fully compact, single-line output. Independent of --indent; "
-                              "if both are given, --raw wins.")
-    parser.add_argument("-e", "--entry", default=None)
-    parser.add_argument("--strict", action="store_true")
+                        help="Fully compact, single-line output. Wins over --indent if both given.")
+    parser.add_argument("-e", "--entry", default=None, metavar="NAME",
+                        help="Macro entry point to render.")
+    parser.add_argument("--strict", action="store_true",
+                        help="Use strict engine mode (see create_engine(strict=...)).")
     args = parser.parse_args()
 
     def info(msg: str) -> None:
@@ -129,7 +114,9 @@ def main() -> int:
 
     t0 = time.perf_counter()
     try:
-        compiled, compile_errors = engine.compile(template_text)
+
+        template_dict = json.loads(template_text)
+        compiled, compile_errors = engine.compile(template_dict)
     except Exception as exc:
         error(f"{template_label}: {_exception_summary(exc, args.verbose)}")
         return 1
