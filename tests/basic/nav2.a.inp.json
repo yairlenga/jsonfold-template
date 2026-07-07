@@ -1,0 +1,17 @@
+{
+  "name": "Root",
+  "tag": "R-tag",
+  "level1": {
+    "name": "L1",
+    "tag": "L1-tag",
+    "level2": {
+      "name": "L2",
+      "tag": "L2-tag",
+      "level3": {
+        "name": "L3",
+        "tag": "L3-tag",
+        "level4": { "name": "L4", "tag": "L4-tag" }
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "Root",
+  "tag": "R-tag",
+  "id": 1000,
+  "active": true,
+  "notes": "root-level noise",
+  "level1": {
+    "name": "L1",
+    "tag": "L1-tag",
+    "id": 1001,
+    "active": false,
+    "notes": "level1 noise",
+    "unrelated": ["x", "y", "z"],
+    "level2": {
+      "name": "L2",
+      "tag": "L2-tag",
+      "id": 1002,
+      "active": true,
+      "notes": "level2 noise",
+      "meta": { "created": "2026-01-01" },
+      "level3": {
+        "name": "L3",
+        "tag": "L3-tag",
+        "id": 1003,
+        "active": false,
+        "notes": "level3 noise",
+        "level4": {
+          "name": "L4",
+          "tag": "L4-tag",
+          "id": 1004,
+          "active": true,
+          "notes": "level4 noise",
+          "trailing": null
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "level": 1,
+  "current": "L1",
+  "currentTag": "L1-tag",
+  "parent": "Root",
+  "parentTag": "R-tag",
+  "root": "Root",
+  "rootTag": "R-tag",
+  "nested": {
+    "level": 2,
+    "current": "L2",
+    "currentTag": "L2-tag",
+    "parent": "L1",
+    "parentTag": "L1-tag",
+    "root": "Root",
+    "rootTag": "R-tag",
+    "nested": {
+      "level": 3,
+      "current": "L3",
+      "currentTag": "L3-tag",
+      "parent": "L2",
+      "parentTag": "L2-tag",
+      "root": "Root",
+      "rootTag": "R-tag",
+      "nested": {
+        "level": 4,
+        "current": "L4",
+        "currentTag": "L4-tag",
+        "parent": "L3",
+        "parentTag": "L3-tag",
+        "root": "Root",
+        "rootTag": "R-tag"
+      }
+    }
+  }
+}
+{
+  "level": 1,
+  "current": "L1",
+  "currentTag": "L1-tag",
+  "parent": "Root",
+  "parentTag": "R-tag",
+  "root": "Root",
+  "rootTag": "R-tag",
+  "nested": {
+    "level": 2,
+    "current": "L2",
+    "currentTag": "L2-tag",
+    "parent": "L1",
+    "parentTag": "L1-tag",
+    "root": "Root",
+    "rootTag": "R-tag",
+    "nested": {
+      "level": 3,
+      "current": "L3",
+      "currentTag": "L3-tag",
+      "parent": "L2",
+      "parentTag": "L2-tag",
+      "root": "Root",
+      "rootTag": "R-tag",
+      "nested": {
+        "level": 4,
+        "current": "L4",
+        "currentTag": "L4-tag",
+        "parent": "L3",
+        "parentTag": "L3-tag",
+        "root": "Root",
+        "rootTag": "R-tag"
+      }
+    }
+  }
+}
+{
+  "level": 1,
+  "current": "Beta",
+  "currentTag": "Beta-tag",
+  "parent": "Alpha",
+  "root": "Alpha",
+  "nested": {
+    "level": 2,
+    "current": "Gamma",
+    "currentTag": "Gamma-tag",
+    "parent": "Beta",
+    "parentTag": "Beta-tag",
+    "root": "Alpha",
+    "nested": {
+      "level": 3,
+      "current": "Delta",
+      "currentTag": "Delta-tag",
+      "parent": "Gamma",
+      "parentTag": "Gamma-tag",
+      "root": "Alpha",
+      "nested": {
+        "level": 4,
+        "current": "Epsilon",
+        "currentTag": "Epsilon-tag",
+        "parent": "Delta",
+        "parentTag": "Delta-tag",
+        "root": "Alpha"
+      }
+    }
+  }
+}

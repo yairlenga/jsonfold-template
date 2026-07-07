@@ -20,29 +20,24 @@ class TestLiterals(unittest.TestCase):
 
     def test_plain_string_is_literal(self):
         stmt = compile("hello")
-        self.assertIsInstance(stmt, LiteralStatement)
-        self.assertEqual(stmt.value, "hello")
+        self.assertEqual(stmt, "hello")
 
     def test_int_is_literal(self):
         stmt = compile(42)
-        self.assertIsInstance(stmt, LiteralStatement)
-        self.assertEqual(stmt.value, 42)
+        self.assertEqual(stmt, 42)
 
     def test_bool_is_literal(self):
         stmt = compile(True)
-        self.assertIsInstance(stmt, LiteralStatement)
-        self.assertIs(stmt.value, True)
+        self.assertEqual(stmt, True)
 
     def test_none_is_literal(self):
         stmt = compile(None)
-        self.assertIsInstance(stmt, LiteralStatement)
-        self.assertIsNone(stmt.value)
+        self.assertEqual(stmt, None)
 
     def test_string_not_starting_with_prefix_is_literal(self):
         # starts with '$' but not '$.' — should NOT be treated as a path
         stmt = compile("$$5.00")
-        self.assertIsInstance(stmt, LiteralStatement)
-        self.assertEqual(stmt.value, "$5.00")
+        self.assertEqual(stmt, "$5.00")
 
 
 class TestPathStatements(unittest.TestCase):
@@ -81,8 +76,8 @@ class TestObjectStatements(unittest.TestCase):
         stmt = compile({"a": "x", "b": 1})
         self.assertIsInstance(stmt, ObjectStatement)
         self.assertEqual(set(stmt.entries.keys()), {"a", "b"})
-        self.assertIsInstance(stmt.entries["a"], LiteralStatement)
-        self.assertIsInstance(stmt.entries["b"], LiteralStatement)
+        self.assertIsInstance(stmt.entries["a"], str)
+        self.assertIsInstance(stmt.entries["b"], int)
 
     def test_dict_value_with_path_expression(self):
         stmt = compile({"name": "$.user.name"})
@@ -115,8 +110,8 @@ class TestArrayStatements(unittest.TestCase):
     def test_flat_list(self):
         stmt = compile([1, "x", "$.y"])
         self.assertIsInstance(stmt, ArrayStatement)
-        self.assertIsInstance(stmt.items[0], LiteralStatement)
-        self.assertIsInstance(stmt.items[1], LiteralStatement)
+        self.assertIsInstance(stmt.items[0], int)
+        self.assertIsInstance(stmt.items[1], str)
         self.assertIsInstance(stmt.items[2], PathStatement)
 
     def test_list_of_dicts(self):
@@ -150,11 +145,11 @@ class TestMixedNesting(unittest.TestCase):
         self.assertIsInstance(stmt, ObjectStatement)
         self.assertIsInstance(stmt.entries["name"], PathStatement)
         self.assertIsInstance(stmt.entries["tags"], ArrayStatement)
-        self.assertIsInstance(stmt.entries["tags"].items[0], LiteralStatement)
+        self.assertIsInstance(stmt.entries["tags"].items[0], str)
         self.assertIsInstance(stmt.entries["tags"].items[1], PathStatement)
         self.assertIsInstance(stmt.entries["address"], ObjectStatement)
         self.assertIsInstance(stmt.entries["address"].entries["city"], PathStatement)
-        self.assertIsInstance(stmt.entries["address"].entries["zip"], LiteralStatement)
+        self.assertIsInstance(stmt.entries["address"].entries["zip"], str)
 
 
 if __name__ == "__main__":

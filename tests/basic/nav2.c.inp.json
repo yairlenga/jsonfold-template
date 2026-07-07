@@ -1,0 +1,16 @@
+{
+  "name": "Alpha",
+  "level1": {
+    "name": "Beta",
+    "tag": "Beta-tag",
+    "level2": {
+      "name": "Gamma",
+      "tag": "Gamma-tag",
+      "level3": {
+        "name": "Delta",
+        "tag": "Delta-tag",
+        "level4": { "name": "Epsilon", "tag": "Epsilon-tag" }
+      }
+    }
+  }
+}

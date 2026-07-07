@@ -65,6 +65,8 @@ class JFTLEngine(Engine, Compiler):
     def render_to(self, output: TextIO, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
 
     def _compile(self, source: Any, where: str = "") -> Statement | Expression:
+
+        # Handle Dictionary objects. Use '$' attribute to classify into logic, literal, macro or other.
         if isinstance(source, dict):
 
             action = source.get("$", None)
@@ -76,29 +78,66 @@ class JFTLEngine(Engine, Compiler):
             entries = {k: self._compile(v, where=f"{where}.{k}") for k, v in source.items()}
             return ObjectStatement(entries)
 
+
         if isinstance(source, list):
             items = [self._compile(v, where=f"{where}[{i}]") for i, v in enumerate(source)]
             return ArrayStatement(items)
 
-        if isinstance(source, str) and source.startswith("$"):
-            if source.startswith('$$'):
-                source = source[1:]
-                pass
-            elif source.startswith(EXPR_PREFIX):
-                path_text = source[1:]   # strip just "$", keep the "." — matches grammar directly
-                engine = NavigationExprNode(path_text, where=where)
-                return PathStatement(engine)
-            elif source.startswith(EXPR_PYTHON):
-                expr = source[len(EXPR_PYTHON):].strip()
-                engine = PyRunExprEngine()
-                return engine.compile(expr)
-            else:
-                raise CompileError(Error(
-                    code="INVALID_PYTHON", severity="ERROR", where=where, location=None,
-                    message=f"lambda expressions are not allowed in {source!r}",
-                ))
+        # Scalar Cases - string
+        if isinstance(source, str):
 
-        return LiteralStatement(source)
+            # Anything starting with '$$' is considered as a literal removing the first $.
+            if source.startswith('$$'):
+                return source[1:]
+
+            if source.startswith("$"):
+
+                # Navigation from various points.
+                p2 = source[:2]
+                if p2 in { "$.", "$[" }:
+                    path_text = source[1:]   # strip just "$", keep the "." — matches grammar directly
+                    engine = NavigationExprNode(path_text, where=where, start="current")
+                    return PathStatement(engine)
+
+                p3 = source[:3]
+                if p3 in { "$^", "$^.", "$^[" }:
+                    path_text = source[2:]   # strip just "$", keep the "." — matches grammar directly
+                    engine = NavigationExprNode(path_text, where=where, start="root")
+                    return PathStatement(engine)
+
+                elif p3 in { "$<", "$<.", "$<[" }:
+                    path_text = source[2:]   # strip just "$", keep the "." — matches grammar directly
+                    engine = NavigationExprNode(path_text, where=where, start="parent")
+                    return PathStatement(engine)
+
+                elif p3 in { "$%", "$%.", "$<%" }:
+                    path_text = source[2:]   # strip just "$", keep the "." — matches grammar directly
+                    engine = NavigationExprNode(path_text, where=where, start="vars")
+                    return PathStatement(engine)
+
+                # Consider python expression engines (hardcoded for now)
+
+                if source.startswith(EXPR_PYTHON):
+                    expr = source[len(EXPR_PYTHON):].strip()
+                    engine = PyRunExprEngine()
+                    return engine.compile(expr)
+
+                else:
+                    raise CompileError(Error(
+                        code="BAD_EXPRESSION", severity="ERROR", where=where, location=None,
+                        message=f"Unknown Expression {source!r}",
+                    ))
+            return source
+        
+        # Non string source
+        if isinstance(source, (str, int, float, bool, type(None))):
+            return source
+                                   
+        raise CompileError(Error(
+            code="BAD_NODE", severity="ERROR", where=where, location=None,
+            message=f"Unknown node {source!r}",
+            ))
+
 
     # Returning JSON friendly types
     def _render(self, source: Any | Evaluator, frame: Frame) -> tuple[TYPE_ANY_REC, list[Error] | None]:
@@ -160,8 +199,8 @@ class ObjectStatement(Statement):
 
     def eval(self, frame: Frame) -> Any | Error | Missing:
         result = {}
-        for key, stmt in self.entries.items():
-            value = stmt.eval(frame)
+        for key, item in self.entries.items():
+            value = item.eval(frame) if isinstance(item, Evaluator) else item
             if isinstance(value, Error):
                 return value
             if isinstance(value, Missing):
@@ -176,8 +215,8 @@ class ArrayStatement(Statement):
 
     def eval(self, frame: Frame) -> Any | Error | Missing:
         result = []
-        for stmt in self.items:
-            value = stmt.eval(frame)
+        for item in self.items:
+            value = item.eval(frame) if isinstance(item, Evaluator) else item
             if isinstance(value, Error):
                 return value
             result.append(None if isinstance(value, Missing) else value)  # kept as null in arrays

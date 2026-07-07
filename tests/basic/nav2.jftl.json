@@ -1,0 +1,54 @@
+{
+  "main": {
+    "$": true,
+    "data": "$.level1",
+    "body": {
+      "level": 1,
+      "current": "$.name",
+      "currentTag": "$.tag",
+      "parent": "$<.name",
+      "parentTag": "$<.tag",
+      "root": "$^.name",
+      "rootTag": "$^.tag",
+      "nested": {
+        "$": true,
+        "data": "$.level2",
+        "body": {
+          "level": 2,
+          "current": "$.name",
+          "currentTag": "$.tag",
+          "parent": "$<.name",
+          "parentTag": "$<.tag",
+          "root": "$^.name",
+          "rootTag": "$^.tag",
+          "nested": {
+            "$": true,
+            "data": "$.level3",
+            "body": {
+              "level": 3,
+              "current": "$.name",
+              "currentTag": "$.tag",
+              "parent": "$<.name",
+              "parentTag": "$<.tag",
+              "root": "$^.name",
+              "rootTag": "$^.tag",
+              "nested": {
+                "$": true,
+                "data": "$.level4",
+                "body": {
+                  "level": 4,
+                  "current": "$.name",
+                  "currentTag": "$.tag",
+                  "parent": "$<.name",
+                  "parentTag": "$<.tag",
+                  "root": "$^.name",
+                  "rootTag": "$^.tag"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
