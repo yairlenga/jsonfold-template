@@ -1,0 +1,20 @@
+{
+  "customerName": "Dave",
+  "greeting": "Welcome back, valued VIP customer!",
+  "orderTotal": 250,
+  "itemNames": [
+    "Widget",
+    "Gadget",
+    "Gizmo"
+  ]
+}
+{
+  "customerName": "Eve",
+  "greeting": "Welcome!",
+  "orderTotal": "No current order",
+  "itemNames": []
+}
+{
+  "greeting": null,
+  "itemNames": null
+}

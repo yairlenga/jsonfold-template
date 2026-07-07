@@ -1,0 +1,19 @@
+{
+  "customerName": "Alice",
+  "email": "alice@example.com",
+  "accountType": "premium",
+  "firstItemName": "Widget",
+  "secondItemQty": 5
+}
+{
+  "customerName": "Bob",
+  "accountType": "basic",
+  "firstItemName": "Thingamajig",
+  "secondItemQty": 2
+}
+{
+  "customerName": "Carol",
+  "email": "carol@example.com",
+  "accountType": "gold",
+  "firstItemName": "Solo Item"
+}

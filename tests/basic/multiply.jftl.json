@@ -1,0 +1,19 @@
+{
+    "main": {
+        "$": true,
+        "foreach": {
+            "shape": "range",
+            "limit": 10,
+            "var": "x"
+        },
+        "body": {
+      		"$": true,
+            "foreach": {
+                "shape": "range",
+                "limit": 10,
+                "var": "y"
+            },
+            "body": "$pyrun: x * y"
+        }
+    }
+}
