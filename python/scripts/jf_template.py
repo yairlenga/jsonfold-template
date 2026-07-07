@@ -38,7 +38,7 @@ from template import create_engine, Engine  # noqa: E402
 def _read_text(path: Optional[str]) -> tuple[str, str]:
     """Read raw text either from a named file or from stdin.
     Returns (text, label) where label is the filename or '(stdin)'."""
-    if path is None:
+    if path == "-":
         return sys.stdin.read(), "(stdin)"
     with open(path, "r", encoding="utf-8") as f:
         return f.read(), path
@@ -99,6 +99,12 @@ def main() -> int:
                         help="Macro entry point to render.")
     parser.add_argument("--strict", action="store_true",
                         help="Use strict engine mode (see create_engine(strict=...)).")
+
+    parser.add_argument("template", nargs="?", default=None, metavar="TEMPLATE",
+                        help="Path to the template JSON file.")
+    parser.add_argument("files", nargs="*", metavar="FILE",
+                        help="Input JSON files to process independently.")
+    
     args = parser.parse_args()
 
     def info(msg: str) -> None:
@@ -109,7 +115,8 @@ def main() -> int:
         print(msg, file=sys.stderr)  # errors always print, even under -q
 
     # --- read + compile the template ---
-    template_text, template_label = _read_text(args.template)
+    template_path = args.template if args.template else "-"
+    template_text, template_label = _read_text(template_path)
     engine: Engine = create_engine(strict=args.strict)
 
     t0 = time.perf_counter()
@@ -132,20 +139,12 @@ def main() -> int:
          f"{len(template_text.encode('utf-8'))} bytes, {_count_lines(template_text)} lines.")
 
     # --- figure out which inputs to process ---
-    if args.template is None and not args.files:
-        # "no arguments at all" -> template from stdin already consumed above;
-        # render with NO input data.
-        input_sources: list[Optional[str]] = [None]
-        no_input_data = True
-    else:
-        no_input_data = False
-        input_sources = args.files if args.files else [None]  # None -> stdin
-
+    input_sources = args.files if args.files else [None]  # None -> stdin
     overall_ok = True
 
     for input_path in input_sources:
         try:
-            if no_input_data:
+            if not input_path:
                 input_text, input_label = "", "(none)"
                 input_doc = None
             else:
