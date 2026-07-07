@@ -51,13 +51,15 @@ class Frame:
     # Cached value, including inherited, calculated, ...
     _cache:  dict[str, Any] = field(default_factory=dict)
 
-    def eval_value(self, expr: Evaluator | Any) -> Any:
+    def eval_value(self, expr: Evaluator | Any, default_val=None) -> Any:
+        if expr is None:
+            return default_val
 
         # if it can be evaluated, then use the current frame
         result = expr.eval(self) if isinstance(expr, Evaluator) else expr
         return result        
     
-    def eval_bool(self, cond: Condition | Any, default_val) -> bool:
+    def eval_bool(self, cond: Condition | Any, default_val=None) -> bool:
         if cond is None:
             return default_val
         result = cond.eval_bool(self)        

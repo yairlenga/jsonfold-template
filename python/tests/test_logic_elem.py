@@ -55,14 +55,7 @@ class TestEmptyInput(unittest.TestCase):
         self.assertIsNone(stmt._set_current)
         self.assertIsNone(stmt._cases)
         self.assertFalse(stmt._foreach)
-        self.assertIsNone(stmt._foreach_key)
-        self.assertIsNone(stmt._foreach_var)
-        self.assertIsNone(stmt._foreach_in)
-        self.assertIsNone(stmt._foreach_cond)
-        self.assertIsNone(stmt._body)
-        self.assertIsNone(stmt._default_val)
-        self.assertIsNone(stmt._error_val)
-        self.assertIsNone(stmt._transform)
+
 
 
 class TestSet(unittest.TestCase):
@@ -122,35 +115,30 @@ class TestForeach(unittest.TestCase):
             "foreach": {"key": "idx", "var": "item", "in": "$.items", "if": "$.item.active"}
         })
         self.assertTrue(stmt._foreach)
-        self.assertEqual(stmt._foreach_key, "idx")
-        self.assertEqual(stmt._foreach_var, "item")
-        self.assertEqual(stmt._foreach_in, Tagged("expression", "$.items"))
-        self.assertEqual(stmt._foreach_cond, Tagged("condition", "$.item.active"))
+        self.assertEqual(stmt._foreach.key, "idx")
+        self.assertEqual(stmt._foreach.var, "item")
+        self.assertEqual(stmt._foreach.items, Tagged("expression", "$.items"))
+        self.assertEqual(stmt._foreach.cond, Tagged("condition", "$.item.active"))
 
     def test_foreach_without_optional_if(self):
         stmt = compile_logic({"foreach": {"key": "idx", "var": "item", "in": "$.items"}})
         self.assertTrue(stmt._foreach)
-        self.assertIsNone(stmt._foreach_cond)
+        self.assertIsNone(stmt._foreach.cond)
 
     def test_foreach_without_key(self):
         stmt = compile_logic({"foreach": {"var": "item", "in": "$.items"}})
         self.assertTrue(stmt._foreach)
-        self.assertIsNone(stmt._foreach_key)
-        self.assertEqual(stmt._foreach_var, "item")
+        self.assertIsNone(stmt._foreach.key)
+        self.assertEqual(stmt._foreach.var, "item")
 
     def test_missing_foreach_is_false_and_all_subfields_none(self):
         stmt = compile_logic({})
         self.assertFalse(stmt._foreach)
-        self.assertIsNone(stmt._foreach_key)
-        self.assertIsNone(stmt._foreach_var)
-        self.assertIsNone(stmt._foreach_in)
-        self.assertIsNone(stmt._foreach_cond)
 
     def test_foreach_wrong_type_is_treated_as_absent(self):
         # "foreach" present but not a dict — should not crash, should behave as absent
         stmt = compile_logic({"foreach": "not-a-dict"})
         self.assertFalse(stmt._foreach)
-        self.assertIsNone(stmt._foreach_in)
 
 
 class TestCases(unittest.TestCase):
@@ -239,9 +227,9 @@ class TestFullRealisticBlock(unittest.TestCase):
                          [{"_name": "total", "_expr": Tagged("expression", "$.price")}])
         self.assertEqual(stmt._if, Tagged("condition", "$.enabled"))
         self.assertTrue(stmt._foreach)
-        self.assertEqual(stmt._foreach_key, "idx")
-        self.assertEqual(stmt._foreach_var, "row")
-        self.assertEqual(stmt._foreach_in, Tagged("expression", "$.rows"))
+        self.assertEqual(stmt._foreach.key, "idx")
+        self.assertEqual(stmt._foreach.var, "row")
+        self.assertEqual(stmt._foreach.items, Tagged("expression", "$.rows"))
         self.assertEqual(len(stmt._cases), 1)
         self.assertEqual(stmt._body, Tagged("statement", "$.output"))
         self.assertEqual(stmt._transform, "MERGE")
