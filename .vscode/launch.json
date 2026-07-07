@@ -8,9 +8,9 @@
             "name": "Python: test",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/python/tests/test_logic_simple.py",
+            "program": "${workspaceFolder}/python/scripts/jf_template.py",
             "console": "integratedTerminal",
-            "args": [],
+            "args": [ "python/multiply.jftl.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
             }

@@ -17,19 +17,8 @@ import ast
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-from core import Frame, CompileError
+from core import Evaluator, Frame, CompileError
 from template import Error, Missing
-
-
-class Evaluator(ABC):
-    """A single compiled expression, ready to run against many frames."""
-
-    @abstractmethod
-    def eval(self, frame: Frame) -> Any | Error | Missing: ...
-
-    @abstractmethod
-    def eval_bool(self, frame: Frame) -> bool | Error | Missing: ...
-
 
 def _build_env(frame: Frame) -> dict[str, Any]:
     """Walk the frame chain, closest scope wins: '_' + locals + parent vars."""
