@@ -86,30 +86,6 @@ class TestMissingValues(unittest.TestCase):
         self.assertIsInstance(result, Missing)
 
 
-class TestUpNavigation(unittest.TestCase):
-
-    def test_single_up_to_parent(self):
-        root = make_root({"total": 100})
-        child = make_child(root, {"line": 1})
-        self.assertEqual(nav("^.total").eval(child), 100)
-
-    def test_double_up_to_grandparent(self):
-        root = make_root({"currency": "USD"})
-        mid = make_child(root, {"order": 1})
-        leaf = make_child(mid, {"item": "x"})
-        self.assertEqual(nav("^^.currency").eval(leaf), "USD")
-
-    def test_overshoot_up_clamps_at_root(self):
-        root = make_root({"a": 1})
-        # far more ^ than there are ancestors — should clamp at root, not error
-        self.assertEqual(nav("^^^^^.a").eval(root), 1)
-
-    def test_bare_up_returns_parents_current(self):
-        root = make_root({"x": 1})
-        child = make_child(root, {"y": 2})
-        self.assertEqual(nav("^").eval(child), {"x": 1})
-
-
 class TestMalformedPaths(unittest.TestCase):
 
     def test_malformed_path_stray_character(self):

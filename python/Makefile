@@ -25,7 +25,7 @@ TESTS = $(wildcard tests/test_*.py)
 
 run-test:
 	pytest
-	set -x ; for file in ../tests/basic/*.jftl.json ; do scripts/jf_template.py $$file $${file%.jftl.json}.*.inp.json ; done
+	(cd ../tests/basic && ../run_tests.sh -mpython)
 
 test:
 	$(MAKE) run-test | tee test.log

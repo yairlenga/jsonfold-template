@@ -5,12 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: test",
+            "name": "Python: jf_template",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/python/scripts/jf_template.py",
             "console": "integratedTerminal",
             "args": [ "python/multiply.jftl.json"],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/python/src"
+            }
+        },
+        {
+            "name": "Python: test",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/python/tests/test_reshape.py",
+            "console": "integratedTerminal",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
             }

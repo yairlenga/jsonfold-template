@@ -14,15 +14,9 @@ class Key:
 class Index:
     i: int
 
-@dataclass
-class Up:
-    pass  # one '^' step
-
-PathSegment = Union[Key, Index, Up]
+PathSegment = Union[Key, Index]
 
 import re
-
-_UP_RE = re.compile(r"^\^*")
 
 _SEGMENT_RE = re.compile(r"""
     \.(?P<word>\w+)
@@ -41,21 +35,16 @@ class NavigationExprNode(Statement, Expression):
         self._segments = self._compile(path)
 
     def _compile(self, path_text: str) -> list[PathSegment]:
-        up_match = _UP_RE.match(path_text)
-        assert up_match is not None  # \^* always matches (possibly zero-width), never None
 
-        up_count = len(up_match.group())
-        rest = path_text[up_match.end():] 
-
-        segments: list[PathSegment] = [Up() for _ in range(up_count)]
+        segments: list[PathSegment] = []
 
         pos = 0
 
-        for m in _SEGMENT_RE.finditer(rest):
+        for m in _SEGMENT_RE.finditer(path_text):
             if m.start() != pos:
                 raise CompileError(Error(
                     code="INVALID_PATH", severity="ERROR", where=self._where, location=None,
-                    message=f"unexpected text at position {pos} in {rest!r}"))
+                    message=f"unexpected text at position {pos} in {path_text!r}"))
             pos = m.end()
 
             if m.group("word") is not None:
@@ -67,10 +56,10 @@ class NavigationExprNode(Statement, Expression):
             elif m.group("sq") is not None:
                 segments.append(Key(m.group("sq")))
 
-        if pos != len(rest):
+        if pos != len(path_text):
             raise CompileError(Error(
                 code="INVALID_PATH", severity="ERROR", where=self._where, location=None,
-                message=f"trailing unparsed text at position {pos} in {rest!r}"))
+                message=f"trailing unparsed text at position {pos} in {path_text!r}"))
 
         return segments
 
@@ -89,12 +78,6 @@ class NavigationExprNode(Statement, Expression):
         for seg in self._segments:
             if isinstance(value, (Error, Missing)):
                 return value  # already failed upstream — propagate, stop walking
-
-            if isinstance(seg, Up):
-                target = target.parent
-                value = target.current
-                traveled += ".^"
-                continue
 
             if isinstance(seg, Key):
                 if isinstance(value, dict) and seg.name in value:
