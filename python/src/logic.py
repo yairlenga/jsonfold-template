@@ -45,7 +45,7 @@ class ForeachStatement():
     index: Optional[str] = None
     items: Optional[Expression] = None
     cond: Optional[Condition] = None
-    shape: Literal["ARRAY", "RANGE", None] = None
+    shape: Literal["array", "range", None] = None
     start: Optional[Expression] = None
     stop: Optional[Expression] = None
     limit: Optional[Expression] = None
@@ -88,9 +88,9 @@ class LogicStatement(Statement):
             # Runtime expressions
             v_foreach_in, _ = compiler.expression(v, source) if ( v:= v_loop.get("in", None)) else (None, None)
             v_foreach_cond, _ = compiler.condition(v, source) if ( v := v_loop.get("if", None)) else (None, None)
-            v_foreach_start, _ = compiler.condition(v, source) if ( v := v_loop.get("start", None)) else (None, None)
-            v_foreach_stop, _ = compiler.condition(v, source) if ( v := v_loop.get("stop", None)) else (None, None)
-            v_foreach_limit, _ = compiler.condition(v, source) if ( v := v_loop.get("limit", None)) else (None, None)
+            v_foreach_start, _ = compiler.expression(v, source) if ( v := v_loop.get("start", None)) else (None, None)
+            v_foreach_stop, _ = compiler.expression(v, source) if ( v := v_loop.get("stop", None)) else (None, None)
+            v_foreach_limit, _ = compiler.expression(v, source) if ( v := v_loop.get("limit", None)) else (None, None)
             v_foreach = ForeachStatement(
                 key = v_foreach_key,
                 var = v_foreach_var,
@@ -131,12 +131,15 @@ class LogicStatement(Statement):
         foreach = self._foreach
         items = frame.eval_value(foreach.items) if foreach.items else frame.current
         loop_iter = None
+        count = None
         if foreach.shape == "range":
             pass
 
         elif isinstance(items, list):
+            count = len(items)
             loop_iter = enumerate(items)
         elif isinstance(items, dict):
+            count = len(items)
             loop_iter = iter(items.items())
         elif items is None or isinstance(items, Missing):
             return None
@@ -150,9 +153,10 @@ class LogicStatement(Statement):
         ix_start = frame.eval_value(foreach.start) if foreach.start else 0
         ix_stop = frame.eval_value(foreach.stop) if foreach.stop else None
         ix_limit = frame.eval_value(foreach.limit) if foreach.limit else None
-        # TODO: Add support for negative indices
-        start_index = ix_start if ix_start else 0
-        stop_index = start_index + ix_stop if ix_stop else ix_limit-start_index if ix_limit else None
+
+        # Support negative indexes if count is known.
+        start_index = count-ix_start if count is not None and ix_start<0 else ix_start
+        stop_index = start_index + ix_limit if ix_limit else count-ix_stop if count is not None and ix_stop is not None and ix_stop < 0 else ix_stop
 
         new_vars = frame.vars
         # Process foreach loop
@@ -164,6 +168,7 @@ class LogicStatement(Statement):
         list_result = []
         do_dict = self._transform == "OBJECT"
         if foreach.shape == "range":
+            count = stop_index - start_index
             loop_iter = enumerate(range(start_index, stop_index))
             start_index = None
             stop_index = None
