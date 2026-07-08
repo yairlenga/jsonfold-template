@@ -28,7 +28,7 @@ _SEGMENT_RE = re.compile(r"""
 class NavigationExprNode(Statement, Expression):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
-    def __init__(self, path: str, where: str | None = None, start: Literal["current", "parent", "root", "vars"] = "current"):
+    def __init__(self, path: str, where: str | None = None, start: Literal["_current", "_parent.current", "_input"] | str= "_current"):
         self._path = path
         self._where = where   # for diagnostics, e.g. "user.items[0].name"
         self._start = start
@@ -64,14 +64,15 @@ class NavigationExprNode(Statement, Expression):
         return segments
 
     def eval(self, frame: Frame) -> Any | Error | Missing:
-        target = frame
         value: Any = frame.current
-        if self._start == "root":
+        if self._start == "_current":
+            value = frame.current
+        elif self._start == "_input":
             value = frame.env.input
-        elif self._start == "parent":
+        elif self._start == "_parent.current":
             value = frame.parent.current
-        elif self._start == "vars":
-            value = frame.vars
+        else:
+            value = frame.lookup_var(self._start)
 
         traveled = "_"  # builds up the "location" string as we walk, for diagnostics
 

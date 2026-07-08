@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Any, Literal, Optional, TextIO
 from pathlib import Path
 from dataclasses import dataclass
+import re
 
 from logic import LogicStatement
 from py_expr import PyRunExprEngine
@@ -64,8 +65,19 @@ class JFTLEngine(Engine, Compiler):
         
     def render_to(self, output: TextIO, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
 
+    NAV_RE = re.compile(r"""
+        \$
+        (?P<head> | \^ | < | (?P<vars>\w+ ) )
+        (?P<segments> $ | \[.* | \..* )
+        $
+    """, re.VERBOSE)
+
     def _compile(self, source: Any, where: str = "") -> Statement | Expression:
 
+        # Simple Literal returned here
+        if isinstance(source, (int, float, bool, type(None))):
+            return source
+                                   
         # Handle Dictionary objects. Use '$' attribute to classify into logic, literal, macro or other.
         if isinstance(source, dict):
 
@@ -87,35 +99,35 @@ class JFTLEngine(Engine, Compiler):
         if isinstance(source, str):
 
             # Anything starting with '$$' is considered as a literal removing the first $.
+            if not source.startswith("$"):
+                return source
+            
             if source.startswith('$$'):
                 return source[1:]
 
-            if source.startswith("$"):
+            m = self.NAV_RE.match(source) if source != "$" else None
+            if m:
+                start = None
+                head = m.group("head")
+                segments = m.group("segments")
+                if head == "":
+                    start = "_current"
+                    # Special case '$.' implied start with current, NO segments
+                    if segments == ".":
+                        segments = "" 
+                elif head == "^":
+                    start = "_input"
+                elif head == "<":
+                    start = "_parent.current"
+                elif (vars := m.group("vars")) != "":
+                    # Convert $foo.bar to .foo.bar, starting with implied "_.vars"
+                    start = vars
 
-                # Navigation from various points.
-                p2 = source[:2]
-                if p2 in { "$.", "$[" }:
-                    path_text = source[1:]   # strip just "$", keep the "." — matches grammar directly
-                    engine = NavigationExprNode(path_text, where=where, start="current")
+                if start:
+                    engine = NavigationExprNode(segments, where=where, start=start)
                     return PathStatement(engine)
 
-                p3 = source[:3]
-                if p3 in { "$^", "$^.", "$^[" }:
-                    path_text = source[2:]   # strip just "$", keep the "." — matches grammar directly
-                    engine = NavigationExprNode(path_text, where=where, start="root")
-                    return PathStatement(engine)
-
-                elif p3 in { "$<", "$<.", "$<[" }:
-                    path_text = source[2:]   # strip just "$", keep the "." — matches grammar directly
-                    engine = NavigationExprNode(path_text, where=where, start="parent")
-                    return PathStatement(engine)
-
-                elif p3 in { "$%", "$%.", "$<%" }:
-                    path_text = source[2:]   # strip just "$", keep the "." — matches grammar directly
-                    engine = NavigationExprNode(path_text, where=where, start="vars")
-                    return PathStatement(engine)
-
-                # Consider python expression engines (hardcoded for now)
+            # Consider python expression engines (hardcoded for now)
 
                 if source.startswith(EXPR_PYTHON):
                     expr = source[len(EXPR_PYTHON):].strip()
@@ -130,9 +142,6 @@ class JFTLEngine(Engine, Compiler):
             return source
         
         # Non string source
-        if isinstance(source, (str, int, float, bool, type(None))):
-            return source
-                                   
         raise CompileError(Error(
             code="BAD_NODE", severity="ERROR", where=where, location=None,
             message=f"Unknown node {source!r}",
@@ -148,6 +157,10 @@ class JFTLEngine(Engine, Compiler):
             result = {}
             for k, v in source.items():
                 eval_v, _ = self._render(v, frame)
+                if isinstance(eval_v, Error):
+                    return Error
+                if isinstance(eval_v, Missing):
+                    continue  # silently dropped from objects, per locked sentinel rules
                 result[k] = eval_v
             return result
         
@@ -155,6 +168,10 @@ class JFTLEngine(Engine, Compiler):
             result = []
             for v in source:
                 eval_v, _ = self._render(v, frame)
+                if isinstance(eval_v, Error):
+                    return Error
+                if isinstance(eval_v, Missing):
+                    eval_v = None
                 result.append(eval_v)
             return result, None
 
@@ -174,8 +191,10 @@ class JFTLEngine(Engine, Compiler):
     def statement(self, source: dict | str, where: str|None) -> tuple[Statement, list[Error]]:
         return self._compile(source), None
 
+
 EXPR_PREFIX = "$."  # e.g. "$.user.name" — later: other prefixes (e.g. $cel., $^) route to other engines
 EXPR_PYTHON = "$pyrun:"
+
 
 @dataclass
 class LiteralStatement(Statement):

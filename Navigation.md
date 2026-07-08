@@ -8,7 +8,7 @@ Navigation is one specific expression engine among several (see
 - Every navigation expression starts with a head reference.
 - The navigation expression may be followed by 1 or more segments
 
-It is possible to identify navigation element by the following rules if it starts with the following regex (white spaces in this pattern are for readablity only, and are not significant, similar to python re.VERBOSE or Perl/PCRE `/x`)
+It is possible to identify navigation element by the following rules if it starts with the following regex (white spaces in this pattern are for readability only, and are not significant, similar to python re.VERBOSE or Perl/PCRE `/x`)
 
 > `\$   ( | ^ | < | \w+ )   ( $ | \[ | \. )`
 

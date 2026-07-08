@@ -22,7 +22,6 @@ def make_root(current):
     """Build a root Frame: self-referencing parent, per the locked design."""
     env = Environment(template=None, input=current, to=None, top=None)
     root = Frame(env=env, current=current, parent=None, level=0)
-    root.parent = root
     env.top = root
     return root
 

@@ -51,10 +51,10 @@ class TestPathStatements(unittest.TestCase):
         stmt = compile("$.user.name")
         self.assertEqual(stmt.engine._path, ".user.name")
 
-    def test_bare_dollar_dot_is_malformed(self):
+    def test_bare_dollar_dot_is_ok(self):
         # "$." alone — a dot with nothing after it is not a valid path segment
-        with self.assertRaises(CompileError):
-            compile("$.")
+        stmt = compile("$.")
+        self.assertIsInstance(stmt, PathStatement)
 
     def test_malformed_path_raises_compile_error(self):
         with self.assertRaises(CompileError):

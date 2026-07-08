@@ -150,13 +150,25 @@ class LogicStatement(Statement):
                 message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
             ))
 
-        ix_start = frame.eval_value(foreach.start) if foreach.start else 0
-        ix_stop = frame.eval_value(foreach.stop) if foreach.stop else None
-        ix_limit = frame.eval_value(foreach.limit) if foreach.limit else None
+        ix_start = frame.eval_value(foreach.start)
+        ix_stop = frame.eval_value(foreach.stop)
+        ix_limit = frame.eval_value(foreach.limit)
 
         # Support negative indexes if count is known.
-        start_index = count-ix_start if count is not None and ix_start<0 else ix_start
-        stop_index = start_index + ix_limit if ix_limit else count-ix_stop if count is not None and ix_stop is not None and ix_stop < 0 else ix_stop
+        start_index = ix_start if ix_start is not None else 0
+        stop_index = ix_stop
+        if count is not None:
+            # Make sure start_index has value
+            if start_index < 0:
+                start_index = count + start_index
+            # Make sure that stop_index has value
+            if stop_index is None:
+                stop_index = count
+            elif stop_index < 0:
+                stop_index = count + stop_index
+            # Apply limit, if ix_limit is set
+            if ix_limit is not None and start_index + ix_limit < stop_index:
+                stop_index = start_index + ix_limit
 
         new_vars = frame.vars
         # Process foreach loop
@@ -176,7 +188,7 @@ class LogicStatement(Statement):
         pos = -1
         for key, item in loop_iter:
             pos = pos+1
-            if (start_index and pos < start_index) or (stop_index and pos >= stop_index):
+            if (start_index is not None and pos < start_index) or (stop_index is not None and pos >= stop_index):
                 continue
             new_key = key if do_dict else None
             if v_key:
@@ -191,9 +203,15 @@ class LogicStatement(Statement):
             if not frame.eval_bool(v_cond, True):
                 continue
             new_val = frame.eval_value(body)
+            if isinstance(new_val, Error):
+                return new_val
             if new_key is None:
+                if isinstance(new_val, Missing):
+                    new_val = None
                 list_result.append(new_val)
             else:
+                if isinstance(new_val, Missing):
+                    continue
                 dict_result[new_key] = new_val
 
         return dict_result if do_dict else list_result

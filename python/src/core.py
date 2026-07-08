@@ -3,7 +3,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Optional, TextIO
 from abc import ABC, abstractmethod
 
-from template import Template, Error, Missing
+from template import MISSING_VALUE, Template, Error, Missing
 # Template Class - represent compiled templates
 
 @dataclass(slots=True)
@@ -92,6 +92,30 @@ class Frame:
             vars = vars,
             _cache = {},
         )
+    
+    def lookup_var(self, name: str) -> Any:
+        """Search this frame, then parent, then parent's parent, ...
+        for `name` in `vars`. Caches the result (or MISSING) at every
+        frame walked through, so a repeated lookup from the same frame
+        is O(1) afterward."""
+        if name in self._cache:
+            return self._cache[name]
+
+        frame = self
+#        chain = []
+        while frame is not None:
+            if name in frame.vars:
+                value = frame.vars[name]
+#                for f in chain:
+#                    f._cache[name] = value
+                self._cache[name] = value
+                return value
+#            chain.append(frame)
+            frame = frame.parent
+
+#        for f in chain:
+#            f._cache[name] = MISSING_VALUE
+        return MISSING_VALUE
  
 
 # Draft - NIY

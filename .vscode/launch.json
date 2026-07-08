@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/python/scripts/jf_template.py",
             "console": "integratedTerminal",
-            "args": [ "python/multiply.jftl.json"],
+            "args": [ "-v", "tests/basic/foreach_bounds.jftl.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
             }
@@ -19,7 +19,7 @@
             "name": "Python: test",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/python/tests/test_reshape.py",
+            "program": "${workspaceFolder}/python/tests/test_nav_node.py",
             "console": "integratedTerminal",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"

@@ -1,0 +1,274 @@
+[
+  [
+    [
+      {
+        "start": null,
+        "stop": null,
+        "limit": null,
+        "subset": [
+          "aa",
+          "bb",
+          "cc",
+          "dd",
+          "ee",
+          "ff",
+          "gg",
+          "hh",
+          "ii"
+        ]
+      },
+      {
+        "start": null,
+        "stop": null,
+        "limit": null,
+        "subset": []
+      },
+      {
+        "start": null,
+        "stop": null,
+        "limit": null,
+        "subset": [
+          "aa",
+          "bb",
+          "cc",
+          "dd"
+        ]
+      }
+    ],
+    [
+      {
+        "start": null,
+        "stop": 6,
+        "limit": null,
+        "subset": [
+          "aa",
+          "bb",
+          "cc",
+          "dd",
+          "ee",
+          "ff"
+        ]
+      },
+      {
+        "start": null,
+        "stop": 6,
+        "limit": null,
+        "subset": []
+      },
+      {
+        "start": null,
+        "stop": 6,
+        "limit": null,
+        "subset": [
+          "aa",
+          "bb",
+          "cc",
+          "dd"
+        ]
+      }
+    ],
+    [
+      {
+        "start": null,
+        "stop": -2,
+        "limit": null,
+        "subset": [
+          "aa",
+          "bb",
+          "cc",
+          "dd",
+          "ee",
+          "ff",
+          "gg"
+        ]
+      },
+      {
+        "start": null,
+        "stop": -2,
+        "limit": null,
+        "subset": []
+      },
+      {
+        "start": null,
+        "stop": -2,
+        "limit": null,
+        "subset": [
+          "aa",
+          "bb",
+          "cc",
+          "dd"
+        ]
+      }
+    ]
+  ],
+  [
+    [
+      {
+        "start": 2,
+        "stop": null,
+        "limit": null,
+        "subset": [
+          "cc",
+          "dd",
+          "ee",
+          "ff",
+          "gg",
+          "hh",
+          "ii"
+        ]
+      },
+      {
+        "start": 2,
+        "stop": null,
+        "limit": null,
+        "subset": []
+      },
+      {
+        "start": 2,
+        "stop": null,
+        "limit": null,
+        "subset": [
+          "cc",
+          "dd",
+          "ee",
+          "ff"
+        ]
+      }
+    ],
+    [
+      {
+        "start": 2,
+        "stop": 6,
+        "limit": null,
+        "subset": [
+          "cc",
+          "dd",
+          "ee",
+          "ff"
+        ]
+      },
+      {
+        "start": 2,
+        "stop": 6,
+        "limit": null,
+        "subset": []
+      },
+      {
+        "start": 2,
+        "stop": 6,
+        "limit": null,
+        "subset": [
+          "cc",
+          "dd",
+          "ee",
+          "ff"
+        ]
+      }
+    ],
+    [
+      {
+        "start": 2,
+        "stop": -2,
+        "limit": null,
+        "subset": [
+          "cc",
+          "dd",
+          "ee",
+          "ff",
+          "gg"
+        ]
+      },
+      {
+        "start": 2,
+        "stop": -2,
+        "limit": null,
+        "subset": []
+      },
+      {
+        "start": 2,
+        "stop": -2,
+        "limit": null,
+        "subset": [
+          "cc",
+          "dd",
+          "ee",
+          "ff"
+        ]
+      }
+    ]
+  ],
+  [
+    [
+      {
+        "start": -3,
+        "stop": null,
+        "limit": null,
+        "subset": [
+          "gg",
+          "hh",
+          "ii"
+        ]
+      },
+      {
+        "start": -3,
+        "stop": null,
+        "limit": null,
+        "subset": []
+      },
+      {
+        "start": -3,
+        "stop": null,
+        "limit": null,
+        "subset": [
+          "gg",
+          "hh",
+          "ii"
+        ]
+      }
+    ],
+    [
+      {
+        "start": -3,
+        "stop": 6,
+        "limit": null,
+        "subset": []
+      },
+      {
+        "start": -3,
+        "stop": 6,
+        "limit": null,
+        "subset": []
+      },
+      {
+        "start": -3,
+        "stop": 6,
+        "limit": null,
+        "subset": []
+      }
+    ],
+    [
+      {
+        "start": -3,
+        "stop": -2,
+        "limit": null,
+        "subset": [
+          "gg"
+        ]
+      },
+      {
+        "start": -3,
+        "stop": -2,
+        "limit": null,
+        "subset": []
+      },
+      {
+        "start": -3,
+        "stop": -2,
+        "limit": null,
+        "subset": [
+          "gg"
+        ]
+      }
+    ]
+  ]
+]

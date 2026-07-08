@@ -1,0 +1,44 @@
+{
+    "main": {
+        "$": true,
+        "set": {
+            "letters": ["aa", "bb", "cc", "dd", "ee", "ff", "gg", "hh", "ii"],
+            "starts": [null, 2, -3],
+            "stops": [null, 6, -2],
+            "limits": [null, 0, 4]
+        },
+        "foreach": {
+            "in": "$starts",
+            "var": "s"
+        },
+        "body": {
+            "$": true,
+            "foreach": {
+                "in": "$stops",
+                "var": "e"
+            },
+            "body": {
+                "$": true,
+                "foreach": {
+                    "in": "$limits",
+                    "var": "l"
+                },
+                "body": {
+                    "start": "$s",
+                    "stop": "$e",
+                    "limit": "$l",
+                    "subset": {
+                        "$": true,
+                        "foreach": {
+                            "in": "$letters",
+                            "start": "$s",
+                            "stop": "$e",
+                            "limit": "$l"
+                        },
+                        "body": "$."
+                    }
+                }
+            }
+        }
+    }
+}
