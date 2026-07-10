@@ -1,0 +1,7 @@
+{
+  "customer": { "name": "Heidi" },
+  "order": { "subtotal": 49.99, "taxRate": 0.0725 },
+  "items": [
+    { "name": "Mug" }
+  ]
+}

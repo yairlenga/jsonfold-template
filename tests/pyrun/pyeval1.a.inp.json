@@ -1,0 +1,9 @@
+{
+  "customer": { "name": "Grace" },
+  "order": { "subtotal": 100.0, "taxRate": 0.08 },
+  "items": [
+    { "name": "Book" },
+    { "name": "Pen" },
+    { "name": "Notebook" }
+  ]
+}
