@@ -6,6 +6,7 @@ name=
 
 case "${1-}" in
 	-mpython | -mpy ) shift ; mode=python ; JSONFOLD="$root/python/run.sh" ;;
+	-mpyrun ) shift ; mode=python ; JSONFOLD="$root/python/run.sh --all-plugins" ;;
 esac
 
 

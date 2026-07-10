@@ -1,11 +1,10 @@
 from __future__ import annotations
 from typing import Any, Literal, Optional, TextIO
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import re
 
 from logic import LogicStatement
-from py_expr import PyRunExprEngine
 from template import Template, Status, Error, Engine, Missing
 from core import CompileError, Condition, Environment, Evaluator, Expression, RenderError, Statement, Frame, Compiler, JFTLTemplate
 from runtime import NavigationExprNode
@@ -40,7 +39,13 @@ TYPE_ANY_REC = Union[
      dict[str, "TYPE_ANY_REC"],
 ]
 
+@dataclass
 class JFTLEngine(Engine, Compiler):
+
+    _plugins: dict[str, Any] = field(default_factory=dict)
+
+    def add_plugin(self, prefix: str, plugin: Any) -> None:
+        self._plugins[prefix] = plugin
 
     def compile(self, source: str | dict | list, where: str = "", *, main_only: bool = False) -> tuple[Template, list[Error]]:
         top = source if main_only else source.get("main")
@@ -65,11 +70,22 @@ class JFTLEngine(Engine, Compiler):
         
     def render_to(self, output: TextIO, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
 
+    # Call to natigation: $anchor... or $ancho[...]
     NAV_RE = re.compile(r"""
         \$
         (?P<head> | \^ | < | (?P<vars>\w+ ) )
         (?P<segments> $ | \[.* | \..* )
         $
+    """, re.VERBOSE)
+
+    # Call to expression engine: $prefix=expression
+    EXPR_RE = re.compile(r"""
+        \$
+        (?P<plugin> \w+ )
+        =
+        \s *
+        (?P<expr> .*)
+        $            
     """, re.VERBOSE)
 
     def _compile(self, source: Any, where: str = "") -> Statement | Expression:
@@ -129,17 +145,18 @@ class JFTLEngine(Engine, Compiler):
 
             # Consider python expression engines (hardcoded for now)
 
-                if source.startswith(EXPR_PYTHON):
-                    expr = source[len(EXPR_PYTHON):].strip()
-                    engine = PyRunExprEngine()
-                    return engine.compile(expr)
+            m = self.EXPR_RE.match(source)
+            if m:
+                plugin_id = m.group("plugin")
+                plugin = self._plugins.get(plugin_id, None)
+                if isinstance(plugin, Compiler):
+                    expr, _ = plugin.expression(m.group("expr"))
+                    return expr
 
-                else:
-                    raise CompileError(Error(
-                        code="BAD_EXPRESSION", severity="ERROR", where=where, location=None,
-                        message=f"Unknown Expression {source!r}",
-                    ))
-            return source
+            raise CompileError(Error(
+                code="BAD_EXPRESSION", severity="ERROR", where=where, location=None,
+                message=f"Unknown Expression {source!r}",
+                ))
         
         # Non string source
         raise CompileError(Error(
@@ -190,10 +207,6 @@ class JFTLEngine(Engine, Compiler):
 
     def statement(self, source: dict | str, where: str|None) -> tuple[Statement, list[Error]]:
         return self._compile(source), None
-
-
-EXPR_PREFIX = "$."  # e.g. "$.user.name" — later: other prefixes (e.g. $cel., $^) route to other engines
-EXPR_PYTHON = "$pyrun:"
 
 
 @dataclass

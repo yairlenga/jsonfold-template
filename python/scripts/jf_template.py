@@ -97,8 +97,14 @@ def main() -> int:
                         help="Fully compact, single-line output. Wins over --indent if both given.")
     parser.add_argument("-e", "--entry", default=None, metavar="NAME",
                         help="Macro entry point to render.")
-    parser.add_argument("--strict", action="store_true",
-                        help="Use strict engine mode (see create_engine(strict=...)).")
+
+    parser.add_argument("--no-plugins", "-N", action="store_true",
+                        help="Start with no registered plugins")
+    parser.add_argument("--all-plugins", "-A", action="store_true",
+                        help="Start with no registered plugins")
+    parser.add_argument("--enable", action="append", default=[], metavar="PLUGIN",
+                        choices=["pyrun", "pyeval", "cel", "simpleeval"],
+                        help="Enable an optional plugin. May be specified multiple times.")
 
     parser.add_argument("template", nargs="?", default=None, metavar="TEMPLATE",
                         help="Path to the template JSON file.")
@@ -117,7 +123,7 @@ def main() -> int:
     # --- read + compile the template ---
     template_path = args.template if args.template else "-"
     template_text, template_label = _read_text(template_path)
-    engine: Engine = create_engine(strict=args.strict)
+    engine = create_engine(all_plugins = args.all_plugins, no_plugins = args.no_plugins)
 
     t0 = time.perf_counter()
     try:

@@ -167,8 +167,9 @@ class LogicStatement(Statement):
             elif stop_index < 0:
                 stop_index = count + stop_index
             # Apply limit, if ix_limit is set
-            if ix_limit is not None and start_index + ix_limit < stop_index:
-                stop_index = start_index + ix_limit
+
+        if ix_limit is not None and (stop_index is None or start_index + ix_limit < stop_index):
+            stop_index = start_index + ix_limit
 
         new_vars = frame.vars
         # Process foreach loop

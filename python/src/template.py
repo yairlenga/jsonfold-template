@@ -31,7 +31,6 @@ class Missing(Diagnostic):
     def __getitem__(self, key: Any) -> "Missing":
         return self
 
-
 @dataclass
 class Status:
     ok: bool
@@ -42,7 +41,6 @@ class Status:
 class Template(ABC):
     @abstractmethod
     def valid(): bool: ...
-
 
 @dataclass
 class Engine(ABC):
@@ -60,6 +58,9 @@ class Engine(ABC):
     @abstractmethod
     def render_to(self, output: TextIO, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
 
+    @abstractmethod
+    def add_plugin(self, prefix: str, plugin: Any): ...
+
     # Execute a simple template (not wrapped in macros) as a top level item
     def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Status, Any, list[Error]]:
         template, errors = self.compile(source, main_only = main_only)
@@ -69,13 +70,27 @@ class Engine(ABC):
     def add_dataset(self, name: str, data: Any) -> None:
         self._datasets[name] = data
 
-def create_engine(*, strict: bool = True) -> Engine:
+def create_engine(*, no_plugins: bool = False, all_plugins: bool = False ) -> Engine:
     """strict=False (default) treats recoverable issues (over-'^' past root,
     unsafe navigation, etc.) as WARNING-severity and continues execution —
     useful during development when many such issues may surface at once.
     strict=True escalates the same conditions to ERROR and halts.
     Global per-engine for now; per-call override may be added later if needed."""
     from engine import JFTLEngine
-    return JFTLEngine()
+    engine = JFTLEngine()
+
+    if not no_plugins:
+        import py_expr
+        engine.add_plugin("py", py_expr.SimpleEvalPlugin())
+
+        if all_plugins :
+            import py_run
+            engine.add_plugin("pyeval", py_run.PyEvalPlugin())
+            engine.add_plugin("pyrun", py_run.PyRunPlugin())
+    
+    # Those are not installed by default.
+
+    return engine        
+
 
 MISSING_VALUE = Missing(code="MISSING", message="Unspecific MISSING", where=None, location=None)

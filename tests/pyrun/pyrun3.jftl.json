@@ -1,0 +1,15 @@
+{
+  "main": {
+    "$": true,
+    "set": {
+      "subtotal": "$.order.subtotal",
+      "taxRate": "$.order.taxRate"
+    },
+    "body": {
+      "customerName": "$.customer.name",
+      "total": "$pyeval= round(subtotal * (1 + taxRate), 2)",
+      "itemCount": "$pyeval= len(_input['items'])",
+      "itemSummary": "$pyeval= ', '.join([i['name'] for i in _input['items']])"
+    }
+  }
+}

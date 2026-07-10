@@ -8,10 +8,24 @@ from template import Engine, create_engine
 
 def test1():
     template = {
-        "test1": "$pyrun: 1+2",
-        "test2": "$pyrun: ','.join(['a',  'b', 'c', 'd', 'e'])",
+        "eval": {
+            "1+2": "$pyeval= 1+2",
+            "join(a-z)": "$pyeval= ','.join(['a',  'b', 'c', 'd', 'e'])",
+        },
+        "eval_var": {
+            "$": True,
+            "set": {
+                "foo": 100,
+                "bar": 200,
+                "list": ['a',  'b', 'c', 'd', 'e'],
+            },
+            "body": {
+                "foo+bar=": "$pyeval= foo + bar",
+                "join(list)=": "$pyeval= ','.join(list)"
+            }
+        }
     }
-    engine = create_engine()
+    engine = create_engine(all_plugins=True)
     status, result, errors = engine.compile_and_render(template, None, main_only=True)
     print(result)
 
