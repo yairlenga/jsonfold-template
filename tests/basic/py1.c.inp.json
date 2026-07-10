@@ -1,0 +1,5 @@
+{
+  "customer": { "name": "Ivan" },
+  "order": { "subtotal": 0, "taxRate": 0 },
+  "items": []
+}

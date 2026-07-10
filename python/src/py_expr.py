@@ -1,90 +1,100 @@
 """
-$pyrun: — arbitrary, fully-trusted Python expression evaluation.
-
-Protocol:
-  - ExprEngine is registered ONCE (e.g. engine.add_expr_engine("pyrun", PyRunExprEngine())).
-  - ExprEngine.compile(source_text, where) is called ONCE PER EXPRESSION, at
-    template compile time. It returns an Evaluator.
-  - Evaluator.eval(frame) / Evaluator.eval_bool(frame) are called at RUNTIME,
-    potentially many times (once per render, once per foreach iteration, etc.).
-
-No sandboxing, no AST filtering — this is the deliberate 'shell escape' mode,
-opt-in only via explicit registration. Input data still cannot become code on
-its own (it's only ever placed into the evaluation namespace as values), but
-if input objects carry real Python methods, those ARE callable from here.
+Evaluate Expressions using
 """
-import ast
-from abc import ABC, abstractmethod
+
+from dataclasses import InitVar, dataclass, field
 from typing import Any, Optional
 
-from core import Evaluator, Frame, CompileError
+from core import Compiler, Condition, Evaluator, Expression, Frame, Statement
+from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes
+
 from template import Error, Missing
 
-def _build_env(frame: Frame) -> dict[str, Any]:
-    """Walk the frame chain, closest scope wins: '_' + locals + parent vars."""
-    env: dict[str, Any] = {}
-    chain: list[Frame] = []
-    f: Optional[Frame] = frame
-    seen: set[int] = set()
-    while f is not None and id(f) not in seen:
-        chain.append(f)
-        seen.add(id(f))
-        if f.parent is f:
-            break
-        f = f.parent
-    for ancestor in reversed(chain):  # farthest ancestor first, closer scopes overwrite
-        env.update(ancestor.vars)
-    env["_"] = frame.current
-    env["_input"] = frame.env.input
-    return env
+@dataclass
+class SimpleEvalEvaluator(Statement, Expression, Condition):
+    se: SimpleEval
+    source: str
+    compiled: Any
 
-
-class PyRunEvaluator(Evaluator):
-    """One compiled '$pyrun:' expression."""
-
-    def __init__(self, code: Any, source_text: str, where: Optional[str]):
-        self._code = code
-        self._source = source_text
-        self._where = where
+    def _build_env(self, frame: Frame) -> dict[str, Any]:
+        """Walk the frame chain, closest scope wins: '_' + locals + parent vars."""
+        env: dict[str, Any] = DEFAULT_NAMES.copy()
+        chain: list[Frame] = []
+        f: Optional[Frame] = frame
+        seen: set[int] = set()
+        while f is not None and id(f) not in seen:
+            chain.append(f)
+            seen.add(id(f))
+            if f.parent is f:
+                break
+            f = f.parent
+        for ancestor in reversed(chain):  # farthest ancestor first, closer scopes overwrite
+            env.update(ancestor.vars)
+        env["_"] = frame.current
+        env["_input"] = frame.env.input
+        return env
 
     def eval(self, frame: Frame) -> Any | Error | Missing:
-        env = _build_env(frame)
-        try:
-            return eval(self._code, {"__builtins__": __builtins__}, env)
-        except Exception as e:
-            return Error(
-                code="PYRUN_RUNTIME_ERROR", severity="ERROR",
-                where=self._where, location=None,
-                message=f"error evaluating {self._source!r}: {e}",
-            )
-
-    def eval_bool(self, frame: Frame) -> bool | Error | Missing:
-        result = self.eval(frame)
-        if isinstance(result, (Error, Missing)):
+        se = self.se
+        se.names = self._build_env(frame)
+        return se.eval(self.source, self.compiled)
+    
+        # Using Python rules for falsyness. Can still return Missing, Error
+    def eval_cond(self, frame: Frame) -> Any | Error | Missing:
+        result = self.se.eval(self.source, previously_parsed=self.compiled,)
+        result = self.se.eval(self.source, previously_parsed=self.compiled,)
+        if isinstance(result, (Missing, Error)):
             return result
-        return bool(result)  # native Python truthiness — not JFTL's falsy rule
+        return bool(result)
+   
 
+@dataclass
+class SimpleEvalPlugin(Compiler):
+    simple_eval : SimpleEval | None= None
+    _se : SimpleEval = field(init=False)
 
-class PyRunExprEngine:
-    """Registered once (e.g. via engine.add_expr_engine('pyrun', PyRunExprEngine())).
-    Stateless — compile() is called once per '$pyrun:' expression found during
-    template compilation, and returns a PyRunEvaluator."""
+    def __post_init__(self) -> None:
+        self._se = self.simple_eval if self.simple_eval else self._default_simple_eval()
 
-    def compile(self, source_text: str, where: Optional[str] = None) -> Evaluator:
-        try:
-            tree = ast.parse(source_text, mode="eval")
-        except SyntaxError as e:
-            raise CompileError(Error(
-                code="INVALID_PYTHON", severity="ERROR", where=where, location=None,
-                message=f"invalid Python expression {source_text!r}: {e}",
-            ))
+    def _default_simple_eval(self) -> SimpleEval:
+        STRING_ATTRS = [
+            "join",
+            "lower",
+            "upper",
+            "strip",
+            "rstrip",
+            "startswith"
+            "endswith",
+            "replace",
+            "split"
+        ]
+        # Was SimpleEval, but it does not support comprehension 
+        se = EvalWithCompoundTypes(
+            allowed_attrs= { str: STRING_ATTRS }
+        )
+        se.functions = {
+            "len": len,
+            "min": min,
+            "max": max,
+            "sum": sum,
+            "round": round,
+            "range": range,
+            "sorted": sorted,
+        }
+        return se
 
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Lambda):
-                raise CompileError(Error(
-                    code="INVALID_PYTHON", severity="ERROR", where=where, location=None,
-                    message=f"lambda expressions are not allowed in {source_text!r}",
-                ))
+    def condition(self, source: str) -> tuple[Condition, Optional[list[Error]]]:
+        assert isinstance(source, str)
+        compiled = self._se.parse(source)
+        return SimpleEvalEvaluator(self._se, source, compiled), None
 
-        code = compile(tree, filename="<jftl-pyrun-expr>", mode="eval")
-        return PyRunEvaluator(code, source_text, where)
+    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[Error]]]:
+        assert isinstance(source, str)
+        compiled = self._se.parse(source)
+        return SimpleEvalEvaluator(self._se, source, compiled), None
+
+    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[Error]]]:
+        assert isinstance(source, str)
+        compiled = self._se.parse(source)
+        return SimpleEvalEvaluator(self._se, source, compiled), None
+

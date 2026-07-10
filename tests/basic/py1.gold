@@ -1,0 +1,18 @@
+{
+  "customerName": "Grace",
+  "total": 108.0,
+  "itemCount": 3,
+  "itemSummary": "Book, Pen, Notebook"
+}
+{
+  "customerName": "Heidi",
+  "total": 53.61,
+  "itemCount": 1,
+  "itemSummary": "Mug"
+}
+{
+  "customerName": "Ivan",
+  "total": 0,
+  "itemCount": 0,
+  "itemSummary": ""
+}

@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/python/scripts/jf_template.py",
             "console": "integratedTerminal",
-            "args": [ "-v", "tests/basic/foreach_bounds.jftl.json"],
+            "args": [ "-v", "--all-plugins", "tests/basic/py1.jftl.json", "tests/basic/py1.a.inp.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
             }
@@ -19,7 +19,7 @@
             "name": "Python: test",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/python/tests/test_nav_node.py",
+            "program": "${workspaceFolder}/python/tests/test_pyrun.py",
             "console": "integratedTerminal",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
