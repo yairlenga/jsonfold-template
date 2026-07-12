@@ -11,7 +11,7 @@
 #
 # Same caveats as chunks 1-2: not engine-verified, best-effort tier calls.
 
-[197-skip]
+[197-paths]
 JQ = {{{
 path(.foo[0,1])
 }}}
@@ -24,7 +24,7 @@ EXPECTED = {{{
 }}}
 SKIP=path() introspection (paths as data) has no JFTL equivalent.
 
-[198-skip]
+[198-paths]
 JQ = {{{
 path(.[] | select(.>3))
 }}}
@@ -36,7 +36,7 @@ EXPECTED = {{{
 }}}
 SKIP=same as 197.
 
-[199-skip]
+[199-paths]
 JQ = {{{
 path(.)
 }}}
@@ -48,7 +48,7 @@ EXPECTED = {{{
 }}}
 SKIP=same as 197.
 
-[200-skip]
+[200-paths]
 JQ = {{{
 try path(.a | map(select(.b == 0))) catch .
 }}}
@@ -60,7 +60,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs path() and try/catch, neither implemented.
 
-[201-skip]
+[201-paths]
 JQ = {{{
 try path(.a | map(select(.b == 0)) | .[0]) catch .
 }}}
@@ -72,7 +72,7 @@ EXPECTED = {{{
 }}}
 SKIP=same as 200.
 
-[202-skip]
+[202-paths]
 JQ = {{{
 try path(.a | map(select(.b == 0)) | .c) catch .
 }}}
@@ -84,7 +84,7 @@ EXPECTED = {{{
 }}}
 SKIP=same as 200.
 
-[203-skip]
+[203-paths]
 JQ = {{{
 try path(.a | map(select(.b == 0)) | .[]) catch .
 }}}
@@ -96,7 +96,7 @@ EXPECTED = {{{
 }}}
 SKIP=same as 200.
 
-[204-skip]
+[204-paths]
 JQ = {{{
 path(.a[path(.b)[0]])
 }}}
@@ -108,7 +108,7 @@ EXPECTED = {{{
 }}}
 SKIP=nested path(), same limitation as 197.
 
-[205-skip]
+[205-paths]
 JQ = {{{
 [paths]
 }}}
@@ -120,7 +120,7 @@ EXPECTED = {{{
 }}}
 SKIP=paths/0 walks every path in the structure recursively; needs both path() and recursive descent, neither available.
 
-[206-py]
+[206-paths]
 LEVEL=py
 JQ = {{{
 ["foo",1] as $p | getpath($p), setpath($p; 20), delpaths([$p])
@@ -139,7 +139,7 @@ JFTL = {{{
 TRANSFORM=stream
 COMMENT=Path ["foo",1] is a fixed literal for this test, so getpath became plain navigation and setpath/delpaths became hand-built dict-spread rebuilds — not a general getpath/setpath/delpaths. Streaming 3 outputs collected into one array.
 
-[207-py]
+[207-paths]
 LEVEL=py
 JQ = {{{
 map(getpath([2])), map(setpath([2]; 42)), map(delpaths([[2]]))
@@ -157,7 +157,7 @@ JFTL = {{{
 }}}
 COMMENT=Index 2 is a fixed literal here; the setpath branch pads short arrays with null before writing index 2 — hand-built for this one index, not a general setpath.
 
-[208-py]
+[208-paths]
 LEVEL=py
 JQ = {{{
 map(delpaths([[0,"foo"]]))
@@ -174,7 +174,7 @@ JFTL = {{{
 COMMENT=dict comprehension with .items() — .items() isn't in the whitelisted str-only attrs, but dict.items() specifically... actually this needs eval, not py; flagging the mistake: retag as eval since .items() isn't reachable at py tier.
 LEVEL=eval
 
-[209-py]
+[209-paths]
 LEVEL=py
 JQ = {{{
 ["foo",1] as $p | getpath($p), setpath($p; 20), delpaths([$p])
@@ -192,7 +192,7 @@ JFTL = {{{
 }}}
 COMMENT=setpath here has to auto-vivify a missing "foo" key as a padded array — hand-built for this exact path, not general auto-vivification. delpaths on a missing path is a no-op, so just "$py=_" (identity).
 
-[210-nav]
+[210-paths]
 LEVEL=nav
 JQ = {{{
 delpaths([[-200]])
@@ -208,7 +208,7 @@ JFTL = {{{
 }}}
 COMMENT=Out-of-range path is a no-op in jq — result equals input exactly, so pure identity nav.
 
-[211-skip]
+[211-paths]
 JQ = {{{
 try delpaths(0) catch .
 }}}
@@ -220,7 +220,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[212-skip]
+[212-paths]
 JQ = {{{
 del(.), del(empty), del((.foo,.bar,.baz) | .[2,3,0]), del(.foo[0], .bar[0], .foo, .baz.bar[0].x)
 }}}
@@ -235,7 +235,7 @@ null
 }}}
 SKIP=compound multi-path deletion test (4 sub-cases including sequential deletions where later deletes depend on earlier ones); not a good effort/value tradeoff to hand-build.
 
-[213-py]
+[213-paths]
 LEVEL=py
 JQ = {{{
 del(.[1], .[-6], .[2], .[-3:9])
@@ -251,7 +251,7 @@ JFTL = {{{
 }}}
 COMMENT=Hand-built for these specific index/slice literals, following the same range()-membership pattern as the earlier multi-path-delete test.
 
-[214-nav]
+[214-paths]
 SKIP=JQ Infinite Loop (jq 1.7)
 LEVEL=nav
 JQ = {{{
@@ -268,7 +268,7 @@ JFTL = {{{
 }}}
 COMMENT=nan never matches a valid index, so this is always a no-op — pure identity.
 
-[215-nav]
+[215-paths]
 SKIP=JQ Infinite Loop (jq 1.7)
 LEVEL=nav
 JQ = {{{
@@ -284,7 +284,7 @@ JFTL = {{{
 {"main": "$."}
 }}}
 
-[216-py]
+[216-paths]
 LEVEL=py
 COMMENT=negative index
 JQ = {{{
@@ -300,7 +300,7 @@ JFTL = {{{
 {"main": "$py=_[:-1] + [1]"}
 }}}
 
-[217-nav]
+[217-paths]
 LEVEL=nav
 JQ = {{{
 pick(.a.b.c)
@@ -316,7 +316,7 @@ JFTL = {{{
 }}}
 COMMENT=Input is null, so the picked leaf is always null regardless — the whole result is a fixed literal skeleton for this input, hence nav tier.
 
-[218-py]
+[218-paths]
 LEVEL=py
 JQ = {{{
 pick(first)
@@ -332,7 +332,7 @@ JFTL = {{{
 }}}
 COMMENT=pick(first) preserves array shape with only the first element — slicing reproduces that for this input.
 
-[219-py]
+[219-paths]
 LEVEL=py
 JQ = {{{
 pick(first|first)
@@ -347,7 +347,7 @@ JFTL = {{{
 {"main": "$py=[_[0][:1]]"}
 }}}
 
-[220-skip]
+[220-paths]
 COMMENT=negative indices in path expressions (since last/1 is .[-1])
 JQ = {{{
 try pick(last) catch .
@@ -360,7 +360,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[221-py]
+[221-paths]
 LEVEL=py
 JQ = {{{
 .message = "goodbye"
@@ -376,7 +376,7 @@ JFTL = {{{
 }}}
 COMMENT=No in-place path assignment; dict-spread rebuild preserves any other keys, unlike a bare literal replacement would.
 
-[222-py]
+[222-paths]
 LEVEL=py
 JQ = {{{
 .foo = .bar
@@ -391,7 +391,7 @@ JFTL = {{{
 {"main": "$py={**_, 'foo': _['bar'] if 'bar' in _ else None}"}
 }}}
 
-[223-py]
+[223-paths]
 LEVEL=py
 JQ = {{{
 .foo |= .+1
@@ -406,7 +406,7 @@ JFTL = {{{
 {"main": "$py={**_, 'foo': _['foo'] + 1}"}
 }}}
 
-[224-py]
+[224-paths]
 LEVEL=py
 JQ = {{{
 .[] += 2, .[] *= 2, .[] -= 2, .[] /= 2, .[] %=2
@@ -427,7 +427,7 @@ JFTL = {{{
 TRANSFORM=stream
 COMMENT=Streaming 5 outputs collected into one array.
 
-[225-py]
+[225-paths]
 LEVEL=py
 JQ = {{{
 [.[] % 7]
@@ -443,7 +443,7 @@ JFTL = {{{
 }}}
 COMMENT=Assumes Python's % matches jq's here for negative operands — worth spot-checking, sign-of-remainder conventions differ between languages in general.
 
-[226-py]
+[226-paths]
 LEVEL=py
 JQ = {{{
 .foo += .foo
@@ -458,7 +458,7 @@ JFTL = {{{
 {"main": "$py={**_, 'foo': _['foo'] + _['foo']}"}
 }}}
 
-[227-py]
+[227-paths]
 LEVEL=py
 JQ = {{{
 .[0].a |= {"old":., "new":(.+1)}
@@ -473,7 +473,7 @@ JFTL = {{{
 {"main": "$py=[{**_[0], 'a': {'old': _[0]['a'], 'new': _[0]['a'] + 1}}] + _[1:]"}
 }}}
 
-[228-skip]
+[228-paths]
 JQ = {{{
 def inc(x): x |= .+1; inc(.[].a)
 }}}
@@ -485,7 +485,7 @@ EXPECTED = {{{
 }}}
 SKIP=no def construct.
 
-[229-skip]
+[229-paths]
 COMMENT=#1358, getpath/1 should work in path expressions
 JQ = {{{
 .[] | try (getpath(["a",0,"b"]) |= 5) catch .
@@ -505,7 +505,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch and generic getpath-as-a-path-expression assignment.
 
-[230-py]
+[230-paths]
 LEVEL=py
 COMMENT=#2051, deletion using assigning empty against arrays
 JQ = {{{
@@ -521,7 +521,7 @@ JFTL = {{{
 {"main": "$py=[v for v in _ if not (v >= 2)]"}
 }}}
 
-[231-py]
+[231-paths]
 LEVEL=py
 JQ = {{{
 .[] |= select(. % 2 == 0)
@@ -536,7 +536,7 @@ JFTL = {{{
 {"main": "$py=[v for v in _ if v % 2 == 0]"}
 }}}
 
-[232-py]
+[232-paths]
 LEVEL=py
 JQ = {{{
 .foo[1,4,2,3] |= empty
@@ -551,7 +551,7 @@ JFTL = {{{
 {"main": "$py={**_, 'foo': [_['foo'][i] for i in range(len(_['foo'])) if i not in (1,4,2,3)]}"}
 }}}
 
-[233-py]
+[233-paths]
 LEVEL=py
 JQ = {{{
 .[2][3] = 1
@@ -567,7 +567,7 @@ JFTL = {{{
 }}}
 COMMENT=Hand-built auto-vivification for these exact literal indices (2,3) and value (1) — not a general nested setpath.
 
-[234-py]
+[234-paths]
 LEVEL=py
 JQ = {{{
 .foo[2].bar = 1
@@ -583,7 +583,7 @@ JFTL = {{{
 }}}
 COMMENT=Same hand-built auto-vivification caveat as 233.
 
-[235-skip]
+[235-paths]
 JQ = {{{
 try ((map(select(.a == 1))[].b) = 10) catch .
 }}}
@@ -595,7 +595,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch and path-expression validity errors.
 
-[236-skip]
+[236-paths]
 JQ = {{{
 try ((map(select(.a == 1))[].a) |= .+1) catch .
 }}}
@@ -607,7 +607,7 @@ EXPECTED = {{{
 }}}
 SKIP=same as 235.
 
-[237-skip]
+[237-paths]
 JQ = {{{
 def x: .[1,2]; x=10
 }}}
@@ -619,7 +619,7 @@ EXPECTED = {{{
 }}}
 SKIP=no def construct.
 
-[238-skip]
+[238-paths]
 JQ = {{{
 try (def x: reverse; x=10) catch .
 }}}
@@ -631,7 +631,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs def and try/catch.
 
-[239-py]
+[239-paths]
 LEVEL=py
 JQ = {{{
 .[] = 1

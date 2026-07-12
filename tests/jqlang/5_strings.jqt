@@ -20,7 +20,7 @@
 #
 # Same caveats as chunks 1-4: not engine-verified, best-effort tier calls.
 
-[284-py]
+[284-strings]
 LEVEL=py
 JQ = {{{
 [.[]|startswith("foo")]
@@ -36,7 +36,7 @@ JFTL = {{{
 }}}
 COMMENT=Relies on startswith actually being reachable in your whitelist once the missing-comma bug (flagged back in chunk 1) is fixed.
 
-[285-py]
+[285-strings]
 LEVEL=py
 JQ = {{{
 [.[]|endswith("foo")]
@@ -51,7 +51,7 @@ JFTL = {{{
 {"main": "$py=[v.endswith('foo') for v in _]"}
 }}}
 
-[286-py]
+[286-strings]
 LEVEL=py
 JQ = {{{
 [.[] | split(", ")]
@@ -66,7 +66,7 @@ JFTL = {{{
 {"main": "$py=[v.split(', ') for v in _]"}
 }}}
 
-[287-py]
+[287-strings]
 LEVEL=py
 JQ = {{{
 split("")
@@ -82,7 +82,7 @@ JFTL = {{{
 }}}
 COMMENT=Python's str.split('') raises ValueError (empty separator not allowed), so used a plain character comprehension instead of .split().
 
-[288-py]
+[288-strings]
 LEVEL=py
 JQ = {{{
 [.[]|ltrimstr("foo")]
@@ -97,7 +97,7 @@ JFTL = {{{
 {"main": "$py=[(v[3:] if v.startswith('foo') else v) for v in _]"}
 }}}
 
-[289-py]
+[289-strings]
 LEVEL=py
 JQ = {{{
 [.[]|rtrimstr("foo")]
@@ -112,7 +112,7 @@ JFTL = {{{
 {"main": "$py=[(v[:-3] if v.endswith('foo') else v) for v in _]"}
 }}}
 
-[290-py]
+[290-strings]
 LEVEL=py
 JQ = {{{
 [.[]|trimstr("foo")]
@@ -128,7 +128,7 @@ JFTL = {{{
 }}}
 COMMENT=Chained ltrimstr-then-rtrimstr inline — readable is a stretch here, but stays in-grammar.
 
-[291-nav]
+[291-strings]
 LEVEL=nav
 JQ = {{{
 [.[]|ltrimstr("")]
@@ -144,7 +144,7 @@ JFTL = {{{
 }}}
 COMMENT=Trimming an empty prefix is always a no-op — pure identity.
 
-[292-nav]
+[292-strings]
 LEVEL=nav
 JQ = {{{
 [.[]|rtrimstr("")]
@@ -159,7 +159,7 @@ JFTL = {{{
 {"main": "$."}
 }}}
 
-[293-nav]
+[293-strings]
 LEVEL=nav
 JQ = {{{
 [.[]|trimstr("")]
@@ -174,7 +174,7 @@ JFTL = {{{
 {"main": "$."}
 }}}
 
-[294-py]
+[294-strings]
 LEVEL=py
 JQ = {{{
 [(index(","), rindex(",")), indices(",")]
@@ -190,7 +190,7 @@ JFTL = {{{
 }}}
 COMMENT=index/rindex via min()/max() over a filtered range() comprehension, avoiding str.find/rfind entirely — stays at py tier.
 
-[295-py]
+[295-strings]
 LEVEL=py
 JQ = {{{
 [ index("aba"), rindex("aba"), indices("aba") ]
@@ -206,7 +206,7 @@ JFTL = {{{
 }}}
 COMMENT=Same min/max/range trick, using a slice comparison to find (overlapping) substring matches instead of find().
 
-[296-skip]
+[296-strings]
 COMMENT=_strindices is used by indices/1 but is callable
 JQ = {{{
 try _strindices("abc") catch .
@@ -219,7 +219,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch and jq's internal _strindices builtin.
 
-[297-skip]
+[297-strings]
 JQ = {{{
 try _strindices(123) catch .
 }}}
@@ -231,7 +231,7 @@ EXPECTED = {{{
 }}}
 SKIP=same as 296.
 
-[298-py]
+[298-strings]
 LEVEL=py
 COMMENT = {{{
 trim
@@ -255,7 +255,7 @@ TRANSFORM=stream
 SKIP=JQ 1.7 does not have trim,ltrim,rtrim
 COMMENT=No lstrip in the whitelist — ltrim done via reverse/rstrip/reverse-back instead. Streaming 3 outputs collected into one array.
 
-[299-py]
+[299-strings]
 LEVEL=py
 JQ = {{{
 trim, ltrim, rtrim
@@ -273,7 +273,7 @@ JFTL = {{{
 }}}
 COMMENT=Assumes Python's str.strip() treats this exact set of Unicode whitespace codepoints the same as jq's trim — worth spot-checking, not independently verified codepoint-by-codepoint.
 
-[300-skip]
+[300-strings]
 JQ = {{{
 try trim catch ., try ltrim catch ., try rtrim catch .
 }}}
@@ -287,7 +287,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[301-py]
+[301-strings]
 LEVEL=py
 JQ = {{{
 indices(1)
@@ -303,7 +303,7 @@ JFTL = {{{
 }}}
 COMMENT=indices() over an array with a scalar needle.
 
-[302-py]
+[302-strings]
 LEVEL=py
 JQ = {{{
 indices([1,2])
@@ -319,7 +319,7 @@ JFTL = {{{
 }}}
 COMMENT=indices() with an array (sub-sequence) needle — same slice-comparison trick as string substring search.
 
-[303-py]
+[303-strings]
 LEVEL=py
 JQ = {{{
 indices([1,2])
@@ -334,7 +334,7 @@ JFTL = {{{
 {"main": "$py=[i for i in range(len(_)) if _[i:i+2]==[1,2]]"}
 }}}
 
-[304-py]
+[304-strings]
 LEVEL=py
 JQ = {{{
 indices(", ")
@@ -349,7 +349,7 @@ JFTL = {{{
 {"main": "$py=[i for i in range(len(_)) if _[i:i+2]==', ']"}
 }}}
 
-[305-py]
+[305-strings]
 LEVEL=py
 JQ = {{{
 index("!")
@@ -365,7 +365,7 @@ JFTL = {{{
 }}}
 COMMENT=Assumes Python's codepoint-based string indexing lines up with jq's here for this Cyrillic string — not independently verified.
 
-[306-py]
+[306-strings]
 LEVEL=py
 JQ = {{{
 .[:rindex("x")]
@@ -380,7 +380,7 @@ JFTL = {{{
 {"main": "$py=_[:max(i for i in range(len(_)) if _[i]=='x')]"}
 }}}
 
-[307-py]
+[307-strings]
 LEVEL=py
 JQ = {{{
 indices("o")
@@ -396,7 +396,7 @@ JFTL = {{{
 }}}
 COMMENT=Only works if Python's codepoint indexing agrees with jq's on the flag-emoji sequence (2 regional-indicator codepoints) — the expected [2,3] implies both sides count it as 2 positions, not 1 grapheme cluster; not independently verified.
 
-[308-py]
+[308-strings]
 LEVEL=py
 JQ = {{{
 indices("o")
@@ -411,7 +411,7 @@ JFTL = {{{
 {"main": "$py=[i for i in range(len(_)) if _[i]=='o']"}
 }}}
 
-[309-py]
+[309-strings]
 LEVEL=py
 JQ = {{{
 [.[]|split(",")]
@@ -426,7 +426,7 @@ JFTL = {{{
 {"main": "$py=[v.split(',') for v in _]"}
 }}}
 
-[310-py]
+[310-strings]
 LEVEL=py
 JQ = {{{
 [.[]|split(", ")]
@@ -441,7 +441,7 @@ JFTL = {{{
 {"main": "$py=[v.split(', ') for v in _]"}
 }}}
 
-[311-py]
+[311-strings]
 LEVEL=py
 JQ = {{{
 [.[] * 3]
@@ -456,7 +456,7 @@ JFTL = {{{
 {"main": "$py=[v * 3 for v in _]"}
 }}}
 
-[312-eval]
+[312-strings]
 LEVEL=eval
 JQ = {{{
 [.[] * "abc"]
@@ -472,7 +472,7 @@ JFTL = {{{
 }}}
 COMMENT=jq truncates the fractional repeat count toward zero (1.5 -> 1 repeat, not 2); int() isn't in the py whitelist and round() rounds-to-nearest rather than truncating, so this needs eval.
 
-[313-nav]
+[313-strings]
 LEVEL=nav
 JQ = {{{
 [. * (nan,-nan)]
@@ -488,7 +488,7 @@ JFTL = {{{
 }}}
 COMMENT=nan multiplier is always null in jq regardless of sign — matches this exact input/output pair as a literal, doesn't generalize.
 
-[314-py]
+[314-strings]
 LEVEL=py
 JQ = {{{
 . * 100000 | [.[:10],.[-10:]]
@@ -503,7 +503,7 @@ JFTL = {{{
 {"main": "$py=[(_ * 100000)[:10], (_ * 100000)[-10:]]"}
 }}}
 
-[315-py]
+[315-strings]
 LEVEL=py
 JQ = {{{
 . * 1000000000
@@ -519,7 +519,7 @@ JFTL = {{{
 }}}
 COMMENT=Empty string times anything is still empty, so this is cheap despite the large multiplier.
 
-[316-skip]
+[316-strings]
 JQ = {{{
 try (. * 1000000000) catch .
 }}}
@@ -531,7 +531,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch and a resource-limit error jq enforces that Python string multiplication doesn't.
 
-[317-py]
+[317-strings]
 LEVEL=py
 JQ = {{{
 [.[] / ","]
@@ -547,7 +547,7 @@ JFTL = {{{
 }}}
 COMMENT=jq overloads "/" as split() for two strings — same underlying feature as 309, different jq spelling.
 
-[318-py]
+[318-strings]
 LEVEL=py
 JQ = {{{
 [.[] / ", "]
@@ -562,7 +562,7 @@ JFTL = {{{
 {"main": "$py=[v.split(', ') for v in _]"}
 }}}
 
-[319-py]
+[319-strings]
 LEVEL=py
 JQ = {{{
 map(.[1] as $needle | .[0] | contains($needle))
@@ -578,7 +578,7 @@ JFTL = {{{
 }}}
 COMMENT=Array contains() here reduces to "every needle element is a member of the haystack array" since elements are plain scalars — doesn't cover jq's fuller recursive containment for nested containers.
 
-[320-py]
+[320-strings]
 LEVEL=py
 JQ = {{{
 map(.[1] as $needle | .[0] | contains($needle))
@@ -594,7 +594,7 @@ JFTL = {{{
 }}}
 COMMENT=Here containment is substring-based (needle strings need only be a substring of some haystack string, not an exact match) — Python's "in" does substring checks naturally for str-in-str.
 
-[321-nav]
+[321-strings]
 LEVEL=nav
 JQ = {{{
 [({foo: 12, bar:13} | contains({foo: 12})), ({foo: 12} | contains({})), ({foo: 12, bar:13} | contains({baz:14}))]
@@ -610,7 +610,7 @@ JFTL = {{{
 }}}
 COMMENT=All operands are literals embedded in the jq program itself, and input ({}) is never referenced — fully deterministic, hence a pure literal.
 
-[322-nav]
+[322-strings]
 LEVEL=nav
 JQ = {{{
 {foo: {baz: 12, blap: {bar: 13}}, bar: 14} | contains({bar: 14, foo: {blap: {}}})
@@ -625,7 +625,7 @@ JFTL = {{{
 {"main": true}
 }}}
 
-[323-nav]
+[323-strings]
 LEVEL=nav
 JQ = {{{
 {foo: {baz: 12, blap: {bar: 13}}, bar: 14} | contains({bar: 14, foo: {blap: {bar: 14}}})

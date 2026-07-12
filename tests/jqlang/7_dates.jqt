@@ -24,7 +24,7 @@
 # an intermediate value made the expression far more readable than repeating
 # an expensive call many times over.
 
-[361-eval]
+[361-dates]
 LEVEL=eval
 JQ = {{{
 bsearch(0,1,2,3,4)
@@ -45,7 +45,7 @@ JFTL = {{{
 TRANSFORM=stream
 COMMENT=Walrus (:=) inside the comprehension's "if" clause binds bisect_left's result once per iteration without needing a lambda; "or True" makes that filter clause always pass. Streaming jq's 5 outputs collected into one array.
 
-[362-skip]
+[362-dates]
 JQ = {{{
 bsearch({x:1})
 }}}
@@ -57,7 +57,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs a dict-aware comparator for bsearch; Python's bisect can't order dicts, and building one without lambda/def isn't worth it for one test.
 
-[363-skip]
+[363-dates]
 JQ = {{{
 try ["OK", bsearch(0)] catch ["KO",.]
 }}}
@@ -69,7 +69,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[364-eval]
+[364-dates]
 LEVEL=eval
 JQ = {{{
 strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -85,7 +85,7 @@ JFTL = {{{
 }}}
 COMMENT=Month field needs +1 to convert jq's 0-indexed month back to Python's 1-indexed tm_mon. This format string doesn't use %a/%A/%j, so the dummy wday/yday/isdst padding (0,1,0) never actually gets read.
 
-[365-eval]
+[365-dates]
 LEVEL=eval
 JQ = {{{
 strftime("%A, %B %d, %Y")
@@ -101,7 +101,7 @@ JFTL = {{{
 }}}
 COMMENT=Timestamp input, so gmtime() computes weekday/month correctly on its own — no manual field math needed here, unlike the array-input cases.
 
-[366-eval]
+[366-dates]
 LEVEL=eval
 JQ = {{{
 strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -117,7 +117,7 @@ JFTL = {{{
 }}}
 COMMENT=Input array only has 3 fields; padded missing hour/min/sec with 0, matching jq's apparent default here.
 
-[367-eval]
+[367-dates]
 LEVEL=eval
 JQ = {{{
 mktime
@@ -133,7 +133,7 @@ JFTL = {{{
 }}}
 COMMENT=calendar.timegm treats its tuple as UTC (unlike time.mktime, which is local-time and would be wrong here) — same month-offset and padding as 366.
 
-[368-run]
+[368-dates]
 LEVEL=run
 JQ = {{{
 gmtime
@@ -149,7 +149,7 @@ JFTL = {{{
 }}}
 COMMENT=Bound gmtime(_) once via a real local variable (run tier) instead of calling it 8 times in one giant expression — applies all three offset rules from the chunk header, plus recombining the fractional-second remainder that tm_sec alone would drop.
 
-[369-eval]
+[369-dates]
 LEVEL=eval
 JQ = {{{
 gmtime[5]
@@ -165,7 +165,7 @@ JFTL = {{{
 }}}
 COMMENT=Only the seconds field is needed here, so a single (mildly redundant) expression is fine without dropping to run tier.
 
-[370-skip]
+[370-dates]
 COMMENT=test invalid tm input
 JQ = {{{
 try strftime("%Y-%m-%dT%H:%M:%SZ") catch .
@@ -178,7 +178,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[371-skip]
+[371-dates]
 JQ = {{{
 try strflocaltime("%Y-%m-%dT%H:%M:%SZ") catch .
 }}}
@@ -190,7 +190,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[372-skip]
+[372-dates]
 JQ = {{{
 try mktime catch .
 }}}
@@ -202,7 +202,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[373-skip]
+[373-dates]
 COMMENT=oss-fuzz #67403: non-string argument with number input fails assert
 JQ = {{{
 try ["OK", strftime([])] catch ["KO", .]
@@ -215,7 +215,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[374-skip]
+[374-dates]
 JQ = {{{
 try ["OK", strflocaltime({})] catch ["KO", .]
 }}}
@@ -227,7 +227,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[375-run]
+[375-dates]
 LEVEL=run
 JQ = {{{
 [strptime("%Y-%m-%dT%H:%M:%SZ")|(.,mktime)]

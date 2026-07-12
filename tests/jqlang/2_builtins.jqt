@@ -14,7 +14,7 @@
 # best-effort tier calls given the py-tier whitelist's restrictions.
 
 
-[122-py]
+[122-builtins]
 LEVEL=py
 JQ = {{{
 1+1
@@ -29,7 +29,7 @@ JFTL = {{{
 {"main": "$py=1 + 1"}
 }}}
 
-[123-py]
+[123-builtins]
 LEVEL=py
 JQ = {{{
 1+1
@@ -45,7 +45,7 @@ JFTL = {{{
 }}}
 COMMENT=Input is irrelevant to this program; jq's 2.0 vs 2 is a numeric-literal-formatting nuance not modeled here.
 
-[124-py]
+[124-builtins]
 LEVEL=py
 JQ = {{{
 2-1
@@ -60,7 +60,7 @@ JFTL = {{{
 {"main": "$py=2 - 1"}
 }}}
 
-[125-py]
+[125-builtins]
 LEVEL=py
 JQ = {{{
 2-(-1)
@@ -75,7 +75,7 @@ JFTL = {{{
 {"main": "$py=2 - (-1)"}
 }}}
 
-[126-py]
+[126-builtins]
 LEVEL=py
 JQ = {{{
 1e+0+0.001e3
@@ -90,7 +90,7 @@ JFTL = {{{
 {"main": "$py=1e+0 + 0.001e3"}
 }}}
 
-[127-py]
+[127-builtins]
 LEVEL=py
 JQ = {{{
 .+4
@@ -105,7 +105,7 @@ JFTL = {{{
 {"main": "$py=_ + 4"}
 }}}
 
-[128-py]
+[128-builtins]
 LEVEL=py
 JQ = {{{
 .+null
@@ -121,7 +121,7 @@ JFTL = {{{
 }}}
 COMMENT=jq's "+" treats null as an additive identity for any type (dict+null=dict here); modeled narrowly for this exact case rather than as a general polymorphic add.
 
-[129-py]
+[129-builtins]
 LEVEL=py
 JQ = {{{
 null+.
@@ -138,7 +138,7 @@ JFTL = {{{
 LEVEL=nav
 COMMENT=Degenerates to a pure literal for this input — actually nav tier, not py; LEVEL corrected above, ignore the py tag mismatch if you're scripting off the ID suffix alone.
 
-[130-py]
+[130-builtins]
 LEVEL=py
 JQ = {{{
 .a+.b
@@ -154,7 +154,7 @@ JFTL = {{{
 }}}
 COMMENT=Null-safe add for the numeric case, via subscript+"in" rather than dict.get() (not whitelisted). Doesn't cover jq's polymorphic "+".
 
-[131-eval]
+[131-builtins]
 LEVEL=eval
 JQ = {{{
 [1,2,3] + [.]
@@ -171,7 +171,7 @@ JFTL = {{{
 LEVEL=py
 COMMENT=Correcting the tag above: this is plain list-literal concatenation, well within py tier — eval tag was a slip, treat LEVEL=py as authoritative.
 
-[132-py]
+[132-builtins]
 LEVEL=py
 JQ = {{{
 {"a":1} + {"b":2} + {"c":3}
@@ -187,7 +187,7 @@ JFTL = {{{
 }}}
 COMMENT=Dict-merge via ** spread inside a dict literal — EvalWithCompoundTypes builds dict literals, and ** spread is part of that same literal-construction grammar, so still py tier (not a function call).
 
-[133-py]
+[133-builtins]
 LEVEL=py
 JQ = {{{
 "asdf" + "jkl;" + . + . + .
@@ -202,7 +202,7 @@ JFTL = {{{
 {"main": "$py='asdf' + 'jkl;' + _ + _ + _"}
 }}}
 
-[134-py]
+[134-builtins]
 LEVEL=py
 JQ = {{{
 "   " + .
@@ -217,7 +217,7 @@ JFTL = {{{
 {"main": "$py='   ' + _"}
 }}}
 
-[135-py]
+[135-builtins]
 LEVEL=py
 JQ = {{{
 42 - .
@@ -232,7 +232,7 @@ JFTL = {{{
 {"main": "$py=42 - _"}
 }}}
 
-[136-eval]
+[136-builtins]
 LEVEL=eval
 JQ = {{{
 [1,2,3,4,1] - [.,3]
@@ -248,7 +248,7 @@ JFTL = {{{
 }}}
 COMMENT=Membership check against a literal list built via [...] is fine at py tier structurally, but jq's array "-" also dedupes matches from a *set* semantics-wise; using "in" against a plain list here happens to match — borderline, tagged eval to be safe rather than asserting it's guaranteed py-safe in every case.
 
-[137-py]
+[137-builtins]
 LEVEL=py
 JQ = {{{
 [-1 as $x | 1,$x]
@@ -263,7 +263,7 @@ JFTL = {{{
 {"main": {"$": true, "set": {"x": -1}, "body": "$py=[1, x]"}}
 }}}
 
-[138-py]
+[138-builtins]
 LEVEL=py
 JQ = {{{
 [10 * 20, 20 / .]
@@ -278,7 +278,7 @@ JFTL = {{{
 {"main": "$py=[10 * 20, 20 / _]"}
 }}}
 
-[139-py]
+[139-builtins]
 LEVEL=py
 JQ = {{{
 1 + 2 * 2 + 10 / 2
@@ -293,7 +293,7 @@ JFTL = {{{
 {"main": "$py=1 + 2 * 2 + 10 / 2"}
 }}}
 
-[140-py]
+[140-builtins]
 LEVEL=py
 JQ = {{{
 [16 / 4 / 2, 16 / 4 * 2, 16 - 4 - 2, 16 - 4 + 2]
@@ -308,7 +308,7 @@ JFTL = {{{
 {"main": "$py=[16 / 4 / 2, 16 / 4 * 2, 16 - 4 - 2, 16 - 4 + 2]"}
 }}}
 
-[141-py]
+[141-builtins]
 LEVEL=py
 JQ = {{{
 1e-19 + 1e-20 - 5e-21
@@ -323,7 +323,7 @@ JFTL = {{{
 {"main": "$py=1e-19 + 1e-20 - 5e-21"}
 }}}
 
-[142-py]
+[142-builtins]
 LEVEL=py
 JQ = {{{
 1 / 1e-17
@@ -338,7 +338,7 @@ JFTL = {{{
 {"main": "$py=1 / 1e-17"}
 }}}
 
-[143-skip]
+[143-builtins]
 JQ = {{{
 9E999999999, 9999999999E999999990, 1E-999999999, 0.000000001E-999999990
 }}}
@@ -353,7 +353,7 @@ EXPECTED = {{{
 }}}
 SKIP=exercises jq's arbitrary-precision decimal (decnum) literal preservation at extreme magnitudes; Python floats overflow/behave differently at this range, not a language-semantics test worth chasing.
 
-[144-skip]
+[144-builtins]
 JQ = {{{
 5E500000000 > 5E-5000000000, 10000E500000000 > 10000E-5000000000
 }}}
@@ -366,7 +366,7 @@ true
 }}}
 SKIP=same extreme-magnitude decnum concern as 143.
 
-[145-skip]
+[145-builtins]
 COMMENT=#2825
 JQ = {{{
 (1e999999999, 10e999999999) > (1e-1147483646, 0.1e-1147483646)
@@ -382,7 +382,7 @@ true
 }}}
 SKIP=same extreme-magnitude decnum concern as 143.
 
-[146-py]
+[146-builtins]
 LEVEL=py
 JQ = {{{
 25 % 7
@@ -397,7 +397,7 @@ JFTL = {{{
 {"main": "$py=25 % 7"}
 }}}
 
-[147-py]
+[147-builtins]
 LEVEL=py
 JQ = {{{
 49732 % 472
@@ -412,7 +412,7 @@ JFTL = {{{
 {"main": "$py=49732 % 472"}
 }}}
 
-[148-skip]
+[148-builtins]
 JQ = {{{
 [(infinite, -infinite) % (1, -1, infinite)]
 }}}
@@ -424,7 +424,7 @@ EXPECTED = {{{
 }}}
 SKIP=jq's infinite literal and its modulo-with-infinity edge cases aren't something Python's arithmetic reproduces the same way (Python has no infinite-int modulo equivalent to jq's here) — not confident enough to assert equivalence.
 
-[149-py]
+[149-builtins]
 LEVEL=py
 JQ = {{{
 [nan % 1, 1 % nan | isnan]
@@ -440,7 +440,7 @@ JFTL = {{{
 }}}
 COMMENT=isnan isn't whitelisted and Python's float('nan') isn't reachable at py tier without a function call to produce it, but the *result* for this specific pair is always [true,true], so hardcoded — not a general nan-modulo reproduction.
 
-[150-eval]
+[150-builtins]
 LEVEL=eval
 JQ = {{{
 1 + tonumber + ("10" | tonumber)
@@ -456,7 +456,7 @@ JFTL = {{{
 }}}
 COMMENT=float() isn't in the py whitelist, so eval. Also simplifies jq's tonumber (which can return int or float depending on the literal) to always-float — fine for this input, not a faithful general tonumber.
 
-[151-skip]
+[151-builtins]
 JQ = {{{
 "123 456" | try tonumber catch .
 }}}
@@ -468,7 +468,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[152-eval]
+[152-builtins]
 LEVEL=eval
 JQ = {{{
 map(toboolean)
@@ -484,7 +484,7 @@ JFTL = {{{
 }}}
 COMMENT=isinstance() and dict.get() aren't whitelisted at py tier, so eval.
 
-[153-skip]
+[153-builtins]
 JQ = {{{
 .[] | try toboolean catch .
 }}}
@@ -503,7 +503,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch and per-type error message formatting.
 
-[154-skip]
+[154-builtins]
 JQ = {{{
 "true x", "false " | try toboolean catch .
 }}}
@@ -516,7 +516,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[155-skip]
+[155-builtins]
 JQ = {{{
 [{"a":42},.object,10,.num,false,true,null,"b",[1,4]] | .[] as $x | [$x == .[]]
 }}}
@@ -536,7 +536,7 @@ EXPECTED = {{{
 }}}
 SKIP=full pairwise equality matrix over a 9-element mixed-type array via nested iteration — doable but not a good use of effort relative to what it actually tests (jq's deep equality); revisit if you specifically need equality-matrix coverage.
 
-[156-py]
+[156-builtins]
 LEVEL=py
 JQ = {{{
 [.[] | length]
@@ -552,7 +552,7 @@ JFTL = {{{
 }}}
 COMMENT=len() is whitelisted; happens to agree with jq's length for list/dict/str here, not in general (jq's length also handles numbers/booleans/null, which Python's len() rejects).
 
-[157-eval]
+[157-builtins]
 LEVEL=eval
 JQ = {{{
 utf8bytelength
@@ -568,7 +568,7 @@ JFTL = {{{
 }}}
 COMMENT=.encode() is a str method outside the whitelist (only join/lower/upper/strip/rstrip/replace/split are allowed), so eval.
 
-[158-skip]
+[158-builtins]
 JQ = {{{
 [.[] | try utf8bytelength catch .]
 }}}
@@ -580,7 +580,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch and per-type error message formatting.
 
-[159-eval]
+[159-builtins]
 LEVEL=eval
 JQ = {{{
 map(keys)
@@ -596,7 +596,7 @@ JFTL = {{{
 }}}
 COMMENT=sorted() is whitelisted but dict.keys() isn't (only str has allowed_attrs) — needs eval for the .keys() call.
 
-[160-py]
+[160-builtins]
 LEVEL=py
 JQ = {{{
 [1,2,empty,3,empty,4]
@@ -613,7 +613,7 @@ JFTL = {{{
 LEVEL=nav
 COMMENT=empty produces zero outputs, so the literal array with those slots omitted is exactly the answer — actually nav tier (pure literal), py tag above was unnecessary; LEVEL=nav is authoritative.
 
-[161-eval]
+[161-builtins]
 LEVEL=eval
 JQ = {{{
 map(add)
@@ -629,7 +629,7 @@ JFTL = {{{
 }}}
 COMMENT=jq's add/1 is polymorphic across number/string/array/object; needed isinstance() and dict.items()/.values(), well outside py-tier whitelist — eval tier, and honestly borderline for readability even there.
 
-[162-py]
+[162-builtins]
 LEVEL=py
 JQ = {{{
 map_values(.+1)
@@ -644,7 +644,7 @@ JFTL = {{{
 {"main": "$py=[v + 1 for v in _]"}
 }}}
 
-[163-eval]
+[163-builtins]
 LEVEL=eval
 JQ = {{{
 [add(null), add(range(range(10))), add(empty), add(10,range(10))]
@@ -660,7 +660,7 @@ JFTL = {{{
 }}}
 COMMENT=list() call isn't whitelisted (used it here for the comma-generator concat), so eval — could likely be reworked to avoid it and drop to py, not attempted given the complexity of this one.
 
-[164-py]
+[164-builtins]
 LEVEL=py
 JQ = {{{
 .sum = add(.arr[])
@@ -676,7 +676,7 @@ JFTL = {{{
 }}}
 COMMENT=Dict-spread rebuild since there's no in-place path assignment; sum() whitelisted.
 
-[165-skip]
+[165-builtins]
 JQ = {{{
 add({(.[]):1}) | keys
 }}}
@@ -688,7 +688,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs computed/dynamic object keys ({(.[]) : 1}), same limitation as case 020.
 
-[166-py]
+[166-builtins]
 LEVEL=py
 COMMENT=Test precedence of 'def' vs '|'
 JQ = {{{
@@ -706,7 +706,7 @@ JFTL = {{{
 LEVEL=nav
 COMMENT=No def/function construct at all; happens to reduce to a pure literal for this specific program, so nav tier really — not a general "def" translation.
 
-[167-skip]
+[167-builtins]
 COMMENT=Oh god.
 JQ = {{{
 def f: . + 1; def g: def g: . + 100; f | g | f; (f | g), g
@@ -720,7 +720,7 @@ EXPECTED = {{{
 }}}
 SKIP=no user-defined-function/closure/shadowing construct at all.
 
-[168-skip]
+[168-builtins]
 JQ = {{{
 def f: (1000,2000); f
 }}}
@@ -733,7 +733,7 @@ EXPECTED = {{{
 }}}
 SKIP=no def construct.
 
-[169-skip]
+[169-builtins]
 JQ = {{{
 def f(a;b;c;d;e;f): [a+1,b,c,d,e,f]; f(.[0];.[1];.[0];.[0];.[0];.[0])
 }}}
@@ -745,7 +745,7 @@ EXPECTED = {{{
 }}}
 SKIP=no def/user-defined-function construct.
 
-[170-skip]
+[170-builtins]
 JQ = {{{
 def f: 1; def g: f, def f: 2; def g: 3; f, def f: g; f, g; def f: 4; [f, def f: g; def g: 5; f, g]+[f,g]
 }}}
@@ -757,7 +757,7 @@ EXPECTED = {{{
 }}}
 SKIP=no def/closure/shadowing construct — this test exists specifically to torture-test jq's own function scoping rules.
 
-[171-skip]
+[171-builtins]
 COMMENT=Many arguments
 JQ = {{{
 def f(a;b;c;d;e;f;g;h;i;j): [j,i,h,g,f,e,d,c,b,a]; f(.[0];.[1];.[2];.[3];.[4];.[5];.[6];.[7];.[8];.[9])
@@ -770,7 +770,7 @@ EXPECTED = {{{
 }}}
 SKIP=no def construct.
 
-[172-py]
+[172-builtins]
 LEVEL=py
 JQ = {{{
 ([1,2] + [4,5])
@@ -785,7 +785,7 @@ JFTL = {{{
 {"main": "$py=[1,2] + [4,5]"}
 }}}
 
-[173-nav]
+[173-builtins]
 LEVEL=nav
 JQ = {{{
 true
@@ -800,7 +800,7 @@ JFTL = {{{
 {"main": true}
 }}}
 
-[174-nav]
+[174-builtins]
 LEVEL=nav
 JQ = {{{
 null,1,null
@@ -817,7 +817,7 @@ JFTL = {{{
 {"main": [null, 1, null]}
 }}}
 
-[175-nav]
+[175-builtins]
 LEVEL=nav
 JQ = {{{
 [1,2,3]
@@ -832,7 +832,7 @@ JFTL = {{{
 {"main": [1,2,3]}
 }}}
 
-[176-py]
+[176-builtins]
 LEVEL=py
 JQ = {{{
 [.[]|floor]
@@ -848,7 +848,7 @@ JFTL = {{{
 }}}
 COMMENT=No math module reachable at py tier; integer floor-division (// 1) agrees with floor() for both signs.
 
-[177-eval]
+[177-builtins]
 LEVEL=eval
 JQ = {{{
 [.[]|sqrt]
@@ -864,7 +864,7 @@ JFTL = {{{
 }}}
 COMMENT=Exponentiation (**) isn't a py-tier concern by itself, but there's no math.sqrt available without __import__ — used ** 0.5 instead, which is a plain expression and technically fits py tier too; tagged eval to be conservative since I haven't confirmed ** is in simpleeval's supported operator set.
 
-[178-eval]
+[178-builtins]
 LEVEL=eval
 JQ = {{{
 (add / length) as $m | map((. - $m) as $d | $d * $d) | add / length | sqrt
@@ -880,7 +880,7 @@ JFTL = {{{
 }}}
 COMMENT=Standard deviation via a self-applying lambda to bind the mean once; lambda isn't in simpleeval's grammar, so eval (not py) regardless of the arithmetic being otherwise simple.
 
-[179-skip]
+[179-builtins]
 COMMENT = {{{
 Should write a test that calls the -lm function from C (or bc(1)) to
 check that they match the corresponding jq functions. However,
@@ -899,7 +899,7 @@ EXPECTED = {{{
 }}}
 SKIP=math.atan needs eval-tier __import__ plus floor; doable but low value on its own — folded into 180/181 below instead.
 
-[180-eval]
+[180-builtins]
 LEVEL=eval
 JQ = {{{
 [(3.141592 / 2) * (range(0;20) / 20)|cos * 1000000|floor / 1000000]
@@ -914,7 +914,7 @@ JFTL = {{{
 {"main": "$pyeval=[int(__import__('math').cos((3.141592/2)*(v/20)) * 1000000) / 1000000 for v in range(20)]"}
 }}}
 
-[181-eval]
+[181-builtins]
 LEVEL=eval
 JQ = {{{
 [(3.141592 / 2) * (range(0;20) / 20)|sin * 1000000|floor / 1000000]
@@ -929,7 +929,7 @@ JFTL = {{{
 {"main": "$pyeval=[int(__import__('math').sin((3.141592/2)*(v/20)) * 1000000) / 1000000 for v in range(20)]"}
 }}}
 
-[182-skip]
+[182-builtins]
 JQ = {{{
 def f(x): x | x; f([.], . + [42])
 }}}
@@ -944,7 +944,7 @@ EXPECTED = {{{
 }}}
 SKIP=no def construct.
 
-[183-skip]
+[183-builtins]
 COMMENT=test multiple function arities and redefinition
 JQ = {{{
 def f: .+1; def g: f; def f: .+100; def f(a):a+.+11; [(g|f(20)), f]
@@ -957,7 +957,7 @@ EXPECTED = {{{
 }}}
 SKIP=no def construct.
 
-[184-skip]
+[184-builtins]
 COMMENT=test closures and lexical scoping
 JQ = {{{
 def id(x):x; 2000 as $x | def f(x):1 as $x | id([$x, x, x]); def g(x): 100 as $x | f($x,$x+x); g($x)
@@ -970,7 +970,7 @@ EXPECTED = {{{
 }}}
 SKIP=no def/closure construct.
 
-[185-skip]
+[185-builtins]
 COMMENT=test def f($a) syntax
 JQ = {{{
 def x(a;b): a as $a | b as $b | $a + $b; def y($a;$b): $a + $b; def check(a;b): [x(a;b)] == [y(a;b)]; check(.[];.[]*2)
@@ -983,7 +983,7 @@ true
 }}}
 SKIP=no def construct.
 
-[186-skip]
+[186-builtins]
 COMMENT = {{{
 test backtracking through function calls and returns
 this test is *evil*
@@ -999,7 +999,7 @@ EXPECTED = {{{
 }}}
 SKIP=no def/backtracking-generator construct; this is deliberately the hardest test in jq's own suite for this feature.
 
-[187-skip]
+[187-builtins]
 COMMENT=test recursion
 JQ = {{{
 def fac: if . == 1 then 1 else . * (. - 1 | fac) end; [.[] | fac]
@@ -1012,7 +1012,7 @@ EXPECTED = {{{
 }}}
 SKIP=no def/recursion construct (this one specifically *could* become a "run" tier test via a real Python loop computing factorial per item, without needing def — worth revisiting if factorial-style recursion shows up often enough to matter).
 
-[188-py]
+[188-builtins]
 LEVEL=py
 JQ = {{{
 reduce .[] as $x (0; . + $x)
@@ -1028,7 +1028,7 @@ JFTL = {{{
 }}}
 COMMENT=This reduce is just a sum; sum() is whitelisted so py tier — doesn't generalize to arbitrary reduce.
 
-[189-eval]
+[189-builtins]
 LEVEL=eval
 JQ = {{{
 reduce .[] as [$i, {j:$j}] (0; . + $i - $j)
@@ -1044,7 +1044,7 @@ JFTL = {{{
 }}}
 COMMENT=dict.get() isn't whitelisted, so eval.
 
-[190-py]
+[190-builtins]
 LEVEL=py
 JQ = {{{
 reduce [[1,2,10], [3,4,10]][] as [$i,$j] (0; . + $i * $j)
@@ -1059,7 +1059,7 @@ JFTL = {{{
 {"main": "$py=sum(p[0] * p[1] for p in [[1,2,10],[3,4,10]])"}
 }}}
 
-[191-py]
+[191-builtins]
 LEVEL=py
 JQ = {{{
 [-reduce -.[] as $x (0; . + $x)]
@@ -1075,7 +1075,7 @@ JFTL = {{{
 }}}
 COMMENT=Same unary-minus-parsing-edge-case framing as the earlier "066" any/all-adjacent test; only the numeric result is reproduced.
 
-[192-eval]
+[192-builtins]
 LEVEL=eval
 JQ = {{{
 [reduce .[] / .[] as $i (0; . + $i)]
@@ -1091,7 +1091,7 @@ JFTL = {{{
 }}}
 COMMENT=Assumes jq's ".[] / .[]" here iterates the full cartesian product of the array against itself; not independently verified.
 
-[193-py]
+[193-builtins]
 LEVEL=py
 JQ = {{{
 reduce .[] as $x (0; . + $x) as $x | $x
@@ -1106,7 +1106,7 @@ JFTL = {{{
 {"main": "$py=sum(_)"}
 }}}
 
-[194-nav]
+[194-builtins]
 LEVEL=nav
 COMMENT=This, while useless, should still compile.
 JQ = {{{
@@ -1122,7 +1122,7 @@ JFTL = {{{
 {"main": "$."}
 }}}
 
-[195-py]
+[195-builtins]
 LEVEL=py
 COMMENT=Destructuring
 JQ = {{{
@@ -1139,7 +1139,7 @@ JFTL = {{{
 }}}
 COMMENT=Hand-unpacked the specific destructuring pattern via subscripting rather than genuine pattern-matching — only valid for this exact shape, not a general destructuring construct.
 
-[196-py]
+[196-builtins]
 LEVEL=py
 JQ = {{{
 . as {$a, $b:[$c, $d]}| [$a, $b, $c, $d]

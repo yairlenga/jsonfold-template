@@ -23,7 +23,7 @@
 #
 # Same caveats as chunks 1-3: not engine-verified, best-effort tier calls.
 
-[240-logic]
+[240-basic]
 LEVEL=logic
 JQ = {{{
 [.[] | if .foo then "yep" else "nope" end]
@@ -39,7 +39,7 @@ JFTL = {{{
 }}}
 COMMENT=JFTL's falsy rule (only false/null/MISSING) matches jq's exactly, so "if $.foo" against the no-var foreach's current item reproduces this natively — no expression engine needed at all.
 
-[241-logic]
+[241-basic]
 LEVEL=logic
 JQ = {{{
 [.[] | if .baz then "strange" elif .foo then "yep" else "nope" end]
@@ -55,7 +55,7 @@ JFTL = {{{
 }}}
 COMMENT=elif chain maps directly onto "case"'s ordered when/then list.
 
-[242-nav]
+[242-basic]
 LEVEL=nav
 JQ = {{{
 [if 1,null,2 then 3 else 4 end]
@@ -71,7 +71,7 @@ JFTL = {{{
 }}}
 COMMENT=Condition is a fixed comma-generator (1,null,2), fully determined at read time — result is a pure literal.
 
-[243-nav]
+[243-basic]
 LEVEL=nav
 JQ = {{{
 [if empty then 3 else 4 end]
@@ -87,7 +87,7 @@ JFTL = {{{
 }}}
 COMMENT=empty as a condition produces zero if/then evaluations — always an empty result.
 
-[244-nav]
+[244-basic]
 LEVEL=nav
 JQ = {{{
 [if 1 then 3,4 else 5 end]
@@ -102,7 +102,7 @@ JFTL = {{{
 {"main": [3, 4]}
 }}}
 
-[245-nav]
+[245-basic]
 LEVEL=nav
 JQ = {{{
 [if null then 3 else 5,6 end]
@@ -117,7 +117,7 @@ JFTL = {{{
 {"main": [5, 6]}
 }}}
 
-[246-nav]
+[246-basic]
 LEVEL=nav
 JQ = {{{
 [if true then 3 end]
@@ -132,7 +132,7 @@ JFTL = {{{
 {"main": [3]}
 }}}
 
-[247-nav]
+[247-basic]
 LEVEL=nav
 JQ = {{{
 [if false then 3 end]
@@ -148,7 +148,7 @@ JFTL = {{{
 }}}
 COMMENT=No else and condition false falls through to the current value — reproduced as navigation, generalizes to any input (not just 7).
 
-[248-nav]
+[248-basic]
 LEVEL=nav
 JQ = {{{
 [if false then 3 else . end]
@@ -163,7 +163,7 @@ JFTL = {{{
 {"main": ["$."]}
 }}}
 
-[249-nav]
+[249-basic]
 LEVEL=nav
 JQ = {{{
 [if false then 3 elif false then 4 end]
@@ -178,7 +178,7 @@ JFTL = {{{
 {"main": ["$."]}
 }}}
 
-[250-nav]
+[250-basic]
 LEVEL=nav
 JQ = {{{
 [if false then 3 elif false then 4 else . end]
@@ -193,7 +193,7 @@ JFTL = {{{
 {"main": ["$."]}
 }}}
 
-[251-nav]
+[251-basic]
 LEVEL=nav
 JQ = {{{
 [-if true then 1 else 2 end]
@@ -209,7 +209,7 @@ JFTL = {{{
 }}}
 COMMENT=Condition is the literal true, fully determined — pure literal result.
 
-[252-logic]
+[252-basic]
 LEVEL=logic
 JQ = {{{
 {x: if true then 1 else 2 end}
@@ -224,7 +224,7 @@ JFTL = {{{
 {"main": {"x": {"$": true, "if": true, "body": 1, "default": 2}}}
 }}}
 
-[253-skip]
+[253-basic]
 JQ = {{{
 if true then [.] else . end []
 }}}
@@ -236,7 +236,7 @@ null
 }}}
 SKIP=ambiguous parse (trailing "[]" suffix after the if-expression) not worth chasing for one deterministic-null result.
 
-[254-py]
+[254-basic]
 LEVEL=py
 JQ = {{{
 [.[] | [.foo[] // .bar]]
@@ -252,7 +252,7 @@ JFTL = {{{
 }}}
 COMMENT=Python's "or" on a list is falsy-when-empty, which conveniently matches jq's // fallback-when-no-truthy-values semantics here.
 
-[255-py]
+[255-basic]
 LEVEL=py
 JQ = {{{
 .[] //= .[0]
@@ -267,7 +267,7 @@ JFTL = {{{
 {"main": "$py=[v if v not in (False, None) else _[0] for v in _]"}
 }}}
 
-[256-py]
+[256-basic]
 LEVEL=py
 JQ = {{{
 .[] | [.[0] and .[1], .[0] or .[1]]
@@ -286,7 +286,7 @@ JFTL = {{{
 }}}
 COMMENT=jq's and/or return actual booleans (not the raw operand like Python's do), so each side is reduced to a boolean via jq's falsy rule before applying and/or.
 
-[257-py]
+[257-basic]
 LEVEL=py
 JQ = {{{
 [.[] | not]
@@ -302,7 +302,7 @@ JFTL = {{{
 }}}
 COMMENT=jq's falsy rule again — 0 is NOT falsy in jq, so "not 0" is false, matching the tuple-membership check rather than Python truthiness.
 
-[258-py]
+[258-basic]
 LEVEL=py
 COMMENT=Check numeric comparison binops
 JQ = {{{
@@ -318,7 +318,7 @@ JFTL = {{{
 {"main": "$py=[10 > 0, 10 > 10, 10 > 20, 10 < 0, 10 < 10, 10 < 20]"}
 }}}
 
-[259-py]
+[259-basic]
 LEVEL=py
 JQ = {{{
 [10 >= 0, 10 >= 10, 10 >= 20, 10 <= 0, 10 <= 10, 10 <= 20]
@@ -333,7 +333,7 @@ JFTL = {{{
 {"main": "$py=[10 >= 0, 10 >= 10, 10 >= 20, 10 <= 0, 10 <= 10, 10 <= 20]"}
 }}}
 
-[260-py]
+[260-basic]
 LEVEL=py
 COMMENT=And some in/equality tests
 JQ = {{{
@@ -349,7 +349,7 @@ JFTL = {{{
 {"main": "$py=[10 == 10, 10 != 10, 10 != 11, 10 == 11]"}
 }}}
 
-[261-py]
+[261-basic]
 LEVEL=py
 JQ = {{{
 ["hello" == "hello", "hello" != "hello", "hello" == "world", "hello" != "world" ]
@@ -364,7 +364,7 @@ JFTL = {{{
 {"main": "$py=['hello' == 'hello', 'hello' != 'hello', 'hello' == 'world', 'hello' != 'world']"}
 }}}
 
-[262-py]
+[262-basic]
 LEVEL=py
 JQ = {{{
 [[1,2,3] == [1,2,3], [1,2,3] != [1,2,3], [1,2,3] == [4,5,6], [1,2,3] != [4,5,6]]
@@ -379,7 +379,7 @@ JFTL = {{{
 {"main": "$py=[[1,2,3] == [1,2,3], [1,2,3] != [1,2,3], [1,2,3] == [4,5,6], [1,2,3] != [4,5,6]]"}
 }}}
 
-[263-py]
+[263-basic]
 LEVEL=py
 JQ = {{{
 [{"foo":42} == {"foo":42},{"foo":42} != {"foo":42}, {"foo":42} != {"bar":42}, {"foo":42} == {"bar":42}]
@@ -394,7 +394,7 @@ JFTL = {{{
 {"main": "$py=[{'foo':42} == {'foo':42}, {'foo':42} != {'foo':42}, {'foo':42} != {'bar':42}, {'foo':42} == {'bar':42}]"}
 }}}
 
-[264-py]
+[264-basic]
 LEVEL=py
 COMMENT=ugly complicated thing
 JQ = {{{
@@ -410,7 +410,7 @@ JFTL = {{{
 {"main": "$py=[{'foo':[1,2,{'bar':18},'world']} == {'foo':[1,2,{'bar':18},'world']}, {'foo':[1,2,{'bar':18},'world']} == {'foo':[1,2,{'bar':19},'world']}]"}
 }}}
 
-[265-py]
+[265-basic]
 LEVEL=py
 COMMENT=containment operator
 JQ = {{{
@@ -427,7 +427,7 @@ JFTL = {{{
 }}}
 COMMENT=jq's "S | contains(T)" (does S contain T) maps to Python's "T in S" substring check.
 
-[266-py]
+[266-basic]
 LEVEL=py
 COMMENT=containment operator (embedded NULs!)
 JQ = {{{
@@ -444,7 +444,7 @@ JFTL = {{{
 }}}
 COMMENT=NOTE: I substituted a plain space for jq's actual \u0000 (NUL) test input here — this defeats the real point of the test (embedded-NUL handling). Flagged in the chat response; redo with real \u0000 if that matters to you.
 
-[267-py]
+[267-basic]
 LEVEL=py
 JQ = {{{
 [contains(""), contains("a"), contains("ab"), contains("c"), contains("d")]
@@ -460,7 +460,7 @@ JFTL = {{{
 }}}
 COMMENT=Same NUL-substitution caveat as 266 — original input used \u0000 where this uses a space.
 
-[268-py]
+[268-basic]
 LEVEL=py
 JQ = {{{
 [contains("cd"), contains("b "), contains("ab ")]
@@ -476,7 +476,7 @@ JFTL = {{{
 }}}
 COMMENT=Same NUL-substitution caveat as 266.
 
-[269-py]
+[269-basic]
 LEVEL=py
 JQ = {{{
 [contains("b c"), contains("b cd"), contains("b cd")]
@@ -492,7 +492,7 @@ JFTL = {{{
 }}}
 COMMENT=Same NUL-substitution caveat as 266.
 
-[270-py]
+[270-basic]
 LEVEL=py
 JQ = {{{
 [contains("@"), contains(" @"), contains(" what")]
@@ -508,7 +508,7 @@ JFTL = {{{
 }}}
 COMMENT=Same NUL-substitution caveat as 266.
 
-[271-skip]
+[271-basic]
 COMMENT=Try/catch and general `?` operator
 JQ = {{{
 [.[]|try if . == 0 then error("foo") elif . == 1 then .a elif . == 2 then empty else . end catch .]
@@ -521,7 +521,7 @@ EXPECTED = {{{
 }}}
 SKIP=try/catch unimplemented, and this one genuinely needs it (real errors are thrown and caught, not just an unreachable/deterministic branch).
 
-[272-skip]
+[272-basic]
 JQ = {{{
 [.[]|(.a, .a)?]
 }}}
@@ -533,7 +533,7 @@ EXPECTED = {{{
 }}}
 SKIP="?" here suppresses errors from non-indexable items (true) entirely rather than emitting null — same output-suppression gap noted in chunk 1.
 
-[273-skip]
+[273-basic]
 JQ = {{{
 [[.[]|[.a,.a]]?]
 }}}
@@ -545,7 +545,7 @@ EXPECTED = {{{
 }}}
 SKIP=the whole outer array-comprehension errors out (on hitting "true") and "?" drops the entire result to empty — this all-or-nothing failure propagation isn't modeled.
 
-[274-skip]
+[274-basic]
 JQ = {{{
 [if error then 1 else 2 end?]
 }}}
@@ -557,7 +557,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs error()/"?" suppression.
 
-[275-skip]
+[275-basic]
 JQ = {{{
 try error(0) // 1
 }}}
@@ -569,7 +569,7 @@ EXPECTED = {{{
 }}}
 SKIP=try/catch unimplemented.
 
-[276-skip]
+[276-basic]
 JQ = {{{
 1, try error(2), 3
 }}}
@@ -582,7 +582,7 @@ EXPECTED = {{{
 }}}
 SKIP=try/catch unimplemented (error output is suppressed here, not caught-and-emitted).
 
-[277-py]
+[277-basic]
 LEVEL=py
 JQ = {{{
 1 + try 2 catch 3 + 4
@@ -598,7 +598,7 @@ JFTL = {{{
 }}}
 COMMENT=This test is really about try/catch's operator precedence relative to "+" (the catch branch never fires since 2 never errors) — the actual numeric result is deterministic and needs no try/catch modeling.
 
-[278-py]
+[278-basic]
 LEVEL=py
 JQ = {{{
 [-try .]
@@ -614,7 +614,7 @@ JFTL = {{{
 }}}
 COMMENT=try never fails here (identity doesn't error), so it's a no-op wrapper.
 
-[279-skip]
+[279-basic]
 JQ = {{{
 try -.? catch .
 }}}
@@ -626,7 +626,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch and jq's exact runtime error-message text.
 
-[280-logic]
+[280-basic]
 LEVEL=logic
 JQ = {{{
 {x: try 1, y: try error catch 2, z: if true then 3 end}
@@ -642,7 +642,7 @@ JFTL = {{{
 }}}
 COMMENT=x and y are both deterministic regardless of try/catch (try 1 never fails; error always fires so the catch branch always wins) — only z genuinely needs a logic construct (native if/body), so this whole test needs no expression engine at all.
 
-[281-py]
+[281-basic]
 LEVEL=py
 JQ = {{{
 {x: 1 + 2, y: false or true, z: null // 3}
@@ -658,7 +658,7 @@ JFTL = {{{
 }}}
 COMMENT=null // 3 maps to Python's "None or 3" since None is falsy in both jq's rule and Python's.
 
-[282-logic]
+[282-basic]
 LEVEL=logic
 JQ = {{{
 .[] | try error catch .
@@ -677,7 +677,7 @@ JFTL = {{{
 TRANSFORM=stream
 COMMENT=error with no message raises the current value itself as the payload, and catch immediately returns it — net effect is identity per item, so this degrades to the same no-var foreach + "$." pattern used throughout, needing no try/catch modeling at all. Streaming collected into one array instead of 3 outputs.
 
-[283-skip]
+[283-basic]
 JQ = {{{
 try error("\($__loc__)") catch .
 }}}

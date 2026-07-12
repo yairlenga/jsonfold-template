@@ -45,7 +45,7 @@
 # STATUS: still chunk 1 only (source lines ~1-1105 of 2635). None of this is
 # engine-verified (no sandbox this session).
 
-[001-nav]
+[001-basic]
 LEVEL=nav
 JQ = {{{
 true
@@ -60,7 +60,7 @@ JFTL = {{{
 {"main": true}
 }}}
 
-[002-nav]
+[002-basic]
 LEVEL=nav
 JQ = {{{
 false
@@ -75,7 +75,7 @@ JFTL = {{{
 {"main": false}
 }}}
 
-[003-nav]
+[003-basic]
 LEVEL=nav
 JQ = {{{
 null
@@ -90,7 +90,7 @@ JFTL = {{{
 {"main": null}
 }}}
 
-[004-nav]
+[004-basic]
 LEVEL=nav
 JQ = {{{
 1
@@ -105,7 +105,7 @@ JFTL = {{{
 {"main": 1}
 }}}
 
-[005-nav]
+[005-basic]
 LEVEL=nav
 JQ = {{{
 -1
@@ -120,7 +120,7 @@ JFTL = {{{
 {"main": -1}
 }}}
 
-[006-nav]
+[006-basic]
 LEVEL=nav
 COMMENT=FIXME: much more number testing needed
 JQ = {{{
@@ -136,7 +136,7 @@ JFTL = {{{
 {"main": {}}
 }}}
 
-[007-nav]
+[007-basic]
 LEVEL=nav
 JQ = {{{
 []
@@ -151,7 +151,7 @@ JFTL = {{{
 {"main": []}
 }}}
 
-[008-eval]
+[008-basic]
 LEVEL=eval
 JQ = {{{
 {x:-1},{x:-.},{x:-.|abs}
@@ -169,7 +169,7 @@ JFTL = {{{
 }}}
 TRANSFORM=stream
 
-[009-nav]
+[009-basic]
 LEVEL=nav
 COMMENT = {{{
 The input line starts with a 0xFEFF (byte order mark) codepoint
@@ -189,7 +189,7 @@ JFTL = {{{
 {"main": "$."}
 }}}
 
-[010-nav]
+[010-basic]
 LEVEL=nav
 COMMENT = {{{
 We test escapes by matching them against Unicode codepoints
@@ -208,7 +208,7 @@ JFTL = {{{
 {"main": "Aa\r\n\t\b\fμ"}
 }}}
 
-[011-nav]
+[011-basic]
 LEVEL=nav
 JQ = {{{
 .
@@ -223,7 +223,7 @@ JFTL = {{{
 {"main": "$."}
 }}}
 
-[012-py]
+[012-basic]
 LEVEL=py
 JQ = {{{
 "inter\("pol" + "ation")"
@@ -238,7 +238,7 @@ JFTL = {{{
 {"main": "$py='inter' + ('pol' + 'ation')"}
 }}}
 
-[013-eval]
+[013-basic]
 LEVEL=eval
 COMMENT=regression test for #436
 JQ = {{{
@@ -254,7 +254,7 @@ JFTL = {{{
 {"main": "$pyeval=__import__('base64').b64encode(_.encode('utf-8')).decode('ascii')"}
 }}}
 
-[014-eval]
+[014-basic]
 LEVEL=eval
 JQ = {{{
 @base64d
@@ -269,7 +269,7 @@ JFTL = {{{
 {"main": "$pyeval=__import__('base64').b64decode(_).decode('utf-8')"}
 }}}
 
-[015-eval]
+[015-basic]
 LEVEL=eval
 JQ = {{{
 @uri
@@ -284,7 +284,7 @@ JFTL = {{{
 {"main": "$pyeval=__import__('urllib.parse', fromlist=['quote']).quote(_, safe='')"}
 }}}
 
-[016-eval]
+[016-basic]
 LEVEL=eval
 JQ = {{{
 @urid
@@ -299,7 +299,7 @@ JFTL = {{{
 {"main": "$pyeval=__import__('urllib.parse', fromlist=['unquote']).unquote(_)"}
 }}}
 
-[017-py]
+[017-basic]
 LEVEL=py
 JQ = {{{
 @html "<b>\(.)</b>"
@@ -315,7 +315,7 @@ JFTL = {{{
 }}}
 COMMENT=Chained .replace() calls only, no chr() — stays inside whitelisted string attrs.
 
-[018-eval]
+[018-basic]
 LEVEL=eval
 JQ = {{{
 [.[]|tojson|fromjson]
@@ -330,7 +330,7 @@ JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$."}, "body": "$pyeval=__import__('json').loads(__import__('json').dumps(_))"}}
 }}}
 
-[019-nav]
+[019-basic]
 LEVEL=nav
 JQ = {{{
 {a: 1}
@@ -345,7 +345,7 @@ JFTL = {{{
 {"main": {"a": 1}}
 }}}
 
-[020-skip]
+[020-basic]
 JQ = {{{
 {a,b,(.d):.a,e:.b}
 }}}
@@ -357,7 +357,7 @@ EXPECTED = {{{
 }}}
 SKIP=object keys are compile-time-constant strings in this engine; no way to compute a key at render time.
 
-[021-skip]
+[021-basic]
 JQ = {{{
 {"a",b,"a$\(1+1)"}
 }}}
@@ -369,7 +369,7 @@ EXPECTED = {{{
 }}}
 SKIP=same computed/interpolated-key limitation as 020.
 
-[022-nav]
+[022-basic]
 LEVEL=nav
 JQ = {{{
 .foo
@@ -384,7 +384,7 @@ JFTL = {{{
 {"main": "$.foo"}
 }}}
 
-[023-nav]
+[023-basic]
 LEVEL=nav
 JQ = {{{
 .foo | .bar
@@ -399,7 +399,7 @@ JFTL = {{{
 {"main": "$.foo.bar"}
 }}}
 
-[024-nav]
+[024-basic]
 LEVEL=nav
 JQ = {{{
 .foo.bar
@@ -414,7 +414,7 @@ JFTL = {{{
 {"main": "$.foo.bar"}
 }}}
 
-[025-nav]
+[025-basic]
 LEVEL=nav
 JQ = {{{
 .foo_bar
@@ -429,7 +429,7 @@ JFTL = {{{
 {"main": "$.foo_bar"}
 }}}
 
-[026-nav]
+[026-basic]
 LEVEL=nav
 JQ = {{{
 .["foo"].bar
@@ -444,7 +444,7 @@ JFTL = {{{
 {"main": "$.[\"foo\"].bar"}
 }}}
 
-[027-nav]
+[027-basic]
 LEVEL=nav
 JQ = {{{
 ."foo"."bar"
@@ -460,7 +460,7 @@ JFTL = {{{
 }}}
 COMMENT=Normalized to .foo.bar — a bare dot immediately before a quoted segment isn't in NavigationExprNode's grammar.
 
-[028-py]
+[028-basic]
 LEVEL=py
 JQ = {{{
 .e0, .E1, .E-1, .E+1
@@ -480,7 +480,7 @@ JFTL = {{{
 TRANSFORM=stream
 COMMENT=Used subscript+"in" instead of dict.get() (.get isn't whitelisted) to stay at py. Streaming 4 outputs collected into one array.
 
-[029-skip]
+[029-basic]
 JQ = {{{
 [.[]|.foo?]
 }}}
@@ -492,7 +492,7 @@ EXPECTED = {{{
 }}}
 SKIP=jq's "?" drops non-matching items from output entirely; foreach always emits one result per iteration.
 
-[030-skip]
+[030-basic]
 JQ = {{{
 [.[]|.foo?.bar?]
 }}}
@@ -504,7 +504,7 @@ EXPECTED = {{{
 }}}
 SKIP=same output-suppression gap as 029.
 
-[031-skip]
+[031-basic]
 JQ = {{{
 [..]
 }}}
@@ -516,7 +516,7 @@ EXPECTED = {{{
 }}}
 SKIP=no recursive-descent operator; even $pyrun's statement support doesn't give you unbounded structural recursion for free without real effort.
 
-[032-skip]
+[032-basic]
 JQ = {{{
 [.[]|.[]?]
 }}}
@@ -528,7 +528,7 @@ EXPECTED = {{{
 }}}
 SKIP=same output-suppression gap as 029.
 
-[033-skip]
+[033-basic]
 JQ = {{{
 [.[]|.[1:3]?]
 }}}
@@ -540,7 +540,7 @@ EXPECTED = {{{
 }}}
 SKIP=same output-suppression gap as 029.
 
-[034-skip]
+[034-basic]
 COMMENT=chaining/suffix-list, with and without dot
 JQ = {{{
 map(try .a[] catch ., try .a.[] catch ., .a[]?, .a.[]?)
@@ -553,7 +553,7 @@ EXPECTED = {{{
 }}}
 SKIP=combines try/catch (unimplemented), per-type error text, and generator fan-out.
 
-[035-skip]
+[035-basic]
 COMMENT=oss-fuzz #66070: objects[] leaks if a non-last element throws an error
 JQ = {{{
 try ["OK", (.[] | error)] catch ["KO", .]
@@ -566,7 +566,7 @@ EXPECTED = {{{
 }}}
 SKIP=try/catch unimplemented ("error" field is compiled but never evaluated).
 
-[036-skip]
+[036-basic]
 JQ = {{{
 try (.foo[-1] = 0) catch .
 }}}
@@ -578,7 +578,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs in-place path assignment and try/catch, neither implemented.
 
-[037-skip]
+[037-basic]
 JQ = {{{
 try (.foo[-2] = 0) catch .
 }}}
@@ -590,7 +590,7 @@ EXPECTED = {{{
 }}}
 SKIP=same as 036.
 
-[038-py]
+[038-basic]
 LEVEL=py
 JQ = {{{
 .[-1] = 5
@@ -605,7 +605,7 @@ JFTL = {{{
 {"main": "$py=_[:-1] + [5]"}
 }}}
 
-[039-py]
+[039-basic]
 LEVEL=py
 JQ = {{{
 .[-2] = 5
@@ -620,7 +620,7 @@ JFTL = {{{
 {"main": "$py=_[:-2] + [5] + _[-1:]"}
 }}}
 
-[040-skip]
+[040-basic]
 JQ = {{{
 try (.[999999999] = 0) catch .
 }}}
@@ -632,7 +632,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch and in-place path assignment.
 
-[041-logic]
+[041-basic]
 LEVEL=logic
 JQ = {{{
 .[]
@@ -651,7 +651,7 @@ JFTL = {{{
 TRANSFORM=stream
 COMMENT=foreach with no "var" sets frame.current to each item, so "$." re-emits it with zero expression-engine use. Streaming collected into one array.
 
-[042-nav]
+[042-basic]
 LEVEL=nav
 JQ = {{{
 1,1
@@ -668,7 +668,7 @@ JFTL = {{{
 }}}
 TRANSFORM=stream
 
-[043-nav]
+[043-basic]
 LEVEL=nav
 JQ = {{{
 1,.
@@ -686,7 +686,7 @@ JFTL = {{{
 TRANSFORM=stream
 
 
-[044-nav]
+[044-basic]
 LEVEL=nav
 JQ = {{{
 [.]
@@ -701,7 +701,7 @@ JFTL = {{{
 {"main": ["$."]}
 }}}
 
-[045-nav]
+[045-basic]
 LEVEL=nav
 JQ = {{{
 [[2]]
@@ -716,7 +716,7 @@ JFTL = {{{
 {"main": [[2]]}
 }}}
 
-[046-nav]
+[046-basic]
 LEVEL=nav
 JQ = {{{
 [{}]
@@ -731,7 +731,7 @@ JFTL = {{{
 {"main": [{}]}
 }}}
 
-[047-logic]
+[047-basic]
 LEVEL=logic
 JQ = {{{
 [.[]]
@@ -746,7 +746,7 @@ JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$."}, "body": "$."}}
 }}}
 
-[048-eval]
+[048-basic]
 LEVEL=eval
 JQ = {{{
 [(.,1),((.,.[]),(2,3))]
@@ -762,7 +762,7 @@ JFTL = {{{
 }}}
 COMMENT=Star-unpacking (*cur) inside a list literal isn't in simpleeval's supported grammar, so eval tier.
 
-[049-py]
+[049-basic]
 LEVEL=py
 JQ = {{{
 [([5,5][]),.,.[]]
@@ -777,7 +777,7 @@ JFTL = {{{
 {"main": "$py=[5, 5, _] + _"}
 }}}
 
-[050-nav]
+[050-basic]
 LEVEL=nav
 JQ = {{{
 {x: (1,2)},{x:3} | .x
@@ -796,7 +796,7 @@ JFTL = {{{
 TRANSFORM=stream
 
 
-[051-py]
+[051-basic]
 LEVEL=py
 JQ = {{{
 [.[-4,-3,-2,-1,0,1,2,3]]
@@ -811,7 +811,7 @@ JFTL = {{{
 {"main": "$py=[(_[i] if -len(_) <= i < len(_) else None) for i in [-4,-3,-2,-1,0,1,2,3]]"}
 }}}
 
-[052-logic]
+[052-basic]
 LEVEL=logic
 JQ = {{{
 [range(0;10)]
@@ -827,7 +827,7 @@ JFTL = {{{
 }}}
 COMMENT=shape:"range" with no "var" also sets frame.current to the numeric value each iteration.
 
-[053-py]
+[053-basic]
 LEVEL=py
 JQ = {{{
 [range(0,1;3,4)]
@@ -842,7 +842,7 @@ JFTL = {{{
 {"main": "$py=[v for start in (0,1) for stop in (3,4) for v in range(start, stop)]"}
 }}}
 
-[054-py]
+[054-basic]
 LEVEL=py
 JQ = {{{
 [range(0;10;3)]
@@ -858,7 +858,7 @@ JFTL = {{{
 }}}
 COMMENT=foreach.shape=range has no "step" field — no native equivalent.
 
-[055-py]
+[055-basic]
 LEVEL=py
 JQ = {{{
 [range(0;10;-1)]
@@ -873,7 +873,7 @@ JFTL = {{{
 {"main": "$py=[v for v in range(0, 10, -1)]"}
 }}}
 
-[056-py]
+[056-basic]
 LEVEL=py
 JQ = {{{
 [range(0;-5;-1)]
@@ -888,7 +888,7 @@ JFTL = {{{
 {"main": "$py=[v for v in range(0, -5, -1)]"}
 }}}
 
-[057-py]
+[057-basic]
 LEVEL=py
 JQ = {{{
 [range(0,1;4,5;1,2)]
@@ -903,7 +903,7 @@ JFTL = {{{
 {"main": "$py=[v for start in (0,1) for stop in (4,5) for step in (1,2) for v in range(start, stop, step)]"}
 }}}
 
-[058-run]
+[058-basic]
 LEVEL=run
 JQ = {{{
 [while(.<100; .*2)]
@@ -919,7 +919,7 @@ JFTL = {{{
 }}}
 COMMENT=No while/until construct; genuine imperative loop, hence run tier (this replaces an earlier, uglier self-applying-lambda version — real statements are the honest tool now that $pyrun supports them).
 
-[059-skip]
+[059-basic]
 JQ = {{{
 [(label $here | .[] | if .>1 then break $here else . end), "hi!"]
 }}}
@@ -931,7 +931,7 @@ EXPECTED = {{{
 }}}
 SKIP=no label/break early-exit construct.
 
-[060-skip]
+[060-basic]
 JQ = {{{
 [(label $here | .[] | if .>1 then break $here else . end), "hi!"]
 }}}
@@ -943,7 +943,7 @@ EXPECTED = {{{
 }}}
 SKIP=no label/break early-exit construct.
 
-[061-eval]
+[061-basic]
 LEVEL=eval
 JQ = {{{
 [.[]|[.,1]|until(.[0] < 1; [.[0] - 1, .[1] * .[0]])|.[1]]
@@ -959,7 +959,7 @@ JFTL = {{{
 }}}
 COMMENT=This specific until() loop happens to compute a factorial — doesn't generalize to arbitrary until() usage.
 
-[062-skip]
+[062-basic]
 JQ = {{{
 [label $out | foreach .[] as $item ([3, null]; if .[0] < 1 then break $out else [.[0] -1, $item] end; .[1])]
 }}}
@@ -971,7 +971,7 @@ EXPECTED = {{{
 }}}
 SKIP=combines label/break (missing) and foreach state-threading (missing).
 
-[063-logic]
+[063-basic]
 LEVEL=logic
 JQ = {{{
 [foreach range(5) as $item (0; $item)]
@@ -987,7 +987,7 @@ JFTL = {{{
 }}}
 COMMENT=This foreach's update just re-emits the item, so it degrades to plain range iteration — coincidence, not a general foreach/reduce translation.
 
-[064-eval]
+[064-basic]
 LEVEL=eval
 JQ = {{{
 [foreach .[] as [$i, $j] (0; . + $i - $j)]
@@ -1003,7 +1003,7 @@ JFTL = {{{
 }}}
 COMMENT=itertools isn't whitelisted at py tier; JFTL has no accumulator threading across foreach iterations at all.
 
-[065-eval]
+[065-basic]
 LEVEL=eval
 JQ = {{{
 [foreach .[] as {a:$a} (0; . + $a; -.)]
@@ -1018,7 +1018,7 @@ JFTL = {{{
 {"main": "$pyeval=[-s for s in list(__import__('itertools').accumulate((d.get('a') or 0 for d in _), initial=0))[1:]]"}
 }}}
 
-[066-py]
+[066-basic]
 LEVEL=py
 JQ = {{{
 [-foreach -.[] as $x (0; . + $x)]
@@ -1034,7 +1034,7 @@ JFTL = {{{
 }}}
 COMMENT=Original test really exercises unary-minus-before-keyword parsing; only the numeric result is reproduced.
 
-[067-skip]
+[067-basic]
 JQ = {{{
 [foreach .[] / .[] as $i (0; . + $i)]
 }}}
@@ -1046,7 +1046,7 @@ EXPECTED = {{{
 }}}
 SKIP=cartesian division-generator plus state threading; not confident in jq's exact iteration order to assert equivalence.
 
-[068-eval]
+[068-basic]
 LEVEL=eval
 JQ = {{{
 [foreach .[] as $x (0; . + $x) as $x | $x]
@@ -1061,7 +1061,7 @@ JFTL = {{{
 {"main": "$pyeval=list(__import__('itertools').accumulate(_))"}
 }}}
 
-[069-py]
+[069-basic]
 LEVEL=py
 JQ = {{{
 [limit(3; .[])]
@@ -1076,7 +1076,7 @@ JFTL = {{{
 {"main": "$py=_[:3]"}
 }}}
 
-[070-nav]
+[070-basic]
 LEVEL=nav
 JQ = {{{
 [limit(0; error)]
@@ -1092,7 +1092,7 @@ JFTL = {{{
 }}}
 COMMENT=limit(0;...) never evaluates its generator in jq — matches this pair without modeling short-circuit generally.
 
-[071-nav]
+[071-basic]
 LEVEL=nav
 JQ = {{{
 [limit(1; 1, error)]
@@ -1107,7 +1107,7 @@ JFTL = {{{
 {"main": [1]}
 }}}
 
-[072-skip]
+[072-basic]
 JQ = {{{
 try limit(-1; error) catch .
 }}}
@@ -1119,7 +1119,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[073-py]
+[073-basic]
 LEVEL=py
 JQ = {{{
 [skip(3; .[])]
@@ -1134,7 +1134,7 @@ JFTL = {{{
 {"main": "$py=_[3:]"}
 }}}
 
-[074-py]
+[074-basic]
 LEVEL=py
 JQ = {{{
 [skip(0,2,3,4; .[])]
@@ -1149,7 +1149,7 @@ JFTL = {{{
 {"main": "$py=_[0:] + _[2:] + _[3:] + _[4:]"}
 }}}
 
-[075-py]
+[075-basic]
 LEVEL=py
 JQ = {{{
 [skip(3; .[])]
@@ -1164,7 +1164,7 @@ JFTL = {{{
 {"main": "$py=_[3:]"}
 }}}
 
-[076-skip]
+[076-basic]
 JQ = {{{
 try skip(-1; error) catch .
 }}}
@@ -1176,7 +1176,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[077-nav]
+[077-basic]
 LEVEL=nav
 JQ = {{{
 nth(1; 0,1,error("foo"))
@@ -1192,7 +1192,7 @@ JFTL = {{{
 }}}
 COMMENT=Matches this specific short-circuit-before-error pair; not a general nth().
 
-[078-py]
+[078-basic]
 LEVEL=py
 JQ = {{{
 [first(range(.)), last(range(.))]
@@ -1207,7 +1207,7 @@ JFTL = {{{
 {"main": "$py=[0, _-1] if _ > 0 else []"}
 }}}
 
-[079-py]
+[079-basic]
 LEVEL=py
 JQ = {{{
 [first(range(.)), last(range(.))]
@@ -1222,7 +1222,7 @@ JFTL = {{{
 {"main": "$py=[0, _-1] if _ > 0 else []"}
 }}}
 
-[080-skip]
+[080-basic]
 JQ = {{{
 [nth(0,5,9,10,15; range(.)), try nth(-1; range(.)) catch .]
 }}}
@@ -1234,7 +1234,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch for the negative-index error branch.
 
-[081-nav]
+[081-basic]
 LEVEL=nav
 JQ = {{{
 first(1,error("foo"))
@@ -1249,7 +1249,7 @@ JFTL = {{{
 {"main": 1}
 }}}
 
-[082-py]
+[082-basic]
 LEVEL=py
 JQ = {{{
 [limit(5,7; range(9))]
@@ -1264,7 +1264,7 @@ JFTL = {{{
 {"main": "$py=[v for v in range(9)][:5] + [v for v in range(9)][:7]"}
 }}}
 
-[083-py]
+[083-basic]
 LEVEL=py
 JQ = {{{
 [nth(5,7; range(9;0;-1))]
@@ -1279,7 +1279,7 @@ JFTL = {{{
 {"main": "$py=[[v for v in range(9,0,-1)][5], [v for v in range(9,0,-1)][7]]"}
 }}}
 
-[084-py]
+[084-basic]
 LEVEL=py
 JQ = {{{
 [range(0,1,2;4,3,2;2,3)]
@@ -1294,7 +1294,7 @@ JFTL = {{{
 {"main": "$py=[v for start in (0,1,2) for stop in (4,3,2) for step in (2,3) for v in range(start, stop, step)]"}
 }}}
 
-[085-py]
+[085-basic]
 LEVEL=py
 JQ = {{{
 [range(3,5)]
@@ -1309,7 +1309,7 @@ JFTL = {{{
 {"main": "$py=[v for v in range(3)] + [v for v in range(5)]"}
 }}}
 
-[086-eval]
+[086-basic]
 LEVEL=eval
 JQ = {{{
 [(index(",","|"), rindex(",","|")), indices(",","|")]
@@ -1325,7 +1325,7 @@ JFTL = {{{
 }}}
 COMMENT=str.find/rfind and enumerate() aren't whitelisted at py tier.
 
-[087-py]
+[087-basic]
 LEVEL=py
 JQ = {{{
 join(",","/")
@@ -1343,7 +1343,7 @@ JFTL = {{{
 TRANSFORM=stream
 
 
-[088-py]
+[088-basic]
 LEVEL=py
 JQ = {{{
 [.[]|join("a")]
@@ -1358,7 +1358,7 @@ JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$."}, "body": "$py='a'.join(_)"}}
 }}}
 
-[089-skip]
+[089-basic]
 JQ = {{{
 flatten(3,2,1)
 }}}
@@ -1372,7 +1372,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs a recursive flatten-to-depth helper.
 
-[090-py]
+[090-basic]
 LEVEL=py
 JQ = {{{
 [.[3:2], .[-5:4], .[:-2], .[-2:], .[3:3][1:], .[10:]]
@@ -1387,7 +1387,7 @@ JFTL = {{{
 {"main": "$py=[_[3:2], _[-5:4], _[:-2], _[-2:], _[3:3][1:], _[10:]]"}
 }}}
 
-[091-py]
+[091-basic]
 LEVEL=py
 JQ = {{{
 [.[3:2], .[-5:4], .[:-2], .[-2:], .[3:3][1:], .[10:]]
@@ -1402,7 +1402,7 @@ JFTL = {{{
 {"main": "$py=[_[3:2], _[-5:4], _[:-2], _[-2:], _[3:3][1:], _[10:]]"}
 }}}
 
-[092-py]
+[092-basic]
 LEVEL=py
 JQ = {{{
 del(.[2:4],.[0],.[-2:])
@@ -1418,7 +1418,7 @@ JFTL = {{{
 }}}
 COMMENT=Avoided list()/set()/zip()/enumerate() (not whitelisted) via membership checks against range() objects.
 
-[093-py]
+[093-basic]
 LEVEL=py
 JQ = {{{
 .[2:4] = ([], ["a","b"], ["a","b","c"])
@@ -1437,7 +1437,7 @@ JFTL = {{{
 TRANSFORM=stream
 COMMENT=Streaming 3 outputs collected into one array.
 
-[094-skip]
+[094-basic]
 JQ = {{{
 reduce range(65540;65536;-1) as $i ([]; .[$i] = $i)|.[65536:]
 }}}
@@ -1449,7 +1449,7 @@ EXPECTED = {{{
 }}}
 SKIP=C-level array-storage reallocation stress test, not language semantics.
 
-[095-py]
+[095-basic]
 LEVEL=py
 JQ = {{{
 1 as $x | 2 as $y | [$x,$y,$x]
@@ -1465,7 +1465,7 @@ JFTL = {{{
 }}}
 COMMENT=Reading a named "set" variable always needs at least py tier — bare name lookup isn't reachable via "$." navigation.
 
-[096-py]
+[096-basic]
 LEVEL=py
 JQ = {{{
 [1,2,3][] as $x | [[4,5,6,7][$x]]
@@ -1484,7 +1484,7 @@ JFTL = {{{
 TRANSFORM=stream
 COMMENT=Streaming 3 outputs -> [[5],[6],[7]] instead.
 
-[097-py]
+[097-basic]
 LEVEL=py
 JQ = {{{
 42 as $x | . | . | . + 432 | $x + 1
@@ -1500,7 +1500,7 @@ JFTL = {{{
 }}}
 COMMENT=Middle pipeline never affects the result in jq either (only $x is read at the end) — dropped as dead code.
 
-[098-py]
+[098-basic]
 LEVEL=py
 JQ = {{{
 1 + 2 as $x | -$x
@@ -1515,7 +1515,7 @@ JFTL = {{{
 {"main": {"$": true, "set": {"x": "$py=1 + 2"}, "body": "$py=-x"}}
 }}}
 
-[099-py]
+[099-basic]
 LEVEL=py
 SKIP=Bug in JQ.
 JQ = {{{
@@ -1532,7 +1532,7 @@ JFTL = {{{
 }}}
 
 
-[101-skip]
+[101-basic]
 JQ = {{{
 [1, {c:3, d:4}] as [$a, {c:$b, b:$c}] | $a, $b, $c
 }}}
@@ -1546,7 +1546,7 @@ null
 }}}
 SKIP=no destructuring construct; hand-matching the already-known literal isn't a genuine translation.
 
-[102-py]
+[102-basic]
 LEVEL=py
 JQ = {{{
 . as {as: $kw, "str": $str, ("e"+"x"+"p"): $exp} | [$kw, $str, $exp]
@@ -1561,7 +1561,7 @@ JFTL = {{{
 {"main": "$py=[_['as'] if 'as' in _ else None, _['str'] if 'str' in _ else None, _['exp'] if 'exp' in _ else None]"}
 }}}
 
-[103-py]
+[103-basic]
 LEVEL=py
 JQ = {{{
 .[] as [$a, $b] | [$b, $a]
@@ -1579,7 +1579,7 @@ JFTL = {{{
 TRANSFORM=stream
 
 
-[104-nav]
+[104-basic]
 LEVEL=nav
 JQ = {{{
 . as $i | . as [$i] | $i
@@ -1595,7 +1595,7 @@ JFTL = {{{
 }}}
 COMMENT=Navigation without a leading dot before the bracket ("$[0]", not "$.[0]") is the valid form for a top-level index.
 
-[105-nav]
+[105-basic]
 LEVEL=nav
 JQ = {{{
 . as [$i] | . as $i | $i
@@ -1610,7 +1610,7 @@ JFTL = {{{
 {"main": "$."}
 }}}
 
-[106-skip]
+[106-basic]
 JQ = {{{
 .[] | . as {$a, b: [$c, {$d}]} ?// [$a, {$b}, $e] ?// $f | [$a, $b, $c, $d, $e, $f]
 }}}
@@ -1624,7 +1624,7 @@ EXPECTED = {{{
 }}}
 SKIP=?// alternation-pattern destructuring; ~12 near-duplicate tests around this construct all skip for the same reason and aren't repeated individually.
 
-[107-py]
+[107-basic]
 LEVEL=py
 JQ = {{{
 . as $dot|any($dot[];not)
@@ -1639,7 +1639,7 @@ JFTL = {{{
 {"main": "$py=any(not v for v in _)"}
 }}}
 
-[108-py]
+[108-basic]
 LEVEL=py
 JQ = {{{
 . as $dot|any($dot[];not)
@@ -1654,7 +1654,7 @@ JFTL = {{{
 {"main": "$py=any(not v for v in _)"}
 }}}
 
-[109-py]
+[109-basic]
 LEVEL=py
 JQ = {{{
 . as $dot|all($dot[];.)
@@ -1670,7 +1670,7 @@ JFTL = {{{
 }}}
 COMMENT=Modeled jq's falsy rule explicitly (only false/null are falsy) rather than Python truthiness.
 
-[110-py]
+[110-basic]
 LEVEL=py
 JQ = {{{
 . as $dot|all($dot[];.)
@@ -1685,7 +1685,7 @@ JFTL = {{{
 {"main": "$py=all(v is not False and v is not None for v in _)"}
 }}}
 
-[111-nav]
+[111-basic]
 LEVEL=nav
 JQ = {{{
 any(true, error; .)
@@ -1701,7 +1701,7 @@ JFTL = {{{
 }}}
 COMMENT=any() short-circuits on the first true, never reaching error().
 
-[112-nav]
+[112-basic]
 LEVEL=nav
 JQ = {{{
 all(false, error; .)
@@ -1716,7 +1716,7 @@ JFTL = {{{
 {"main": false}
 }}}
 
-[113-py]
+[113-basic]
 LEVEL=py
 JQ = {{{
 any(not)
@@ -1731,7 +1731,7 @@ JFTL = {{{
 {"main": "$py=any(not v for v in _)"}
 }}}
 
-[114-py]
+[114-basic]
 LEVEL=py
 JQ = {{{
 all(not)
@@ -1746,7 +1746,7 @@ JFTL = {{{
 {"main": "$py=all(not v for v in _)"}
 }}}
 
-[115-py]
+[115-basic]
 LEVEL=py
 JQ = {{{
 any(not)
@@ -1761,7 +1761,7 @@ JFTL = {{{
 {"main": "$py=any(not v for v in _)"}
 }}}
 
-[116-py]
+[116-basic]
 LEVEL=py
 JQ = {{{
 all(not)
@@ -1776,7 +1776,7 @@ JFTL = {{{
 {"main": "$py=all(not v for v in _)"}
 }}}
 
-[117-py]
+[117-basic]
 LEVEL=py
 JQ = {{{
 [any,all]
@@ -1791,7 +1791,7 @@ JFTL = {{{
 {"main": "$py=[any(v is not False and v is not None for v in _), all(v is not False and v is not None for v in _)]"}
 }}}
 
-[118-py]
+[118-basic]
 LEVEL=py
 JQ = {{{
 [any,all]
@@ -1806,7 +1806,7 @@ JFTL = {{{
 {"main": "$py=[any(v is not False and v is not None for v in _), all(v is not False and v is not None for v in _)]"}
 }}}
 
-[119-py]
+[119-basic]
 LEVEL=py
 JQ = {{{
 [any,all]
@@ -1821,7 +1821,7 @@ JFTL = {{{
 {"main": "$py=[any(v is not False and v is not None for v in _), all(v is not False and v is not None for v in _)]"}
 }}}
 
-[120-py]
+[120-basic]
 LEVEL=py
 JQ = {{{
 [any,all]
@@ -1836,7 +1836,7 @@ JFTL = {{{
 {"main": "$py=[any(v is not False and v is not None for v in _), all(v is not False and v is not None for v in _)]"}
 }}}
 
-[121-py]
+[121-basic]
 LEVEL=py
 JQ = {{{
 [any,all]

@@ -27,7 +27,7 @@
 #
 # Same caveats as chunks 1-5: not engine-verified, best-effort tier calls.
 
-[324-skip]
+[324-blocks]
 JQ = {{{
 sort
 }}}
@@ -39,7 +39,7 @@ EXPECTED = {{{
 }}}
 SKIP=jq's sort has a total order across every JSON type (null<false<true<number<string<array<object); Python can't compare dicts with "<" at all, and reproducing jq's full cross-type order without a lambda/def-based comparator is a lot of fragile inline logic for one test.
 
-[325-skip]
+[325-blocks]
 JQ = {{{
 (sort_by(.b) | sort_by(.a)), sort_by(.a, .b), sort_by(.b, .c), group_by(.b), group_by(.a + .b - .c == 2)
 }}}
@@ -55,7 +55,7 @@ EXPECTED = {{{
 }}}
 SKIP=compound test combining sequential sort_by, multi-key sort_by, and group_by with a computed grouping key — doable with the tuple+index trick used elsewhere in this chunk, but 5 different key expressions stacked in one test isn't a good effort/value tradeoff to hand-derive.
 
-[326-py]
+[326-blocks]
 LEVEL=py
 JQ = {{{
 unique
@@ -71,7 +71,7 @@ JFTL = {{{
 }}}
 COMMENT=set() isn't whitelisted, so dedupe-after-sort via adjacent-comparison instead of sorted(set(_)) — recomputes sorted(_) redundantly per index, wasteful but stays in-grammar.
 
-[327-nav]
+[327-blocks]
 LEVEL=nav
 JQ = {{{
 unique
@@ -86,7 +86,7 @@ JFTL = {{{
 {"main": "$."}
 }}}
 
-[328-py]
+[328-blocks]
 LEVEL=py
 JQ = {{{
 [min, max, min_by(.[1]), max_by(.[1]), min_by(.[2]), max_by(.[2])]
@@ -102,7 +102,7 @@ JFTL = {{{
 }}}
 COMMENT=No lambda, so min_by/max_by built as (key, original-index) tuples — min()/max() compare tuples natively, and picking the smallest/largest index on ties naturally reproduces jq's "first wins for min_by, last wins for max_by" stable-sort tie-breaking. Plain min(_)/max(_) work directly since Python's list comparison happens to agree with jq's array ordering for these homogeneous rows.
 
-[329-nav]
+[329-blocks]
 LEVEL=nav
 JQ = {{{
 [min,max,min_by(.),max_by(.)]
@@ -118,7 +118,7 @@ JFTL = {{{
 }}}
 COMMENT=Python's min()/max() raise on an empty sequence rather than returning null like jq — matches this exact (always-empty) input as a literal rather than guarding generically.
 
-[330-py]
+[330-blocks]
 LEVEL=py
 JQ = {{{
 .foo[.baz]
@@ -134,7 +134,7 @@ JFTL = {{{
 }}}
 COMMENT=Runtime subscript using another field's value as the key — different from the object-construction "computed key" limitation (that one was about building keys, this is about reading with a dynamic key, which subscripting handles fine).
 
-[331-py]
+[331-blocks]
 LEVEL=py
 JQ = {{{
 .[] | .error = "no, it's OK"
@@ -149,7 +149,7 @@ JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$."}, "body": "$py={**_, 'error': \"no, it's OK\"}"}}
 }}}
 
-[332-nav]
+[332-blocks]
 LEVEL=nav
 JQ = {{{
 [{a:1}] | .[] | .a=999
@@ -165,7 +165,7 @@ JFTL = {{{
 }}}
 COMMENT=Every operand here is a literal in the jq program itself; input is never referenced — fully deterministic.
 
-[333-py]
+[333-blocks]
 LEVEL=py
 JQ = {{{
 to_entries
@@ -181,7 +181,7 @@ JFTL = {{{
 }}}
 COMMENT=Native foreach key+var, avoiding dict.items() (not whitelisted) entirely.
 
-[334-py]
+[334-blocks]
 LEVEL=py
 JQ = {{{
 from_entries
@@ -197,7 +197,7 @@ JFTL = {{{
 }}}
 COMMENT=jq's from_entries accepts several key/value field-name aliases; checked each via "in" rather than dict.get() (not whitelisted). Only covers the 4 aliases exercised by this test, not jq's full alias list (also k/K/v/V).
 
-[335-py]
+[335-blocks]
 LEVEL=py
 JQ = {{{
 with_entries(.key |= "KEY_" + .)
@@ -213,7 +213,7 @@ JFTL = {{{
 }}}
 COMMENT=with_entries here needs to rename keys, which JFTL's foreach transform:"OBJECT" can't do (it always keys the result by the loop's own key, not whatever the body computes) — did it as a plain dict comprehension over "for k in _" (dict iteration yields keys) instead of going through foreach at all.
 
-[336-py]
+[336-blocks]
 LEVEL=py
 JQ = {{{
 map(has("foo"))
@@ -228,7 +228,7 @@ JFTL = {{{
 {"main": "$py=['foo' in d for d in _]"}
 }}}
 
-[337-py]
+[337-blocks]
 LEVEL=py
 JQ = {{{
 map(has(2))
@@ -244,7 +244,7 @@ JFTL = {{{
 }}}
 COMMENT=has(N) on an array checks whether index N exists, i.e. N < length.
 
-[338-nav]
+[338-blocks]
 LEVEL=nav
 JQ = {{{
 has(nan)
@@ -260,7 +260,7 @@ JFTL = {{{
 }}}
 COMMENT=nan is never a valid array index, so this is always false regardless of the array.
 
-[339-py]
+[339-blocks]
 LEVEL=py
 JQ = {{{
 keys
@@ -275,7 +275,7 @@ JFTL = {{{
 {"main": "$py=[i for i in range(len(_))]"}
 }}}
 
-[340-nav]
+[340-blocks]
 LEVEL=nav
 JQ = {{{
 [][.]
@@ -291,7 +291,7 @@ JFTL = {{{
 }}}
 COMMENT=Indexing a literal empty array is always null, for any index — the input value is irrelevant.
 
-[341-py]
+[341-blocks]
 LEVEL=py
 JQ = {{{
 map([1,2][0:.])
@@ -307,7 +307,7 @@ JFTL = {{{
 }}}
 COMMENT=Python's slice clamping on negative/huge bounds happens to agree with jq's here.
 
-[342-py]
+[342-blocks]
 LEVEL=py
 COMMENT=Test recursive object merge
 JQ = {{{
@@ -324,7 +324,7 @@ JFTL = {{{
 }}}
 COMMENT=Hand-built for this exact one-key, one-level-deep literal shape — jq's "*" is a genuine recursive type-aware merge (recurse if both sides are objects, else RHS overrides), which needs isinstance()-driven recursion in general. Not a real "*" implementation, just matches this specific test.
 
-[343-skip]
+[343-blocks]
 JQ = {{{
 {"k": {"a": 1, "b": 2}, "hello": {"x": 1}} * .
 }}}
@@ -336,7 +336,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs the general "merge if both sides are objects, else RHS wins" rule (per-key type dispatch via isinstance), which without def/lambda means a lot of repeated inline conditionals for diminishing value per test.
 
-[344-skip]
+[344-blocks]
 JQ = {{{
 {"k": {"a": 1, "b": 2}, "hello": 1} * .
 }}}
@@ -348,7 +348,7 @@ EXPECTED = {{{
 }}}
 SKIP=same as 343.
 
-[345-skip]
+[345-blocks]
 JQ = {{{
 {"a": {"b": 1}, "c": {"d": 2}, "e": 5} * .
 }}}
@@ -360,7 +360,7 @@ EXPECTED = {{{
 }}}
 SKIP=same as 343 (three keys deep-merging here, even more hand-unrolling for one test).
 
-[346-eval]
+[346-blocks]
 LEVEL=eval
 JQ = {{{
 [.[]|arrays]
@@ -376,7 +376,7 @@ JFTL = {{{
 }}}
 COMMENT=isinstance() isn't whitelisted at py tier.
 
-[347-eval]
+[347-blocks]
 LEVEL=eval
 JQ = {{{
 [.[]|objects]
@@ -391,7 +391,7 @@ JFTL = {{{
 {"main": "$pyeval=[x for x in _ if isinstance(x, dict)]"}
 }}}
 
-[348-eval]
+[348-blocks]
 LEVEL=eval
 JQ = {{{
 [.[]|iterables]
@@ -406,7 +406,7 @@ JFTL = {{{
 {"main": "$pyeval=[x for x in _ if isinstance(x, (list, dict))]"}
 }}}
 
-[349-eval]
+[349-blocks]
 LEVEL=eval
 JQ = {{{
 [.[]|scalars]
@@ -421,7 +421,7 @@ JFTL = {{{
 {"main": "$pyeval=[x for x in _ if not isinstance(x, (list, dict))]"}
 }}}
 
-[350-py]
+[350-blocks]
 LEVEL=py
 JQ = {{{
 [.[]|values]
@@ -437,7 +437,7 @@ JFTL = {{{
 }}}
 COMMENT=jq's values/0 just means "not null" — no isinstance() needed, so this stays at py tier unlike its type-filter siblings.
 
-[351-eval]
+[351-blocks]
 LEVEL=eval
 JQ = {{{
 [.[]|booleans]
@@ -452,7 +452,7 @@ JFTL = {{{
 {"main": "$pyeval=[x for x in _ if isinstance(x, bool)]"}
 }}}
 
-[352-py]
+[352-blocks]
 LEVEL=py
 JQ = {{{
 [.[]|nulls]
@@ -468,7 +468,7 @@ JFTL = {{{
 }}}
 COMMENT=Same as 350 — no isinstance() needed for a plain None check.
 
-[353-nav]
+[353-blocks]
 LEVEL=nav
 JQ = {{{
 flatten(0)
@@ -484,7 +484,7 @@ JFTL = {{{
 }}}
 COMMENT=flatten(0) is defined as a no-op.
 
-[354-run]
+[354-blocks]
 LEVEL=run
 JQ = {{{
 flatten(2)
@@ -500,7 +500,7 @@ JFTL = {{{
 }}}
 COMMENT=Real loop, fixed at 2 passes since flatten(N) needs N literal — no recursion or def required, just genuine iteration which run tier's statement support makes straightforward.
 
-[355-run]
+[355-blocks]
 LEVEL=run
 JQ = {{{
 flatten(2)
@@ -515,7 +515,7 @@ JFTL = {{{
 {"main": "$pyrun=result = list(_)\nfor _pass in range(2):\n    new_result = []\n    for item in result:\n        if isinstance(item, list):\n            new_result.extend(item)\n        else:\n            new_result.append(item)\n    result = new_result\nreturn result"}
 }}}
 
-[356-skip]
+[356-blocks]
 JQ = {{{
 try flatten(-1) catch .
 }}}
@@ -527,7 +527,7 @@ EXPECTED = {{{
 }}}
 SKIP=needs try/catch.
 
-[357-run]
+[357-blocks]
 LEVEL=run
 JQ = {{{
 flatten
@@ -543,7 +543,7 @@ JFTL = {{{
 }}}
 COMMENT=Unlimited-depth flatten via a while-loop that keeps expanding until no list remains — genuinely general (no depth assumption), no recursion needed since it's iterative widening rather than depth-first recursion.
 
-[358-py]
+[358-blocks]
 LEVEL=py
 JQ = {{{
 transpose
@@ -559,7 +559,7 @@ JFTL = {{{
 }}}
 COMMENT=Built from max/range/len (all whitelisted) rather than itertools.zip_longest — stays at py tier.
 
-[359-nav]
+[359-blocks]
 LEVEL=nav
 JQ = {{{
 transpose
@@ -574,7 +574,7 @@ JFTL = {{{
 {"main": "$."}
 }}}
 
-[360-py]
+[360-blocks]
 LEVEL=py
 JQ = {{{
 ascii_upcase
