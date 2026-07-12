@@ -167,7 +167,7 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": [{"x": -1}, {"x": "$py=-_"}, {"x": "$py=abs(-_)"}]}
 }}}
-COMMENT=abs() is not in the py-tier whitelist, so eval; also collects 3 streamed outputs into one array.
+TRANSFORM=stream
 
 [009-nav]
 LEVEL=nav
@@ -477,7 +477,8 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": ["$.e0", "$.E1", "$py=(_['E'] if 'E' in _ else 0) - 1", "$py=(_['E'] if 'E' in _ else 0) + 1"]}
 }}}
-COMMENT=Used subscript+"in" instead of dict.get() (.get isn't whitelisted) to stay at py. Streaming gap: 4 outputs collected into one array.
+TRANSFORM=stream
+COMMENT=Used subscript+"in" instead of dict.get() (.get isn't whitelisted) to stay at py. Streaming 4 outputs collected into one array.
 
 [029-skip]
 JQ = {{{
@@ -647,7 +648,8 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$."}, "body": "$."}}
 }}}
-COMMENT=foreach with no "var" sets frame.current to each item, so "$." re-emits it with zero expression-engine use. Streaming gap: collected into one array.
+TRANSFORM=stream
+COMMENT=foreach with no "var" sets frame.current to each item, so "$." re-emits it with zero expression-engine use. Streaming collected into one array.
 
 [042-nav]
 LEVEL=nav
@@ -664,6 +666,7 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": [1, 1]}
 }}}
+TRANSFORM=stream
 
 [043-nav]
 LEVEL=nav
@@ -680,6 +683,8 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": [1, "$."]}
 }}}
+TRANSFORM=stream
+
 
 [044-nav]
 LEVEL=nav
@@ -788,6 +793,8 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": [1, 2, 3]}
 }}}
+TRANSFORM=stream
+
 
 [051-py]
 LEVEL=py
@@ -1333,6 +1340,8 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": ["$py=','.join(_)", "$py='/'.join(_)"]}
 }}}
+TRANSFORM=stream
+
 
 [088-py]
 LEVEL=py
@@ -1425,7 +1434,8 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": ["$py=_[:2] + [] + _[4:]", "$py=_[:2] + ['a','b'] + _[4:]", "$py=_[:2] + ['a','b','c'] + _[4:]"]}
 }}}
-COMMENT=Streaming gap: 3 outputs collected into one array.
+TRANSFORM=stream
+COMMENT=Streaming 3 outputs collected into one array.
 
 [094-skip]
 JQ = {{{
@@ -1471,7 +1481,8 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": {"$": true, "foreach": {"in": [1,2,3]}, "body": "$py=[[4,5,6,7][_]]"}}
 }}}
-COMMENT=Streaming gap: 3 outputs -> [[5],[6],[7]] instead.
+TRANSFORM=stream
+COMMENT=Streaming 3 outputs -> [[5],[6],[7]] instead.
 
 [097-py]
 LEVEL=py
@@ -1552,7 +1563,6 @@ JFTL = {{{
 
 [103-py]
 LEVEL=py
-SKIP=streaming output not supported.
 JQ = {{{
 .[] as [$a, $b] | [$b, $a]
 }}}
@@ -1566,6 +1576,8 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$."}, "body": "$py=[_[1] if len(_) > 1 else None, _[0]]"}}
 }}}
+TRANSFORM=stream
+
 
 [104-nav]
 LEVEL=nav

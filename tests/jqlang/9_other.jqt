@@ -337,7 +337,7 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": "$pyrun=state = 0\nout = []\nfor x in _:\n    state = state + x\n    out.append(state)\nreturn out"}
 }}}
-COMMENT=$try/$catch are keyword-shadowed names, not real try/catch. This is jq's foreach init;update;extract running total; JFTL's foreach construct doesn't carry a fold accumulator across iterations, so a real loop at run tier collects the running totals directly. Streaming gap: jq's 4 outputs collected into one array.
+COMMENT=$try/$catch are keyword-shadowed names, not real try/catch. This is jq's foreach init;update;extract running total; JFTL's foreach construct doesn't carry a fold accumulator across iterations, so a real loop at run tier collects the running totals directly. Streaming jq's 4 outputs collected into one array.
 
 [457-skip]
 COMMENT=Object construction
@@ -781,9 +781,9 @@ EXPECTED = {{{
 [1,1,1]
 }}}
 JFTL = {{{
-{"main": "$pyeval=[_[int(i)] for i in (1.1,1.5,1.7)]"}
+{"main": "$pyeval=[list(range(10))[int(i)] for i in (1.1,1.5,1.7)]"}
 }}}
-COMMENT=Not a slice — this is a comma-generator of three ordinary (fractional, floor-truncated) single-element indices, which JFTL's indexing does support. Streaming gap: 3 outputs collected into one array.
+COMMENT=Not a slice — this is a comma-generator of three ordinary (fractional, floor-truncated) single-element indices, which JFTL's indexing does support. Streaming 3 outputs collected into one array.
 
 [489-eval]
 LEVEL=eval
@@ -986,6 +986,7 @@ EXPECTED = {{{
 SKIP=needs try/catch and setpath's exact error text.
 
 [504-run]
+#SKIP = JQ 1.7 fails
 LEVEL=run
 COMMENT=regression test for #3227
 JQ = {{{
@@ -1003,6 +1004,7 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": "$pyrun=out = []\nfor init in (0, 1):\n    state = init\n    for x in _:\n        state = state + x\n        out.append(state)\nreturn out"}
 }}}
+TRANSFORM=stream
 COMMENT=jq's foreach init here is itself a two-value generator (0, 1), which reruns the ENTIRE foreach once per init value, concatenating both runs' outputs — replicated with an explicit outer loop over the two init values. Streaming gap: jq's 4 outputs collected into one array.
 
 [505-skip]

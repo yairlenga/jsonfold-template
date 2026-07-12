@@ -338,7 +338,7 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$.", "body": {"$pyeval": "','.join(('' if x is None else ('true' if x is True else ('false' if x is False else (x if isinstance(x,str) else __import__('json').dumps(x))))) for x in _)"}}}}
 }}}
-COMMENT=foreach with no "var" binds each inner array to frame.current ("_" inside the body expression); reuses test 400's join logic per item. Streaming gap: jq's 4 outputs collected into one array.
+COMMENT=foreach with no "var" binds each inner array to frame.current ("_" inside the body expression); reuses test 400's join logic per item. Streaming jq's 4 outputs collected into one array.
 
 [402-eval]
 LEVEL=eval
@@ -353,9 +353,10 @@ EXPECTED = {{{
 ",a"
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$.", "body": {"$pyeval": "','.join(('' if x is None else ('true' if x is True else ('false' if x is False else (x if isinstance(x,str) else __import__('json').dumps(x))))) for x in _)"}}}}
+{"main": {"$": true, "foreach": {"in": "$."}, "body": "$py=','.join('' if v == None else v for v in _)"}}
 }}}
-COMMENT=Same pattern as 401. Streaming gap: 2 outputs collected into one array.
+TRANSFORM=stream
+COMMENT=Same pattern as 401. Streaming  2 outputs collected into one array.
 
 [403-skip]
 JQ = {{{
@@ -568,7 +569,8 @@ true
 JFTL = {{{
 {"main": "$pyeval=[x in range(10) for x in range(5,10)]"}
 }}}
-COMMENT=Streaming gap: jq's 5 outputs collected into one array.
+TRANSFORM=stream
+COMMENT=Streaming jq's 5 outputs collected into one array.
 
 [419-eval]
 LEVEL=eval
@@ -591,7 +593,8 @@ false
 JFTL = {{{
 {"main": "$pyeval=[x in range(0,10,3) for x in range(5,13)]"}
 }}}
-COMMENT=Streaming gap: jq's 8 outputs collected into one array.
+TRANSFORM=stream
+COMMENT=Streaming jq's 8 outputs collected into one array.
 
 [420-eval]
 LEVEL=eval
@@ -608,7 +611,8 @@ false
 JFTL = {{{
 {"main": "$pyeval=[x in range(10) for x in range(10,12)]"}
 }}}
-COMMENT=Streaming gap: jq's 2 outputs collected into one array.
+TRANSFORM=stream
+COMMENT=Streaming jq's 2 outputs collected into one array.
 
 [421-eval]
 LEVEL=eval

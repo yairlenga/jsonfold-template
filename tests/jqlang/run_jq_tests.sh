@@ -45,7 +45,7 @@ ID_RE='[a-zA-Z0-9][a-zA-Z0-9._-]+'
 SECTION_RE="^\[($ID_RE)\]$"
 KEY_VAL_RE="^ *($ID_RE) *= *(.*)$"
 BLOCK_START_RE="^ *($ID_RE) *= *\{\{\{ *$"
-BLOCK_END_RE="}}}"
+BLOCK_END_RE="^ *}}} *$"
 
 declare -A data
 id=
@@ -154,12 +154,14 @@ for id in "${id_list[@]}" ; do
 			none) opt="--no-plugins" ;;
 			nav | logic | py | default ) ;;
 			eval) opt="--enable=pyeval" ; opt="--all-plugins" ;;
-			run) opt="--enable=pyeval,pyrun" ;;
-			all) opt="--all-plugins" ;;
+			run | all) opt="--all-plugins" ;;
 			*) error=${error:+, }"Bad Level=$level" ;;
 		esac
 		echo "=== jf_template:" >> $err_file
-		if ! ../../python/run.sh $opt $jf_file $input_file 2>> $err_file | jq . > "$jf_out" 2>> "$err_file" ; then
+		JQ_MODE="."
+		[[ "${data["$id.TRANSFORM"]-}" = "stream" ]] && JQ_MODE=".[]"
+		echo  "Debug: " ../../python/run.sh -v $opt $jf_file $input_file >> $err_file
+		if ! ../../python/run.sh $opt $jf_file $input_file 2>> $err_file | jq "$JQ_MODE" > "$jf_out" 2>> "$err_file" ; then
 			error+=${error:+, }"JF fail"
 		else
 			diff=$(diff $jf_out $gold_file || true)

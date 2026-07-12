@@ -251,7 +251,9 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": ["$py=[v.strip() for v in _]", "$py=[v[::-1].rstrip()[::-1] for v in _]", "$py=[v.rstrip() for v in _]"]}
 }}}
-COMMENT=No lstrip in the whitelist — ltrim done via reverse/rstrip/reverse-back instead. Streaming gap: 3 outputs collected into one array.
+TRANSFORM=stream
+SKIP=JQ 1.7 does not have trim,ltrim,rtrim
+COMMENT=No lstrip in the whitelist — ltrim done via reverse/rstrip/reverse-back instead. Streaming 3 outputs collected into one array.
 
 [299-py]
 LEVEL=py

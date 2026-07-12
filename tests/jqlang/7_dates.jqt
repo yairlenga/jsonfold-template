@@ -42,7 +42,8 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": "$pyeval=[(p if p < len(_) and _[p]==n else -(p+1)) for n in (0,1,2,3,4) if (p := __import__('bisect').bisect_left(_,n)) or True]"}
 }}}
-COMMENT=Walrus (:=) inside the comprehension's "if" clause binds bisect_left's result once per iteration without needing a lambda; "or True" makes that filter clause always pass. Streaming gap: jq's 5 outputs collected into one array.
+TRANSFORM=stream
+COMMENT=Walrus (:=) inside the comprehension's "if" clause binds bisect_left's result once per iteration without needing a lambda; "or True" makes that filter clause always pass. Streaming jq's 5 outputs collected into one array.
 
 [362-skip]
 JQ = {{{

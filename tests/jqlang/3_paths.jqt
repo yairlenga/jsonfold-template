@@ -136,7 +136,8 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": ["$.foo[1]", "$py={**_, 'foo': _['foo'][:1] + [20] + _['foo'][2:]}", "$py={**_, 'foo': _['foo'][:1] + _['foo'][2:]}"]}
 }}}
-COMMENT=Path ["foo",1] is a fixed literal for this test, so getpath became plain navigation and setpath/delpaths became hand-built dict-spread rebuilds — not a general getpath/setpath/delpaths. Streaming gap: 3 outputs collected into one array.
+TRANSFORM=stream
+COMMENT=Path ["foo",1] is a fixed literal for this test, so getpath became plain navigation and setpath/delpaths became hand-built dict-spread rebuilds — not a general getpath/setpath/delpaths. Streaming 3 outputs collected into one array.
 
 [207-py]
 LEVEL=py
@@ -423,7 +424,8 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": ["$py=[v + 2 for v in _]", "$py=[v * 2 for v in _]", "$py=[v - 2 for v in _]", "$py=[v / 2 for v in _]", "$py=[v % 2 for v in _]"]}
 }}}
-COMMENT=Streaming gap: 5 outputs collected into one array.
+TRANSFORM=stream
+COMMENT=Streaming 5 outputs collected into one array.
 
 [225-py]
 LEVEL=py

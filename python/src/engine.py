@@ -82,7 +82,7 @@ class JFTLEngine(Engine, Compiler):
         (?P<plugin> \w+ )
         =
         \s *
-        (?P<expr> .*)
+        (?P<expr> (?s:.*))
         $            
     """, re.VERBOSE)
 

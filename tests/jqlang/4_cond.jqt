@@ -674,7 +674,8 @@ null
 JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$."}, "body": "$."}}
 }}}
-COMMENT=error with no message raises the current value itself as the payload, and catch immediately returns it — net effect is identity per item, so this degrades to the same no-var foreach + "$." pattern used throughout, needing no try/catch modeling at all. Streaming gap: collected into one array instead of 3 outputs.
+TRANSFORM=stream
+COMMENT=error with no message raises the current value itself as the payload, and catch immediately returns it — net effect is identity per item, so this degrades to the same no-var foreach + "$." pattern used throughout, needing no try/catch modeling at all. Streaming collected into one array instead of 3 outputs.
 
 [283-skip]
 JQ = {{{
