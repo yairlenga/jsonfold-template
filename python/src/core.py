@@ -108,7 +108,8 @@ class Frame:
                 value = frame.vars[name]
 #                for f in chain:
 #                    f._cache[name] = value
-                self._cache[name] = value
+                if frame != self:
+                    self._cache[name] = value
                 return value
 #            chain.append(frame)
             frame = frame.parent
