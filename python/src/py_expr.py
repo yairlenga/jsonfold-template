@@ -73,6 +73,7 @@ class SimpleEvalPlugin(Compiler):
             allowed_attrs= { str: STRING_ATTRS }
         )
         se.functions = {
+            "abs": abs,
             "len": len,
             "min": min,
             "max": max,
@@ -80,6 +81,8 @@ class SimpleEvalPlugin(Compiler):
             "round": round,
             "range": range,
             "sorted": sorted,
+            "any": any,
+            "all": all,
         }
         return se
 

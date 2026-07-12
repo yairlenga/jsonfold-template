@@ -58,9 +58,7 @@ class JFTLEngine(Engine, Compiler):
         try:
             body = template.main
             frame = Frame.top_frame(template, input)
-            result = self._render(body, frame)
-            status = None
-            result = self._render(body, frame)
+            result, _ = self._render(body, frame)
             status = Status(ok=True)
         except RenderError as re:
             status = re.error
@@ -168,18 +166,18 @@ class JFTLEngine(Engine, Compiler):
     # Returning JSON friendly types
     def _render(self, source: Any | Evaluator, frame: Frame) -> tuple[TYPE_ANY_REC, list[Error] | None]:
         if isinstance(source, Evaluator):
-            return source.eval(frame)
+            return source.eval(frame), None
 
         if isinstance(source, dict):
             result = {}
             for k, v in source.items():
                 eval_v, _ = self._render(v, frame)
                 if isinstance(eval_v, Error):
-                    return Error
+                    return Error, None
                 if isinstance(eval_v, Missing):
                     continue  # silently dropped from objects, per locked sentinel rules
                 result[k] = eval_v
-            return result
+            return result, None
         
         if isinstance(source, list):
             result = []

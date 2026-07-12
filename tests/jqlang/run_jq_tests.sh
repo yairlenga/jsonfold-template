@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -ue
 #
 # test_pack.sh — extract JQ/INPUT/EXPECTED/JFTL sections from a test file
 # in the [ID] / KEY = {{{ ... }}} format, run jq for each case, and write
@@ -10,21 +10,22 @@ set -uo pipefail
  
 OUTDIR=tmp
 KEEP=
+INFILE=
 while getopts T: opt ; do
 	case "$opt" in
 		T) OUTDIR=$OPTARG ;;
 		K) KEEP=YES ;;
+		F) INFILE=$OPTARG ;;
 	esac
 done
 
 shift $((OPTIND-1))
 input='(stdin)'
-if [ "${1-}" ] ; then
+if [ "$INFILE" ] ; then
 	if [ "$1" != "-" ] ; then
 		exec < $1
 		input="$1"
 	fi
-	shift
 fi
 
 command -v jq >/dev/null 2>&1 || { echo "jq not found on PATH" >&2; exit 1; }
@@ -50,8 +51,9 @@ declare -A data
 id=
 in_block=
 id_list=()
+all_list=()
 
-while read line ; do
+while read -r line ; do
 	if [[ "$in_block" ]] ; then
 		if [[ "$line" =~ $BLOCK_END_RE ]] ; then
 			in_block=""
@@ -62,9 +64,17 @@ while read line ; do
 	# Outside Block
 	elif [[ "$line" =~ $SECTION_RE ]] ; then
 		# New Section
-		[ "$id" ]
 		id=${BASH_REMATCH[1]}
-		id_list+=($id)
+		# Check if matching the selected list
+		run=yes
+		if [ "$*" ] ; then
+			run=
+			for arg ; do
+				[[ "$id" = $arg ]] && run=$arg && break
+			done
+		fi
+		all_list+=($id)
+		[ "$run" ] && id_list+=($id)
 	elif [[ "$line" =~ $BLOCK_START_RE ]] ; then
 		key=${BASH_REMATCH[1]}
 		in_block="$id.$key"
@@ -86,7 +96,7 @@ echo "Found ${#id_list[@]} tests, Running $#, using OUTDIR=$OUTDIR" >&2
 pass=0
 fail=0
 skip=0
-for id ; do
+for id in "${id_list[@]}" ; do
 	base="$OUTDIR/$id"
 	rm -f $base.input $base.jq $base.jq.out $base.jq.err
 	skip_msg=${data["$id.SKIP"]-}
@@ -105,6 +115,7 @@ for id ; do
 	error=
 	rm -f $OUTDIR/$id.{input,gold,jq.out,jf.out,err,diff}
 	rm -f $err_file
+
 	if [ "$skip_msg" ] ; then
 		error=SKIP
 	elif [ ! "$jq_filter" ] ; then
@@ -116,7 +127,8 @@ for id ; do
 	else
 		echo "$jq_filter" > "$jq_file"
 		echo "$jftl" > "$jf_file"
-		echo "$gold" | json_pp > "$gold_file"
+		# Pretty print the gold file
+		echo "$gold" | jq . > "$gold_file"
 		if [ "$input" ] ; then
 			echo "$input" > $input_file
 		else
@@ -125,27 +137,43 @@ for id ; do
 
 		echo "=== jq:" >> $err_file
 		if ! jq -f $jq_file < ${input_file:-/dev/null} > "$jq_out" 2>> "$err_file" ; then
-			error=${error+, }"JQ Fail"
+			error=${error:+, }"JQ Fail"
 		else
-			echo "=== jq-diff:" >> $err_file
-			if ! diff <(json_pp <$jq_out) "$gold_file" >> $base.diff ; then
-				error+=${error+, }"JQDIFF"
+			diff=$(diff $jq_out $gold_file || true)
+			if [ "$diff" ] ; then
+				echo "diff: Failed\n$diff" >> $err_file
+				error+=${error:+, }"JQ-DIFF"
+			else
+				echo "=== jq-diff: OK" >> $err_file
 			fi
 		fi
 
+		opt=
+		level=${data["$id.LEVEL"]-}
+		case "$level" in
+			none) opt="--no-plugins" ;;
+			nav | logic | py | default ) ;;
+			eval) opt="--enable=pyeval" ; opt="--all-plugins" ;;
+			run) opt="--enable=pyeval,pyrun" ;;
+			all) opt="--all-plugins" ;;
+			*) error=${error:+, }"Bad Level=$level" ;;
+		esac
 		echo "=== jf_template:" >> $err_file
-		if ! ../../python/run.sh $jf_file $input_file > "$jf_out" 2>> "$err_file" ; then
-			error+=${error+, }"JF fail"
+		if ! ../../python/run.sh $opt $jf_file $input_file 2>> $err_file | jq . > "$jf_out" 2>> "$err_file" ; then
+			error+=${error:+, }"JF fail"
 		else
-			echo "=== jf-diff:" >> $err_file
-			if ! diff <(json_pp <$jq_out) "$gold_file" >> $base.diff ; then
-				error+=${error+, }"JFDiff"
+			diff=$(diff $jf_out $gold_file || true)
+			if [ "$diff" ] ; then
+				echo "diff:\n$diff" >> $err_file
+				error+=${error:+, }"JFTL-DIFF"
+			else
+				echo "=== jf-diff: OK" >> $err_file
 			fi
 		fi
 	fi
 
 	if [ "$skip_msg" ] ; then
-		echo "SKIP $id ($skip)" >&2
+		echo "SKIP $id ($skip_msg)" >&2
 		skip=$((skip+1))
 	elif [ "$error" ]; then
 		echo "FAIL $id ($error) see $err_file" >&2

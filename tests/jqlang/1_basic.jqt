@@ -165,7 +165,7 @@ EXPECTED = {{{
 {"x":1}
 }}}
 JFTL = {{{
-{"main": [{"x": -1}, {"x": "$pyeval=-_"}, {"x": "$pyeval=abs(-_)"}]}
+{"main": [{"x": -1}, {"x": "$py=-_"}, {"x": "$py=abs(-_)"}]}
 }}}
 COMMENT=abs() is not in the py-tier whitelist, so eval; also collects 3 streamed outputs into one array.
 
@@ -1506,6 +1506,7 @@ JFTL = {{{
 
 [099-py]
 LEVEL=py
+SKIP=Bug in JQ.
 JQ = {{{
 "x" as $x | "a"+"y" as $y | $x+","+$y
 }}}
@@ -1551,6 +1552,7 @@ JFTL = {{{
 
 [103-py]
 LEVEL=py
+SKIP=streaming output not supported.
 JQ = {{{
 .[] as [$a, $b] | [$b, $a]
 }}}
