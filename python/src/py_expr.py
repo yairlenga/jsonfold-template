@@ -83,6 +83,12 @@ class SimpleEvalPlugin(Compiler):
             "sorted": sorted,
             "any": any,
             "all": all,
+            "int": int,
+            "float": float,
+            "bool": bool,
+            "str": str,
+            "ord": ord,
+            "chr": chr,
         }
         return se
 

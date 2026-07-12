@@ -781,7 +781,14 @@ EXPECTED = {{{
 [1,1,1]
 }}}
 JFTL = {{{
-{"main": "$pyeval=[list(range(10))[int(i)] for i in (1.1,1.5,1.7)]"}
+{"main": {
+  "$": true,
+  "set": {
+    "arr": {"$": true, "foreach": {"shape": "range", "limit": 20}, "body": "$."}
+  },
+  "foreach": {"in": [1.1, 1.5, 1.7]},
+  "body": "$py=arr[int(_)]"
+}}
 }}}
 COMMENT=Not a slice — this is a comma-generator of three ordinary (fractional, floor-truncated) single-element indices, which JFTL's indexing does support. Streaming 3 outputs collected into one array.
 
