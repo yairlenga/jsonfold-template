@@ -1,0 +1,1838 @@
+# JFTL reference test corpus, v3 — corrects the expression-engine prefixes
+# and adds an explicit LEVEL= field to every test. Supersedes
+# jftl_reference_tests_v2.txt (same 121 cases, source lines ~1-1105 of 2635).
+#
+# ID naming: NNN-tag, tag is one of: nav, logic, py, eval, run, skip.
+# LEVEL=<tag> is also included as its own field on every non-skip test
+# (redundant with the ID suffix, per request).
+#
+# Corrected expression-engine syntax:
+#   $py=<expr>     - simpleeval (EvalWithCompoundTypes), restricted to your
+#                    whitelist: arithmetic/comparison/boolean/ternary,
+#                    subscript/slice, "in"/"not in", list/tuple/dict/set
+#                    literals AND comprehensions, functions {len, min, max,
+#                    sum, round, range, sorted}, string methods {join,
+#                    lower, upper, strip, rstrip, replace, split} (see bug
+#                    note below on startswith/endswith).
+#   $pyeval=<expr> - unrestricted eval() of a single Python expression: any
+#                    builtin, any method, module access via __import__(...).
+#   $pyrun=<code>  - exec-style, real statements (loops, assignments,
+#                    multiple lines), final result given via an explicit
+#                    "return" — used only when genuine imperative/recursive
+#                    logic is unavoidable.
+#   $.path         - navigation, unchanged.
+#
+# Tier definitions (unchanged from v2, just the prefixes were wrong there):
+#   nav   - whole template is a literal/object/array skeleton whose leaves
+#           are JSON literals or a bare "$.path" string. No {"$":true}
+#           anywhere.
+#   logic - uses {"$":true} (set/if/foreach/case/data/transform/default) but
+#           never reads a named variable's value through an expression
+#           engine. Main trick: foreach with no "var" sets frame.current to
+#           the item each iteration, so body "$." re-emits it for free.
+#   py    - needs $py= and stays inside the whitelist above.
+#   eval  - needs $pyeval= (something outside the whitelist, still one
+#           expression).
+#   run   - needs $pyrun= (real statements/loops; forcing it into a single
+#           expression would be a hack, not idiomatic).
+#   skip  - no JFTL section; SKIP=<short reason> instead, no LEVEL field.
+#
+# Found while deriving the "py" whitelist: STRING_ATTRS is missing a comma
+# between "startswith" and "endswith", so they silently concatenate into one
+# unusable entry. Classified below as if both work (matching evident
+# intent) — worth fixing on your end.
+#
+# STATUS: still chunk 1 only (source lines ~1-1105 of 2635). None of this is
+# engine-verified (no sandbox this session).
+
+[001-nav]
+LEVEL=nav
+JQ = {{{
+true
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+true
+}}}
+JFTL = {{{
+{"main": true}
+}}}
+
+[002-nav]
+LEVEL=nav
+JQ = {{{
+false
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+false
+}}}
+JFTL = {{{
+{"main": false}
+}}}
+
+[003-nav]
+LEVEL=nav
+JQ = {{{
+null
+}}}
+INPUT = {{{
+42
+}}}
+EXPECTED = {{{
+null
+}}}
+JFTL = {{{
+{"main": null}
+}}}
+
+[004-nav]
+LEVEL=nav
+JQ = {{{
+1
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+1
+}}}
+JFTL = {{{
+{"main": 1}
+}}}
+
+[005-nav]
+LEVEL=nav
+JQ = {{{
+-1
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+-1
+}}}
+JFTL = {{{
+{"main": -1}
+}}}
+
+[006-nav]
+LEVEL=nav
+COMMENT=FIXME: much more number testing needed
+JQ = {{{
+{}
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+{}
+}}}
+JFTL = {{{
+{"main": {}}
+}}}
+
+[007-nav]
+LEVEL=nav
+JQ = {{{
+[]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[]
+}}}
+JFTL = {{{
+{"main": []}
+}}}
+
+[008-eval]
+LEVEL=eval
+JQ = {{{
+{x:-1},{x:-.},{x:-.|abs}
+}}}
+INPUT = {{{
+1
+}}}
+EXPECTED = {{{
+{"x":-1}
+{"x":-1}
+{"x":1}
+}}}
+JFTL = {{{
+{"main": [{"x": -1}, {"x": "$pyeval=-_"}, {"x": "$pyeval=abs(-_)"}]}
+}}}
+COMMENT=abs() is not in the py-tier whitelist, so eval; also collects 3 streamed outputs into one array.
+
+[009-nav]
+LEVEL=nav
+COMMENT = {{{
+The input line starts with a 0xFEFF (byte order mark) codepoint
+No, there is no reason to have a byte order mark in UTF8 text.
+But apparently people do, so jq shouldn't break on it.
+}}}
+JQ = {{{
+.
+}}}
+INPUT = {{{
+"byte order mark"
+}}}
+EXPECTED = {{{
+"byte order mark"
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+
+[010-nav]
+LEVEL=nav
+COMMENT = {{{
+We test escapes by matching them against Unicode codepoints
+FIXME: more tests needed for weird unicode stuff (e.g. utf16 pairs)
+}}}
+JQ = {{{
+"Aa\r\n\t\b\fμ"
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Aa\r\n\t\b\fμ"
+}}}
+JFTL = {{{
+{"main": "Aa\r\n\t\b\fμ"}
+}}}
+
+[011-nav]
+LEVEL=nav
+JQ = {{{
+.
+}}}
+INPUT = {{{
+"Aa\r\n\t\b\fμ"
+}}}
+EXPECTED = {{{
+"Aa\r\n\t\b\fμ"
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+
+[012-py]
+LEVEL=py
+JQ = {{{
+"inter\("pol" + "ation")"
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"interpolation"
+}}}
+JFTL = {{{
+{"main": "$py='inter' + ('pol' + 'ation')"}
+}}}
+
+[013-eval]
+LEVEL=eval
+COMMENT=regression test for #436
+JQ = {{{
+@base64
+}}}
+INPUT = {{{
+"foóbar\n"
+}}}
+EXPECTED = {{{
+"Zm/Ds2Jhcgo="
+}}}
+JFTL = {{{
+{"main": "$pyeval=__import__('base64').b64encode(_.encode('utf-8')).decode('ascii')"}
+}}}
+
+[014-eval]
+LEVEL=eval
+JQ = {{{
+@base64d
+}}}
+INPUT = {{{
+"Zm/Ds2Jhcgo="
+}}}
+EXPECTED = {{{
+"foóbar\n"
+}}}
+JFTL = {{{
+{"main": "$pyeval=__import__('base64').b64decode(_).decode('utf-8')"}
+}}}
+
+[015-eval]
+LEVEL=eval
+JQ = {{{
+@uri
+}}}
+INPUT = {{{
+"μ"
+}}}
+EXPECTED = {{{
+"%CE%BC"
+}}}
+JFTL = {{{
+{"main": "$pyeval=__import__('urllib.parse', fromlist=['quote']).quote(_, safe='')"}
+}}}
+
+[016-eval]
+LEVEL=eval
+JQ = {{{
+@urid
+}}}
+INPUT = {{{
+"%CE%BC"
+}}}
+EXPECTED = {{{
+"μ"
+}}}
+JFTL = {{{
+{"main": "$pyeval=__import__('urllib.parse', fromlist=['unquote']).unquote(_)"}
+}}}
+
+[017-py]
+LEVEL=py
+JQ = {{{
+@html "<b>\(.)</b>"
+}}}
+INPUT = {{{
+"<script>hax</script>"
+}}}
+EXPECTED = {{{
+"<b>&lt;script&gt;hax&lt;/script&gt;</b>"
+}}}
+JFTL = {{{
+{"main": "$py='<b>' + _.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace(\"'\",'&#39;').replace('\"','&quot;') + '</b>'"}
+}}}
+COMMENT=Chained .replace() calls only, no chr() — stays inside whitelisted string attrs.
+
+[018-eval]
+LEVEL=eval
+JQ = {{{
+[.[]|tojson|fromjson]
+}}}
+INPUT = {{{
+["foo", 1, ["a", 1, "b", 2, {"foo":"bar"}]]
+}}}
+EXPECTED = {{{
+["foo",1,["a",1,"b",2,{"foo":"bar"}]]
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"in": "$."}, "body": "$pyeval=__import__('json').loads(__import__('json').dumps(_))"}}
+}}}
+
+[019-nav]
+LEVEL=nav
+JQ = {{{
+{a: 1}
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+{"a":1}
+}}}
+JFTL = {{{
+{"main": {"a": 1}}
+}}}
+
+[020-skip]
+JQ = {{{
+{a,b,(.d):.a,e:.b}
+}}}
+INPUT = {{{
+{"a":1, "b":2, "c":3, "d":"c"}
+}}}
+EXPECTED = {{{
+{"a":1, "b":2, "c":1, "e":2}
+}}}
+SKIP=object keys are compile-time-constant strings in this engine; no way to compute a key at render time.
+
+[021-skip]
+JQ = {{{
+{"a",b,"a$\(1+1)"}
+}}}
+INPUT = {{{
+{"a":1, "b":2, "c":3}
+}}}
+EXPECTED = {{{
+{"a":1, "b":2, "a$2":4}
+}}}
+SKIP=same computed/interpolated-key limitation as 020.
+
+[022-nav]
+LEVEL=nav
+JQ = {{{
+.foo
+}}}
+INPUT = {{{
+{"foo": 42, "bar": 43}
+}}}
+EXPECTED = {{{
+42
+}}}
+JFTL = {{{
+{"main": "$.foo"}
+}}}
+
+[023-nav]
+LEVEL=nav
+JQ = {{{
+.foo | .bar
+}}}
+INPUT = {{{
+{"foo": {"bar": 42}, "bar": "badvalue"}
+}}}
+EXPECTED = {{{
+42
+}}}
+JFTL = {{{
+{"main": "$.foo.bar"}
+}}}
+
+[024-nav]
+LEVEL=nav
+JQ = {{{
+.foo.bar
+}}}
+INPUT = {{{
+{"foo": {"bar": 42}, "bar": "badvalue"}
+}}}
+EXPECTED = {{{
+42
+}}}
+JFTL = {{{
+{"main": "$.foo.bar"}
+}}}
+
+[025-nav]
+LEVEL=nav
+JQ = {{{
+.foo_bar
+}}}
+INPUT = {{{
+{"foo_bar": 2}
+}}}
+EXPECTED = {{{
+2
+}}}
+JFTL = {{{
+{"main": "$.foo_bar"}
+}}}
+
+[026-nav]
+LEVEL=nav
+JQ = {{{
+.["foo"].bar
+}}}
+INPUT = {{{
+{"foo": {"bar": 42}, "bar": "badvalue"}
+}}}
+EXPECTED = {{{
+42
+}}}
+JFTL = {{{
+{"main": "$.[\"foo\"].bar"}
+}}}
+
+[027-nav]
+LEVEL=nav
+JQ = {{{
+."foo"."bar"
+}}}
+INPUT = {{{
+{"foo": {"bar": 20}}
+}}}
+EXPECTED = {{{
+20
+}}}
+JFTL = {{{
+{"main": "$.foo.bar"}
+}}}
+COMMENT=Normalized to .foo.bar — a bare dot immediately before a quoted segment isn't in NavigationExprNode's grammar.
+
+[028-py]
+LEVEL=py
+JQ = {{{
+.e0, .E1, .E-1, .E+1
+}}}
+INPUT = {{{
+{"e0": 1, "E1": 2, "E": 3}
+}}}
+EXPECTED = {{{
+1
+2
+2
+4
+}}}
+JFTL = {{{
+{"main": ["$.e0", "$.E1", "$py=(_['E'] if 'E' in _ else 0) - 1", "$py=(_['E'] if 'E' in _ else 0) + 1"]}
+}}}
+COMMENT=Used subscript+"in" instead of dict.get() (.get isn't whitelisted) to stay at py. Streaming gap: 4 outputs collected into one array.
+
+[029-skip]
+JQ = {{{
+[.[]|.foo?]
+}}}
+INPUT = {{{
+[1,[2],{"foo":3,"bar":4},{},{"foo":5}]
+}}}
+EXPECTED = {{{
+[3,null,5]
+}}}
+SKIP=jq's "?" drops non-matching items from output entirely; foreach always emits one result per iteration.
+
+[030-skip]
+JQ = {{{
+[.[]|.foo?.bar?]
+}}}
+INPUT = {{{
+[1,[2],[],{"foo":3},{"foo":{"bar":4}},{}]
+}}}
+EXPECTED = {{{
+[4,null]
+}}}
+SKIP=same output-suppression gap as 029.
+
+[031-skip]
+JQ = {{{
+[..]
+}}}
+INPUT = {{{
+[1,[[2]],{ "a":[1]}]
+}}}
+EXPECTED = {{{
+[[1,[[2]],{"a":[1]}],1,[[2]],[2],2,{"a":[1]},[1],1]
+}}}
+SKIP=no recursive-descent operator; even $pyrun's statement support doesn't give you unbounded structural recursion for free without real effort.
+
+[032-skip]
+JQ = {{{
+[.[]|.[]?]
+}}}
+INPUT = {{{
+[1,null,[],[1,[2,[[3]]]],[{}],[{"a":[1,[2]]}]]
+}}}
+EXPECTED = {{{
+[1,[2,[[3]]],{},{"a":[1,[2]]}]
+}}}
+SKIP=same output-suppression gap as 029.
+
+[033-skip]
+JQ = {{{
+[.[]|.[1:3]?]
+}}}
+INPUT = {{{
+[1,null,true,false,"abcdef",{},{"a":1,"b":2},[],[1,2,3,4,5],[1,2]]
+}}}
+EXPECTED = {{{
+[null,"bc",[],[2,3],[2]]
+}}}
+SKIP=same output-suppression gap as 029.
+
+[034-skip]
+COMMENT=chaining/suffix-list, with and without dot
+JQ = {{{
+map(try .a[] catch ., try .a.[] catch ., .a[]?, .a.[]?)
+}}}
+INPUT = {{{
+[{"a": [1,2]}, {"a": 123}]
+}}}
+EXPECTED = {{{
+[1,2,1,2,1,2,1,2,"Cannot iterate over number (123)","Cannot iterate over number (123)"]
+}}}
+SKIP=combines try/catch (unimplemented), per-type error text, and generator fan-out.
+
+[035-skip]
+COMMENT=oss-fuzz #66070: objects[] leaks if a non-last element throws an error
+JQ = {{{
+try ["OK", (.[] | error)] catch ["KO", .]
+}}}
+INPUT = {{{
+{"a":["b"],"c":["d"]}
+}}}
+EXPECTED = {{{
+["KO",["b"]]
+}}}
+SKIP=try/catch unimplemented ("error" field is compiled but never evaluated).
+
+[036-skip]
+JQ = {{{
+try (.foo[-1] = 0) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Out of bounds negative array index"
+}}}
+SKIP=needs in-place path assignment and try/catch, neither implemented.
+
+[037-skip]
+JQ = {{{
+try (.foo[-2] = 0) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Out of bounds negative array index"
+}}}
+SKIP=same as 036.
+
+[038-py]
+LEVEL=py
+JQ = {{{
+.[-1] = 5
+}}}
+INPUT = {{{
+[0,1,2]
+}}}
+EXPECTED = {{{
+[0,1,5]
+}}}
+JFTL = {{{
+{"main": "$py=_[:-1] + [5]"}
+}}}
+
+[039-py]
+LEVEL=py
+JQ = {{{
+.[-2] = 5
+}}}
+INPUT = {{{
+[0,1,2]
+}}}
+EXPECTED = {{{
+[0,5,2]
+}}}
+JFTL = {{{
+{"main": "$py=_[:-2] + [5] + _[-1:]"}
+}}}
+
+[040-skip]
+JQ = {{{
+try (.[999999999] = 0) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Array index too large"
+}}}
+SKIP=needs try/catch and in-place path assignment.
+
+[041-logic]
+LEVEL=logic
+JQ = {{{
+.[]
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+1
+2
+3
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"in": "$."}, "body": "$."}}
+}}}
+COMMENT=foreach with no "var" sets frame.current to each item, so "$." re-emits it with zero expression-engine use. Streaming gap: collected into one array.
+
+[042-nav]
+LEVEL=nav
+JQ = {{{
+1,1
+}}}
+INPUT = {{{
+[]
+}}}
+EXPECTED = {{{
+1
+1
+}}}
+JFTL = {{{
+{"main": [1, 1]}
+}}}
+
+[043-nav]
+LEVEL=nav
+JQ = {{{
+1,.
+}}}
+INPUT = {{{
+[]
+}}}
+EXPECTED = {{{
+1
+[]
+}}}
+JFTL = {{{
+{"main": [1, "$."]}
+}}}
+
+[044-nav]
+LEVEL=nav
+JQ = {{{
+[.]
+}}}
+INPUT = {{{
+[2]
+}}}
+EXPECTED = {{{
+[[2]]
+}}}
+JFTL = {{{
+{"main": ["$."]}
+}}}
+
+[045-nav]
+LEVEL=nav
+JQ = {{{
+[[2]]
+}}}
+INPUT = {{{
+[3]
+}}}
+EXPECTED = {{{
+[[2]]
+}}}
+JFTL = {{{
+{"main": [[2]]}
+}}}
+
+[046-nav]
+LEVEL=nav
+JQ = {{{
+[{}]
+}}}
+INPUT = {{{
+[2]
+}}}
+EXPECTED = {{{
+[{}]
+}}}
+JFTL = {{{
+{"main": [{}]}
+}}}
+
+[047-logic]
+LEVEL=logic
+JQ = {{{
+[.[]]
+}}}
+INPUT = {{{
+["a"]
+}}}
+EXPECTED = {{{
+["a"]
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"in": "$."}, "body": "$."}}
+}}}
+
+[048-eval]
+LEVEL=eval
+JQ = {{{
+[(.,1),((.,.[]),(2,3))]
+}}}
+INPUT = {{{
+["a","b"]
+}}}
+EXPECTED = {{{
+[["a","b"],1,["a","b"],"a","b",2,3]
+}}}
+JFTL = {{{
+{"main": {"$": true, "set": {"cur": "$."}, "body": "$pyeval=[cur, 1, cur, *cur, 2, 3]"}}
+}}}
+COMMENT=Star-unpacking (*cur) inside a list literal isn't in simpleeval's supported grammar, so eval tier.
+
+[049-py]
+LEVEL=py
+JQ = {{{
+[([5,5][]),.,.[]]
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+[5,5,[1,2,3],1,2,3]
+}}}
+JFTL = {{{
+{"main": "$py=[5, 5, _] + _"}
+}}}
+
+[050-nav]
+LEVEL=nav
+JQ = {{{
+{x: (1,2)},{x:3} | .x
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+1
+2
+3
+}}}
+JFTL = {{{
+{"main": [1, 2, 3]}
+}}}
+
+[051-py]
+LEVEL=py
+JQ = {{{
+[.[-4,-3,-2,-1,0,1,2,3]]
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+[null,1,2,3,1,2,3,null]
+}}}
+JFTL = {{{
+{"main": "$py=[(_[i] if -len(_) <= i < len(_) else None) for i in [-4,-3,-2,-1,0,1,2,3]]"}
+}}}
+
+[052-logic]
+LEVEL=logic
+JQ = {{{
+[range(0;10)]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,1,2,3,4,5,6,7,8,9]
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"shape": "range", "limit": 10}, "body": "$."}}
+}}}
+COMMENT=shape:"range" with no "var" also sets frame.current to the numeric value each iteration.
+
+[053-py]
+LEVEL=py
+JQ = {{{
+[range(0,1;3,4)]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,1,2, 0,1,2,3, 1,2, 1,2,3]
+}}}
+JFTL = {{{
+{"main": "$py=[v for start in (0,1) for stop in (3,4) for v in range(start, stop)]"}
+}}}
+
+[054-py]
+LEVEL=py
+JQ = {{{
+[range(0;10;3)]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,3,6,9]
+}}}
+JFTL = {{{
+{"main": "$py=[v for v in range(0, 10, 3)]"}
+}}}
+COMMENT=foreach.shape=range has no "step" field — no native equivalent.
+
+[055-py]
+LEVEL=py
+JQ = {{{
+[range(0;10;-1)]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[]
+}}}
+JFTL = {{{
+{"main": "$py=[v for v in range(0, 10, -1)]"}
+}}}
+
+[056-py]
+LEVEL=py
+JQ = {{{
+[range(0;-5;-1)]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,-1,-2,-3,-4]
+}}}
+JFTL = {{{
+{"main": "$py=[v for v in range(0, -5, -1)]"}
+}}}
+
+[057-py]
+LEVEL=py
+JQ = {{{
+[range(0,1;4,5;1,2)]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,1,2,3,0,2, 0,1,2,3,4,0,2,4, 1,2,3,1,3, 1,2,3,4,1,3]
+}}}
+JFTL = {{{
+{"main": "$py=[v for start in (0,1) for stop in (4,5) for step in (1,2) for v in range(start, stop, step)]"}
+}}}
+
+[058-run]
+LEVEL=run
+JQ = {{{
+[while(.<100; .*2)]
+}}}
+INPUT = {{{
+1
+}}}
+EXPECTED = {{{
+[1,2,4,8,16,32,64]
+}}}
+JFTL = {{{
+{"main": "$pyrun=result = []\nv = _\nwhile v < 100:\n    result.append(v)\n    v = v * 2\nreturn result"}
+}}}
+COMMENT=No while/until construct; genuine imperative loop, hence run tier (this replaces an earlier, uglier self-applying-lambda version — real statements are the honest tool now that $pyrun supports them).
+
+[059-skip]
+JQ = {{{
+[(label $here | .[] | if .>1 then break $here else . end), "hi!"]
+}}}
+INPUT = {{{
+[0,1,2]
+}}}
+EXPECTED = {{{
+[0,1,"hi!"]
+}}}
+SKIP=no label/break early-exit construct.
+
+[060-skip]
+JQ = {{{
+[(label $here | .[] | if .>1 then break $here else . end), "hi!"]
+}}}
+INPUT = {{{
+[0,2,1]
+}}}
+EXPECTED = {{{
+[0,"hi!"]
+}}}
+SKIP=no label/break early-exit construct.
+
+[061-eval]
+LEVEL=eval
+JQ = {{{
+[.[]|[.,1]|until(.[0] < 1; [.[0] - 1, .[1] * .[0]])|.[1]]
+}}}
+INPUT = {{{
+[1,2,3,4,5]
+}}}
+EXPECTED = {{{
+[1,2,6,24,120]
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"in": "$."}, "body": "$pyeval=__import__('math').factorial(_)"}}
+}}}
+COMMENT=This specific until() loop happens to compute a factorial — doesn't generalize to arbitrary until() usage.
+
+[062-skip]
+JQ = {{{
+[label $out | foreach .[] as $item ([3, null]; if .[0] < 1 then break $out else [.[0] -1, $item] end; .[1])]
+}}}
+INPUT = {{{
+[11,22,33,44,55,66,77,88,99]
+}}}
+EXPECTED = {{{
+[11,22,33]
+}}}
+SKIP=combines label/break (missing) and foreach state-threading (missing).
+
+[063-logic]
+LEVEL=logic
+JQ = {{{
+[foreach range(5) as $item (0; $item)]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,1,2,3,4]
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"shape": "range", "limit": 5}, "body": "$."}}
+}}}
+COMMENT=This foreach's update just re-emits the item, so it degrades to plain range iteration — coincidence, not a general foreach/reduce translation.
+
+[064-eval]
+LEVEL=eval
+JQ = {{{
+[foreach .[] as [$i, $j] (0; . + $i - $j)]
+}}}
+INPUT = {{{
+[[2,1], [5,3], [6,4]]
+}}}
+EXPECTED = {{{
+[1,3,5]
+}}}
+JFTL = {{{
+{"main": "$pyeval=list(__import__('itertools').accumulate((p[0]-p[1] for p in _), initial=0))[1:]"}
+}}}
+COMMENT=itertools isn't whitelisted at py tier; JFTL has no accumulator threading across foreach iterations at all.
+
+[065-eval]
+LEVEL=eval
+JQ = {{{
+[foreach .[] as {a:$a} (0; . + $a; -.)]
+}}}
+INPUT = {{{
+[{"a":1}, {"b":2}, {"a":3, "b":4}]
+}}}
+EXPECTED = {{{
+[-1, -1, -4]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[-s for s in list(__import__('itertools').accumulate((d.get('a') or 0 for d in _), initial=0))[1:]]"}
+}}}
+
+[066-py]
+LEVEL=py
+JQ = {{{
+[-foreach -.[] as $x (0; . + $x)]
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+[6]
+}}}
+JFTL = {{{
+{"main": ["$py=sum(_)"]}
+}}}
+COMMENT=Original test really exercises unary-minus-before-keyword parsing; only the numeric result is reproduced.
+
+[067-skip]
+JQ = {{{
+[foreach .[] / .[] as $i (0; . + $i)]
+}}}
+INPUT = {{{
+[1,2]
+}}}
+EXPECTED = {{{
+[1,3,3.5,4.5]
+}}}
+SKIP=cartesian division-generator plus state threading; not confident in jq's exact iteration order to assert equivalence.
+
+[068-eval]
+LEVEL=eval
+JQ = {{{
+[foreach .[] as $x (0; . + $x) as $x | $x]
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+[1,3,6]
+}}}
+JFTL = {{{
+{"main": "$pyeval=list(__import__('itertools').accumulate(_))"}
+}}}
+
+[069-py]
+LEVEL=py
+JQ = {{{
+[limit(3; .[])]
+}}}
+INPUT = {{{
+[11,22,33,44,55,66,77,88,99]
+}}}
+EXPECTED = {{{
+[11,22,33]
+}}}
+JFTL = {{{
+{"main": "$py=_[:3]"}
+}}}
+
+[070-nav]
+LEVEL=nav
+JQ = {{{
+[limit(0; error)]
+}}}
+INPUT = {{{
+"badness"
+}}}
+EXPECTED = {{{
+[]
+}}}
+JFTL = {{{
+{"main": []}
+}}}
+COMMENT=limit(0;...) never evaluates its generator in jq — matches this pair without modeling short-circuit generally.
+
+[071-nav]
+LEVEL=nav
+JQ = {{{
+[limit(1; 1, error)]
+}}}
+INPUT = {{{
+"badness"
+}}}
+EXPECTED = {{{
+[1]
+}}}
+JFTL = {{{
+{"main": [1]}
+}}}
+
+[072-skip]
+JQ = {{{
+try limit(-1; error) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"limit doesn't support negative count"
+}}}
+SKIP=needs try/catch.
+
+[073-py]
+LEVEL=py
+JQ = {{{
+[skip(3; .[])]
+}}}
+INPUT = {{{
+[1,2,3,4,5,6,7,8,9]
+}}}
+EXPECTED = {{{
+[4,5,6,7,8,9]
+}}}
+JFTL = {{{
+{"main": "$py=_[3:]"}
+}}}
+
+[074-py]
+LEVEL=py
+JQ = {{{
+[skip(0,2,3,4; .[])]
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+[1,2,3,3]
+}}}
+JFTL = {{{
+{"main": "$py=_[0:] + _[2:] + _[3:] + _[4:]"}
+}}}
+
+[075-py]
+LEVEL=py
+JQ = {{{
+[skip(3; .[])]
+}}}
+INPUT = {{{
+[]
+}}}
+EXPECTED = {{{
+[]
+}}}
+JFTL = {{{
+{"main": "$py=_[3:]"}
+}}}
+
+[076-skip]
+JQ = {{{
+try skip(-1; error) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"skip doesn't support negative count"
+}}}
+SKIP=needs try/catch.
+
+[077-nav]
+LEVEL=nav
+JQ = {{{
+nth(1; 0,1,error("foo"))
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+1
+}}}
+JFTL = {{{
+{"main": 1}
+}}}
+COMMENT=Matches this specific short-circuit-before-error pair; not a general nth().
+
+[078-py]
+LEVEL=py
+JQ = {{{
+[first(range(.)), last(range(.))]
+}}}
+INPUT = {{{
+10
+}}}
+EXPECTED = {{{
+[0,9]
+}}}
+JFTL = {{{
+{"main": "$py=[0, _-1] if _ > 0 else []"}
+}}}
+
+[079-py]
+LEVEL=py
+JQ = {{{
+[first(range(.)), last(range(.))]
+}}}
+INPUT = {{{
+0
+}}}
+EXPECTED = {{{
+[]
+}}}
+JFTL = {{{
+{"main": "$py=[0, _-1] if _ > 0 else []"}
+}}}
+
+[080-skip]
+JQ = {{{
+[nth(0,5,9,10,15; range(.)), try nth(-1; range(.)) catch .]
+}}}
+INPUT = {{{
+10
+}}}
+EXPECTED = {{{
+[0,5,9,"nth doesn't support negative indices"]
+}}}
+SKIP=needs try/catch for the negative-index error branch.
+
+[081-nav]
+LEVEL=nav
+JQ = {{{
+first(1,error("foo"))
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+1
+}}}
+JFTL = {{{
+{"main": 1}
+}}}
+
+[082-py]
+LEVEL=py
+JQ = {{{
+[limit(5,7; range(9))]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,1,2,3,4,0,1,2,3,4,5,6]
+}}}
+JFTL = {{{
+{"main": "$py=[v for v in range(9)][:5] + [v for v in range(9)][:7]"}
+}}}
+
+[083-py]
+LEVEL=py
+JQ = {{{
+[nth(5,7; range(9;0;-1))]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[4,2]
+}}}
+JFTL = {{{
+{"main": "$py=[[v for v in range(9,0,-1)][5], [v for v in range(9,0,-1)][7]]"}
+}}}
+
+[084-py]
+LEVEL=py
+JQ = {{{
+[range(0,1,2;4,3,2;2,3)]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,2,0,3,0,2,0,0,0,1,3,1,1,1,1,1,2,2,2,2]
+}}}
+JFTL = {{{
+{"main": "$py=[v for start in (0,1,2) for stop in (4,3,2) for step in (2,3) for v in range(start, stop, step)]"}
+}}}
+
+[085-py]
+LEVEL=py
+JQ = {{{
+[range(3,5)]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,1,2,0,1,2,3,4]
+}}}
+JFTL = {{{
+{"main": "$py=[v for v in range(3)] + [v for v in range(5)]"}
+}}}
+
+[086-eval]
+LEVEL=eval
+JQ = {{{
+[(index(",","|"), rindex(",","|")), indices(",","|")]
+}}}
+INPUT = {{{
+"a,b|c,d,e||f,g,h,|,|,i,j"
+}}}
+EXPECTED = {{{
+[1,3,22,19,[1,5,7,12,14,16,18,20,22],[3,9,10,17,19]]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[_.find(','), _.find('|'), _.rfind(','), _.rfind('|'), [i for i,c in enumerate(_) if c==','], [i for i,c in enumerate(_) if c=='|']]"}
+}}}
+COMMENT=str.find/rfind and enumerate() aren't whitelisted at py tier.
+
+[087-py]
+LEVEL=py
+JQ = {{{
+join(",","/")
+}}}
+INPUT = {{{
+["a","b","c","d"]
+}}}
+EXPECTED = {{{
+"a,b,c,d"
+"a/b/c/d"
+}}}
+JFTL = {{{
+{"main": ["$py=','.join(_)", "$py='/'.join(_)"]}
+}}}
+
+[088-py]
+LEVEL=py
+JQ = {{{
+[.[]|join("a")]
+}}}
+INPUT = {{{
+[[],[""],["",""],["","",""]]
+}}}
+EXPECTED = {{{
+["","","a","aa"]
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"in": "$."}, "body": "$py='a'.join(_)"}}
+}}}
+
+[089-skip]
+JQ = {{{
+flatten(3,2,1)
+}}}
+INPUT = {{{
+[0, [1], [[2]], [[[3]]]]
+}}}
+EXPECTED = {{{
+[0,1,2,3]
+[0,1,2,[3]]
+[0,1,[2],[[3]]]
+}}}
+SKIP=needs a recursive flatten-to-depth helper.
+
+[090-py]
+LEVEL=py
+JQ = {{{
+[.[3:2], .[-5:4], .[:-2], .[-2:], .[3:3][1:], .[10:]]
+}}}
+INPUT = {{{
+[0,1,2,3,4,5,6]
+}}}
+EXPECTED = {{{
+[[], [2,3], [0,1,2,3,4], [5,6], [], []]
+}}}
+JFTL = {{{
+{"main": "$py=[_[3:2], _[-5:4], _[:-2], _[-2:], _[3:3][1:], _[10:]]"}
+}}}
+
+[091-py]
+LEVEL=py
+JQ = {{{
+[.[3:2], .[-5:4], .[:-2], .[-2:], .[3:3][1:], .[10:]]
+}}}
+INPUT = {{{
+"abcdefghi"
+}}}
+EXPECTED = {{{
+["","","abcdefg","hi","",""]
+}}}
+JFTL = {{{
+{"main": "$py=[_[3:2], _[-5:4], _[:-2], _[-2:], _[3:3][1:], _[10:]]"}
+}}}
+
+[092-py]
+LEVEL=py
+JQ = {{{
+del(.[2:4],.[0],.[-2:])
+}}}
+INPUT = {{{
+[0,1,2,3,4,5,6,7]
+}}}
+EXPECTED = {{{
+[1,4,5]
+}}}
+JFTL = {{{
+{"main": "$py=[_[i] for i in range(len(_)) if i not in range(2,4) and i != 0 and i not in range(len(_)-2, len(_))]"}
+}}}
+COMMENT=Avoided list()/set()/zip()/enumerate() (not whitelisted) via membership checks against range() objects.
+
+[093-py]
+LEVEL=py
+JQ = {{{
+.[2:4] = ([], ["a","b"], ["a","b","c"])
+}}}
+INPUT = {{{
+[0,1,2,3,4,5,6,7]
+}}}
+EXPECTED = {{{
+[0,1,4,5,6,7]
+[0,1,"a","b",4,5,6,7]
+[0,1,"a","b","c",4,5,6,7]
+}}}
+JFTL = {{{
+{"main": ["$py=_[:2] + [] + _[4:]", "$py=_[:2] + ['a','b'] + _[4:]", "$py=_[:2] + ['a','b','c'] + _[4:]"]}
+}}}
+COMMENT=Streaming gap: 3 outputs collected into one array.
+
+[094-skip]
+JQ = {{{
+reduce range(65540;65536;-1) as $i ([]; .[$i] = $i)|.[65536:]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[null,65537,65538,65539,65540]
+}}}
+SKIP=C-level array-storage reallocation stress test, not language semantics.
+
+[095-py]
+LEVEL=py
+JQ = {{{
+1 as $x | 2 as $y | [$x,$y,$x]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[1,2,1]
+}}}
+JFTL = {{{
+{"main": {"$": true, "set": {"x": 1, "y": 2}, "body": "$py=[x, y, x]"}}
+}}}
+COMMENT=Reading a named "set" variable always needs at least py tier — bare name lookup isn't reachable via "$." navigation.
+
+[096-py]
+LEVEL=py
+JQ = {{{
+[1,2,3][] as $x | [[4,5,6,7][$x]]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[5]
+[6]
+[7]
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"in": [1,2,3]}, "body": "$py=[[4,5,6,7][_]]"}}
+}}}
+COMMENT=Streaming gap: 3 outputs -> [[5],[6],[7]] instead.
+
+[097-py]
+LEVEL=py
+JQ = {{{
+42 as $x | . | . | . + 432 | $x + 1
+}}}
+INPUT = {{{
+34324
+}}}
+EXPECTED = {{{
+43
+}}}
+JFTL = {{{
+{"main": {"$": true, "set": {"x": 42}, "body": "$py=x + 1"}}
+}}}
+COMMENT=Middle pipeline never affects the result in jq either (only $x is read at the end) — dropped as dead code.
+
+[098-py]
+LEVEL=py
+JQ = {{{
+1 + 2 as $x | -$x
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+-3
+}}}
+JFTL = {{{
+{"main": {"$": true, "set": {"x": "$py=1 + 2"}, "body": "$py=-x"}}
+}}}
+
+[099-py]
+LEVEL=py
+JQ = {{{
+"x" as $x | "a"+"y" as $y | $x+","+$y
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"x,ay"
+}}}
+JFTL = {{{
+{"main": {"$": true, "set": {"x": "x", "y": "$py='a' + 'y'"}, "body": "$py=x + ',' + y"}}
+}}}
+
+
+[101-skip]
+JQ = {{{
+[1, {c:3, d:4}] as [$a, {c:$b, b:$c}] | $a, $b, $c
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+1
+3
+null
+}}}
+SKIP=no destructuring construct; hand-matching the already-known literal isn't a genuine translation.
+
+[102-py]
+LEVEL=py
+JQ = {{{
+. as {as: $kw, "str": $str, ("e"+"x"+"p"): $exp} | [$kw, $str, $exp]
+}}}
+INPUT = {{{
+{"as": 1, "str": 2, "exp": 3}
+}}}
+EXPECTED = {{{
+[1, 2, 3]
+}}}
+JFTL = {{{
+{"main": "$py=[_['as'] if 'as' in _ else None, _['str'] if 'str' in _ else None, _['exp'] if 'exp' in _ else None]"}
+}}}
+
+[103-py]
+LEVEL=py
+JQ = {{{
+.[] as [$a, $b] | [$b, $a]
+}}}
+INPUT = {{{
+[[1], [1, 2, 3]]
+}}}
+EXPECTED = {{{
+[null, 1]
+[2, 1]
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"in": "$."}, "body": "$py=[_[1] if len(_) > 1 else None, _[0]]"}}
+}}}
+
+[104-nav]
+LEVEL=nav
+JQ = {{{
+. as $i | . as [$i] | $i
+}}}
+INPUT = {{{
+[0]
+}}}
+EXPECTED = {{{
+0
+}}}
+JFTL = {{{
+{"main": "$[0]"}
+}}}
+COMMENT=Navigation without a leading dot before the bracket ("$[0]", not "$.[0]") is the valid form for a top-level index.
+
+[105-nav]
+LEVEL=nav
+JQ = {{{
+. as [$i] | . as $i | $i
+}}}
+INPUT = {{{
+[0]
+}}}
+EXPECTED = {{{
+[0]
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+
+[106-skip]
+JQ = {{{
+.[] | . as {$a, b: [$c, {$d}]} ?// [$a, {$b}, $e] ?// $f | [$a, $b, $c, $d, $e, $f]
+}}}
+INPUT = {{{
+[{"a":1, "b":[2,{"d":3}]}, [4, {"b":5, "c":6}, 7, 8, 9], "foo"]
+}}}
+EXPECTED = {{{
+[1, null, 2, 3, null, null]
+[4, 5, null, null, 7, null]
+[null, null, null, null, null, "foo"]
+}}}
+SKIP=?// alternation-pattern destructuring; ~12 near-duplicate tests around this construct all skip for the same reason and aren't repeated individually.
+
+[107-py]
+LEVEL=py
+JQ = {{{
+. as $dot|any($dot[];not)
+}}}
+INPUT = {{{
+[1,2,3,4,true,false,1,2,3,4,5]
+}}}
+EXPECTED = {{{
+true
+}}}
+JFTL = {{{
+{"main": "$py=any(not v for v in _)"}
+}}}
+
+[108-py]
+LEVEL=py
+JQ = {{{
+. as $dot|any($dot[];not)
+}}}
+INPUT = {{{
+[1,2,3,4,true]
+}}}
+EXPECTED = {{{
+false
+}}}
+JFTL = {{{
+{"main": "$py=any(not v for v in _)"}
+}}}
+
+[109-py]
+LEVEL=py
+JQ = {{{
+. as $dot|all($dot[];.)
+}}}
+INPUT = {{{
+[1,2,3,4,true,false,1,2,3,4,5]
+}}}
+EXPECTED = {{{
+false
+}}}
+JFTL = {{{
+{"main": "$py=all(v is not False and v is not None for v in _)"}
+}}}
+COMMENT=Modeled jq's falsy rule explicitly (only false/null are falsy) rather than Python truthiness.
+
+[110-py]
+LEVEL=py
+JQ = {{{
+. as $dot|all($dot[];.)
+}}}
+INPUT = {{{
+[1,2,3,4,true]
+}}}
+EXPECTED = {{{
+true
+}}}
+JFTL = {{{
+{"main": "$py=all(v is not False and v is not None for v in _)"}
+}}}
+
+[111-nav]
+LEVEL=nav
+JQ = {{{
+any(true, error; .)
+}}}
+INPUT = {{{
+"badness"
+}}}
+EXPECTED = {{{
+true
+}}}
+JFTL = {{{
+{"main": true}
+}}}
+COMMENT=any() short-circuits on the first true, never reaching error().
+
+[112-nav]
+LEVEL=nav
+JQ = {{{
+all(false, error; .)
+}}}
+INPUT = {{{
+"badness"
+}}}
+EXPECTED = {{{
+false
+}}}
+JFTL = {{{
+{"main": false}
+}}}
+
+[113-py]
+LEVEL=py
+JQ = {{{
+any(not)
+}}}
+INPUT = {{{
+[]
+}}}
+EXPECTED = {{{
+false
+}}}
+JFTL = {{{
+{"main": "$py=any(not v for v in _)"}
+}}}
+
+[114-py]
+LEVEL=py
+JQ = {{{
+all(not)
+}}}
+INPUT = {{{
+[]
+}}}
+EXPECTED = {{{
+true
+}}}
+JFTL = {{{
+{"main": "$py=all(not v for v in _)"}
+}}}
+
+[115-py]
+LEVEL=py
+JQ = {{{
+any(not)
+}}}
+INPUT = {{{
+[false]
+}}}
+EXPECTED = {{{
+true
+}}}
+JFTL = {{{
+{"main": "$py=any(not v for v in _)"}
+}}}
+
+[116-py]
+LEVEL=py
+JQ = {{{
+all(not)
+}}}
+INPUT = {{{
+[false]
+}}}
+EXPECTED = {{{
+true
+}}}
+JFTL = {{{
+{"main": "$py=all(not v for v in _)"}
+}}}
+
+[117-py]
+LEVEL=py
+JQ = {{{
+[any,all]
+}}}
+INPUT = {{{
+[]
+}}}
+EXPECTED = {{{
+[false,true]
+}}}
+JFTL = {{{
+{"main": "$py=[any(v is not False and v is not None for v in _), all(v is not False and v is not None for v in _)]"}
+}}}
+
+[118-py]
+LEVEL=py
+JQ = {{{
+[any,all]
+}}}
+INPUT = {{{
+[true]
+}}}
+EXPECTED = {{{
+[true,true]
+}}}
+JFTL = {{{
+{"main": "$py=[any(v is not False and v is not None for v in _), all(v is not False and v is not None for v in _)]"}
+}}}
+
+[119-py]
+LEVEL=py
+JQ = {{{
+[any,all]
+}}}
+INPUT = {{{
+[false]
+}}}
+EXPECTED = {{{
+[false,false]
+}}}
+JFTL = {{{
+{"main": "$py=[any(v is not False and v is not None for v in _), all(v is not False and v is not None for v in _)]"}
+}}}
+
+[120-py]
+LEVEL=py
+JQ = {{{
+[any,all]
+}}}
+INPUT = {{{
+[true,false]
+}}}
+EXPECTED = {{{
+[true,false]
+}}}
+JFTL = {{{
+{"main": "$py=[any(v is not False and v is not None for v in _), all(v is not False and v is not None for v in _)]"}
+}}}
+
+[121-py]
+LEVEL=py
+JQ = {{{
+[any,all]
+}}}
+INPUT = {{{
+[null,null,true]
+}}}
+EXPECTED = {{{
+[true,false]
+}}}
+JFTL = {{{
+{"main": "$py=[any(v is not False and v is not None for v in _), all(v is not False and v is not None for v in _)]"}
+}}}

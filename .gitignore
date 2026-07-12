@@ -1,4 +1,7 @@
 *.log
 *.out
+*.tmp
 [0-9]
+out/
+tmp/
 

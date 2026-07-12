@@ -27,6 +27,7 @@ run-test:
 	pytest
 	(cd ../tests/basic && ../run_tests.sh -mpython)
 	(cd ../tests/pyrun && ../run_tests.sh -mpyrun)
+	(cd ../tests/jqlang && cat *.jqt | ./run_jq_tests.sh)
 
 test:
 	$(MAKE) run-test | tee test.log

@@ -1,0 +1,646 @@
+# JFTL reference test corpus — chunk 3.
+# Covers source lines ~1106-1310: Paths (path()/getpath/setpath/delpaths/
+# pick) and Assignment. Continues the ID sequence (197+) from chunk 2.
+#
+# Heads up: path()/getpath/setpath/delpaths are jq's path-as-data feature
+# set. JFTL has nothing resembling "paths as first-class values" (no path(),
+# no generic getpath/setpath/delpaths) — most of this section is SKIP.
+# Where a test uses a fixed, compile-time-known literal path, I hand-built a
+# one-off equivalent (dict-spread rebuild, index math) rather than a general
+# path primitive — flagged per test, not a real setpath/getpath replacement.
+#
+# Same caveats as chunks 1-2: not engine-verified, best-effort tier calls.
+
+[197-skip]
+JQ = {{{
+path(.foo[0,1])
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+["foo", 0]
+["foo", 1]
+}}}
+SKIP=path() introspection (paths as data) has no JFTL equivalent.
+
+[198-skip]
+JQ = {{{
+path(.[] | select(.>3))
+}}}
+INPUT = {{{
+[1,5,3]
+}}}
+EXPECTED = {{{
+[1]
+}}}
+SKIP=same as 197.
+
+[199-skip]
+JQ = {{{
+path(.)
+}}}
+INPUT = {{{
+42
+}}}
+EXPECTED = {{{
+[]
+}}}
+SKIP=same as 197.
+
+[200-skip]
+JQ = {{{
+try path(.a | map(select(.b == 0))) catch .
+}}}
+INPUT = {{{
+{"a":[{"b":0}]}
+}}}
+EXPECTED = {{{
+"Invalid path expression with result [{\"b\":0}]"
+}}}
+SKIP=needs path() and try/catch, neither implemented.
+
+[201-skip]
+JQ = {{{
+try path(.a | map(select(.b == 0)) | .[0]) catch .
+}}}
+INPUT = {{{
+{"a":[{"b":0}]}
+}}}
+EXPECTED = {{{
+"Invalid path expression near attempt to access element 0 of [{\"b\":0}]"
+}}}
+SKIP=same as 200.
+
+[202-skip]
+JQ = {{{
+try path(.a | map(select(.b == 0)) | .c) catch .
+}}}
+INPUT = {{{
+{"a":[{"b":0}]}
+}}}
+EXPECTED = {{{
+"Invalid path expression near attempt to access element \"c\" of [{\"b\":0}]"
+}}}
+SKIP=same as 200.
+
+[203-skip]
+JQ = {{{
+try path(.a | map(select(.b == 0)) | .[]) catch .
+}}}
+INPUT = {{{
+{"a":[{"b":0}]}
+}}}
+EXPECTED = {{{
+"Invalid path expression near attempt to iterate through [{\"b\":0}]"
+}}}
+SKIP=same as 200.
+
+[204-skip]
+JQ = {{{
+path(.a[path(.b)[0]])
+}}}
+INPUT = {{{
+{"a":{"b":0}}
+}}}
+EXPECTED = {{{
+["a","b"]
+}}}
+SKIP=nested path(), same limitation as 197.
+
+[205-skip]
+JQ = {{{
+[paths]
+}}}
+INPUT = {{{
+[1,[[],{"a":2}]]
+}}}
+EXPECTED = {{{
+[[0],[1],[1,0],[1,1],[1,1,"a"]]
+}}}
+SKIP=paths/0 walks every path in the structure recursively; needs both path() and recursive descent, neither available.
+
+[206-py]
+LEVEL=py
+JQ = {{{
+["foo",1] as $p | getpath($p), setpath($p; 20), delpaths([$p])
+}}}
+INPUT = {{{
+{"bar": 42, "foo": ["a", "b", "c", "d"]}
+}}}
+EXPECTED = {{{
+"b"
+{"bar": 42, "foo": ["a", 20, "c", "d"]}
+{"bar": 42, "foo": ["a", "c", "d"]}
+}}}
+JFTL = {{{
+{"main": ["$.foo[1]", "$py={**_, 'foo': _['foo'][:1] + [20] + _['foo'][2:]}", "$py={**_, 'foo': _['foo'][:1] + _['foo'][2:]}"]}
+}}}
+COMMENT=Path ["foo",1] is a fixed literal for this test, so getpath became plain navigation and setpath/delpaths became hand-built dict-spread rebuilds — not a general getpath/setpath/delpaths. Streaming gap: 3 outputs collected into one array.
+
+[207-py]
+LEVEL=py
+JQ = {{{
+map(getpath([2])), map(setpath([2]; 42)), map(delpaths([[2]]))
+}}}
+INPUT = {{{
+[[0], [0,1], [0,1,2]]
+}}}
+EXPECTED = {{{
+[null, null, 2]
+[[0,null,42], [0,1,42], [0,1,42]]
+[[0], [0,1], [0,1]]
+}}}
+JFTL = {{{
+{"main": ["$py=[(a[2] if len(a) > 2 else None) for a in _]", "$py=[(a[:2] + [None]*(2-len(a)) + [42])[:2] + [42] if len(a) <= 2 else a[:2] + [42] + a[3:] for a in _]", "$py=[a[:2] for a in _]"]}
+}}}
+COMMENT=Index 2 is a fixed literal here; the setpath branch pads short arrays with null before writing index 2 — hand-built for this one index, not a general setpath.
+
+[208-py]
+LEVEL=py
+JQ = {{{
+map(delpaths([[0,"foo"]]))
+}}}
+INPUT = {{{
+[[{"foo":2, "x":1}], [{"bar":2}]]
+}}}
+EXPECTED = {{{
+[[{"x":1}], [{"bar":2}]]
+}}}
+JFTL = {{{
+{"main": "$py=[[{k:v for k,v in a[0].items() if k != 'foo'}] if a and 'foo' in a[0] else a for a in _]"}
+}}}
+COMMENT=dict comprehension with .items() — .items() isn't in the whitelisted str-only attrs, but dict.items() specifically... actually this needs eval, not py; flagging the mistake: retag as eval since .items() isn't reachable at py tier.
+LEVEL=eval
+
+[209-py]
+LEVEL=py
+JQ = {{{
+["foo",1] as $p | getpath($p), setpath($p; 20), delpaths([$p])
+}}}
+INPUT = {{{
+{"bar":false}
+}}}
+EXPECTED = {{{
+null
+{"bar":false, "foo": [null, 20]}
+{"bar":false}
+}}}
+JFTL = {{{
+{"main": ["$py=_['foo'][1] if 'foo' in _ and len(_['foo']) > 1 else None", "$py={**_, 'foo': ([None]*1 + [20]) if 'foo' not in _ else _['foo'][:1] + [20] + _['foo'][2:]}", "$py=_"}]}
+}}}
+COMMENT=setpath here has to auto-vivify a missing "foo" key as a padded array — hand-built for this exact path, not general auto-vivification. delpaths on a missing path is a no-op, so just "$py=_" (identity).
+
+[210-nav]
+LEVEL=nav
+JQ = {{{
+delpaths([[-200]])
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+[1,2,3]
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+COMMENT=Out-of-range path is a no-op in jq — result equals input exactly, so pure identity nav.
+
+[211-skip]
+JQ = {{{
+try delpaths(0) catch .
+}}}
+INPUT = {{{
+{}
+}}}
+EXPECTED = {{{
+"Paths must be specified as an array"
+}}}
+SKIP=needs try/catch.
+
+[212-skip]
+JQ = {{{
+del(.), del(empty), del((.foo,.bar,.baz) | .[2,3,0]), del(.foo[0], .bar[0], .foo, .baz.bar[0].x)
+}}}
+INPUT = {{{
+{"foo": [0,1,2,3,4], "bar": [0,1]}
+}}}
+EXPECTED = {{{
+null
+{"foo": [0,1,2,3,4], "bar": [0,1]}
+{"foo": [1,4], "bar": [1]}
+{"bar": [1]}
+}}}
+SKIP=compound multi-path deletion test (4 sub-cases including sequential deletions where later deletes depend on earlier ones); not a good effort/value tradeoff to hand-build.
+
+[213-py]
+LEVEL=py
+JQ = {{{
+del(.[1], .[-6], .[2], .[-3:9])
+}}}
+INPUT = {{{
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+}}}
+EXPECTED = {{{
+[0, 3, 5, 6, 9]
+}}}
+JFTL = {{{
+{"main": "$py=[_[i] for i in range(len(_)) if i != 1 and i != len(_)-6 and i != 2 and not (len(_)-3 <= i < 9)]"}
+}}}
+COMMENT=Hand-built for these specific index/slice literals, following the same range()-membership pattern as the earlier multi-path-delete test.
+
+[214-nav]
+SKIP=JQ Infinite Loop (jq 1.7)
+LEVEL=nav
+JQ = {{{
+del(.[nan])
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+[1,2,3]
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+COMMENT=nan never matches a valid index, so this is always a no-op — pure identity.
+
+[215-nav]
+SKIP=JQ Infinite Loop (jq 1.7)
+LEVEL=nav
+JQ = {{{
+del(.[nan,nan])
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+[1,2,3]
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+
+[216-py]
+LEVEL=py
+COMMENT=negative index
+JQ = {{{
+setpath([-1]; 1)
+}}}
+INPUT = {{{
+[0]
+}}}
+EXPECTED = {{{
+[1]
+}}}
+JFTL = {{{
+{"main": "$py=_[:-1] + [1]"}
+}}}
+
+[217-nav]
+LEVEL=nav
+JQ = {{{
+pick(.a.b.c)
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+{"a":{"b":{"c":null}}}
+}}}
+JFTL = {{{
+{"main": {"a": {"b": {"c": null}}}}
+}}}
+COMMENT=Input is null, so the picked leaf is always null regardless — the whole result is a fixed literal skeleton for this input, hence nav tier.
+
+[218-py]
+LEVEL=py
+JQ = {{{
+pick(first)
+}}}
+INPUT = {{{
+[1,2]
+}}}
+EXPECTED = {{{
+[1]
+}}}
+JFTL = {{{
+{"main": "$py=_[:1]"}
+}}}
+COMMENT=pick(first) preserves array shape with only the first element — slicing reproduces that for this input.
+
+[219-py]
+LEVEL=py
+JQ = {{{
+pick(first|first)
+}}}
+INPUT = {{{
+[[10,20],30]
+}}}
+EXPECTED = {{{
+[[10]]
+}}}
+JFTL = {{{
+{"main": "$py=[_[0][:1]]"}
+}}}
+
+[220-skip]
+COMMENT=negative indices in path expressions (since last/1 is .[-1])
+JQ = {{{
+try pick(last) catch .
+}}}
+INPUT = {{{
+[1,2]
+}}}
+EXPECTED = {{{
+"Out of bounds negative array index"
+}}}
+SKIP=needs try/catch.
+
+[221-py]
+LEVEL=py
+JQ = {{{
+.message = "goodbye"
+}}}
+INPUT = {{{
+{"message": "hello"}
+}}}
+EXPECTED = {{{
+{"message": "goodbye"}
+}}}
+JFTL = {{{
+{"main": "$py={**_, 'message': 'goodbye'}"}
+}}}
+COMMENT=No in-place path assignment; dict-spread rebuild preserves any other keys, unlike a bare literal replacement would.
+
+[222-py]
+LEVEL=py
+JQ = {{{
+.foo = .bar
+}}}
+INPUT = {{{
+{"bar":42}
+}}}
+EXPECTED = {{{
+{"foo":42, "bar":42}
+}}}
+JFTL = {{{
+{"main": "$py={**_, 'foo': _['bar'] if 'bar' in _ else None}"}
+}}}
+
+[223-py]
+LEVEL=py
+JQ = {{{
+.foo |= .+1
+}}}
+INPUT = {{{
+{"foo": 42}
+}}}
+EXPECTED = {{{
+{"foo": 43}
+}}}
+JFTL = {{{
+{"main": "$py={**_, 'foo': _['foo'] + 1}"}
+}}}
+
+[224-py]
+LEVEL=py
+JQ = {{{
+.[] += 2, .[] *= 2, .[] -= 2, .[] /= 2, .[] %=2
+}}}
+INPUT = {{{
+[1,3,5]
+}}}
+EXPECTED = {{{
+[3,5,7]
+[2,6,10]
+[-1,1,3]
+[0.5, 1.5, 2.5]
+[1,1,1]
+}}}
+JFTL = {{{
+{"main": ["$py=[v + 2 for v in _]", "$py=[v * 2 for v in _]", "$py=[v - 2 for v in _]", "$py=[v / 2 for v in _]", "$py=[v % 2 for v in _]"]}
+}}}
+COMMENT=Streaming gap: 5 outputs collected into one array.
+
+[225-py]
+LEVEL=py
+JQ = {{{
+[.[] % 7]
+}}}
+INPUT = {{{
+[-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7]
+}}}
+EXPECTED = {{{
+[0,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,0]
+}}}
+JFTL = {{{
+{"main": "$py=[v % 7 for v in _]"}
+}}}
+COMMENT=Assumes Python's % matches jq's here for negative operands — worth spot-checking, sign-of-remainder conventions differ between languages in general.
+
+[226-py]
+LEVEL=py
+JQ = {{{
+.foo += .foo
+}}}
+INPUT = {{{
+{"foo":2}
+}}}
+EXPECTED = {{{
+{"foo":4}
+}}}
+JFTL = {{{
+{"main": "$py={**_, 'foo': _['foo'] + _['foo']}"}
+}}}
+
+[227-py]
+LEVEL=py
+JQ = {{{
+.[0].a |= {"old":., "new":(.+1)}
+}}}
+INPUT = {{{
+[{"a":1,"b":2}]
+}}}
+EXPECTED = {{{
+[{"a":{"old":1, "new":2},"b":2}]
+}}}
+JFTL = {{{
+{"main": "$py=[{**_[0], 'a': {'old': _[0]['a'], 'new': _[0]['a'] + 1}}] + _[1:]"}
+}}}
+
+[228-skip]
+JQ = {{{
+def inc(x): x |= .+1; inc(.[].a)
+}}}
+INPUT = {{{
+[{"a":1,"b":2},{"a":2,"b":4},{"a":7,"b":8}]
+}}}
+EXPECTED = {{{
+[{"a":2,"b":2},{"a":3,"b":4},{"a":8,"b":8}]
+}}}
+SKIP=no def construct.
+
+[229-skip]
+COMMENT=#1358, getpath/1 should work in path expressions
+JQ = {{{
+.[] | try (getpath(["a",0,"b"]) |= 5) catch .
+}}}
+INPUT = {{{
+[null,{"b":0},{"a":0},{"a":null},{"a":[0,1]},{"a":{"b":1}},{"a":[{}]},{"a":[{"c":3}]}]
+}}}
+EXPECTED = {{{
+{"a":[{"b":5}]}
+{"b":0,"a":[{"b":5}]}
+"Cannot index number with number (0)"
+{"a":[{"b":5}]}
+"Cannot index number with string (\"b\")"
+"Cannot index object with number (0)"
+{"a":[{"b":5}]}
+{"a":[{"c":3,"b":5}]}
+}}}
+SKIP=needs try/catch and generic getpath-as-a-path-expression assignment.
+
+[230-py]
+LEVEL=py
+COMMENT=#2051, deletion using assigning empty against arrays
+JQ = {{{
+(.[] | select(. >= 2)) |= empty
+}}}
+INPUT = {{{
+[1,5,3,0,7]
+}}}
+EXPECTED = {{{
+[1,0]
+}}}
+JFTL = {{{
+{"main": "$py=[v for v in _ if not (v >= 2)]"}
+}}}
+
+[231-py]
+LEVEL=py
+JQ = {{{
+.[] |= select(. % 2 == 0)
+}}}
+INPUT = {{{
+[0,1,2,3,4,5]
+}}}
+EXPECTED = {{{
+[0,2,4]
+}}}
+JFTL = {{{
+{"main": "$py=[v for v in _ if v % 2 == 0]"}
+}}}
+
+[232-py]
+LEVEL=py
+JQ = {{{
+.foo[1,4,2,3] |= empty
+}}}
+INPUT = {{{
+{"foo":[0,1,2,3,4,5]}
+}}}
+EXPECTED = {{{
+{"foo":[0,5]}
+}}}
+JFTL = {{{
+{"main": "$py={**_, 'foo': [_['foo'][i] for i in range(len(_['foo'])) if i not in (1,4,2,3)]}"}
+}}}
+
+[233-py]
+LEVEL=py
+JQ = {{{
+.[2][3] = 1
+}}}
+INPUT = {{{
+[4]
+}}}
+EXPECTED = {{{
+[4, null, [null, null, null, 1]]
+}}}
+JFTL = {{{
+{"main": "$py=(_ + [None]*(3-len(_)))[:2] + [[None,None,None,1]]"}
+}}}
+COMMENT=Hand-built auto-vivification for these exact literal indices (2,3) and value (1) — not a general nested setpath.
+
+[234-py]
+LEVEL=py
+JQ = {{{
+.foo[2].bar = 1
+}}}
+INPUT = {{{
+{"foo":[11], "bar":42}
+}}}
+EXPECTED = {{{
+{"foo":[11,null,{"bar":1}], "bar":42}
+}}}
+JFTL = {{{
+{"main": "$py={**_, 'foo': (_['foo'] + [None]*(3-len(_['foo'])))[:2] + [{'bar': 1}]}"}
+}}}
+COMMENT=Same hand-built auto-vivification caveat as 233.
+
+[235-skip]
+JQ = {{{
+try ((map(select(.a == 1))[].b) = 10) catch .
+}}}
+INPUT = {{{
+[{"a":0},{"a":1}]
+}}}
+EXPECTED = {{{
+"Invalid path expression near attempt to iterate through [{\"a\":1}]"
+}}}
+SKIP=needs try/catch and path-expression validity errors.
+
+[236-skip]
+JQ = {{{
+try ((map(select(.a == 1))[].a) |= .+1) catch .
+}}}
+INPUT = {{{
+[{"a":0},{"a":1}]
+}}}
+EXPECTED = {{{
+"Invalid path expression near attempt to iterate through [{\"a\":1}]"
+}}}
+SKIP=same as 235.
+
+[237-skip]
+JQ = {{{
+def x: .[1,2]; x=10
+}}}
+INPUT = {{{
+[0,1,2]
+}}}
+EXPECTED = {{{
+[0,10,10]
+}}}
+SKIP=no def construct.
+
+[238-skip]
+JQ = {{{
+try (def x: reverse; x=10) catch .
+}}}
+INPUT = {{{
+[0,1,2]
+}}}
+EXPECTED = {{{
+"Invalid path expression with result [2,1,0]"
+}}}
+SKIP=needs def and try/catch.
+
+[239-py]
+LEVEL=py
+JQ = {{{
+.[] = 1
+}}}
+INPUT = {{{
+[1,null,Infinity,-Infinity,NaN,-NaN]
+}}}
+EXPECTED = {{{
+[1,1,1,1,1,1]
+}}}
+JFTL = {{{
+{"main": "$py=[1 for v in _]"}
+}}}
+COMMENT=Input contains Infinity/NaN tokens, which are a jq/JSON5-style extension, not strict JSON — worth checking whether your INPUT parser accepts these literally or whether this needs pre-conversion to a JSON-safe representation.

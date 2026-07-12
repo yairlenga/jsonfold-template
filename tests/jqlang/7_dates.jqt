@@ -1,0 +1,243 @@
+# JFTL reference test corpus — chunk 7.
+# Covers source lines ~1827-1897: bsearch, and date functions (strftime/
+# strflocaltime/mktime/gmtime/strptime). Continues the ID sequence (361+)
+# from chunk 6.
+#
+# Date-function conversions required reverse-engineering three offset rules
+# between jq's "broken-down time" array and Python's time.struct_time,
+# since I can't execute either side to check directly:
+#   month: jq_month  = python_tm_mon - 1        (jq is 0-indexed)
+#   wday:  jq_wday    = (python_tm_wday + 1) % 7 (jq: Sun=0; Python: Mon=0)
+#   yday:  jq_yday    = python_tm_yday - 1       (jq is 0-indexed)
+# Derived these by working backward from the one concrete gmtime example in
+# the source (timestamp 1425599507 -> 2015-03-05, a Thursday, yday 63) —
+# reasonably confident in the arithmetic, but this is hand-derived, not
+# verified against a real jq. Spot-check before trusting.
+#
+# Also: gmtime's seconds field can carry a fractional part (see the
+# "gmtime[5]" test), but Python's time.gmtime() truncates tm_sec to an int
+# — recombined the fractional remainder manually.
+#
+# Same caveats as chunks 1-6: not engine-verified, best-effort tier calls.
+# No lambdas anywhere (see chunk 6's note on py_expr.py rejecting them);
+# used $pyrun= with real local-variable assignment instead, where binding
+# an intermediate value made the expression far more readable than repeating
+# an expensive call many times over.
+
+[361-eval]
+LEVEL=eval
+JQ = {{{
+bsearch(0,1,2,3,4)
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+-1
+0
+1
+2
+-4
+}}}
+JFTL = {{{
+{"main": "$pyeval=[(p if p < len(_) and _[p]==n else -(p+1)) for n in (0,1,2,3,4) if (p := __import__('bisect').bisect_left(_,n)) or True]"}
+}}}
+COMMENT=Walrus (:=) inside the comprehension's "if" clause binds bisect_left's result once per iteration without needing a lambda; "or True" makes that filter clause always pass. Streaming gap: jq's 5 outputs collected into one array.
+
+[362-skip]
+JQ = {{{
+bsearch({x:1})
+}}}
+INPUT = {{{
+[{ "x": 0 },{ "x": 1 },{ "x": 2 }]
+}}}
+EXPECTED = {{{
+1
+}}}
+SKIP=needs a dict-aware comparator for bsearch; Python's bisect can't order dicts, and building one without lambda/def isn't worth it for one test.
+
+[363-skip]
+JQ = {{{
+try ["OK", bsearch(0)] catch ["KO",.]
+}}}
+INPUT = {{{
+"aa"
+}}}
+EXPECTED = {{{
+["KO","string (\"aa\") cannot be searched from"]
+}}}
+SKIP=needs try/catch.
+
+[364-eval]
+LEVEL=eval
+JQ = {{{
+strftime("%Y-%m-%dT%H:%M:%SZ")
+}}}
+INPUT = {{{
+[2015,2,5,23,51,47,4,63]
+}}}
+EXPECTED = {{{
+"2015-03-05T23:51:47Z"
+}}}
+JFTL = {{{
+{"main": "$pyeval=__import__('time').strftime('%Y-%m-%dT%H:%M:%SZ', (_[0], _[1]+1, _[2], _[3], _[4], _[5], 0, 1, 0))"}
+}}}
+COMMENT=Month field needs +1 to convert jq's 0-indexed month back to Python's 1-indexed tm_mon. This format string doesn't use %a/%A/%j, so the dummy wday/yday/isdst padding (0,1,0) never actually gets read.
+
+[365-eval]
+LEVEL=eval
+JQ = {{{
+strftime("%A, %B %d, %Y")
+}}}
+INPUT = {{{
+1435677542.822351
+}}}
+EXPECTED = {{{
+"Tuesday, June 30, 2015"
+}}}
+JFTL = {{{
+{"main": "$pyeval=__import__('time').strftime('%A, %B %d, %Y', __import__('time').gmtime(_))"}
+}}}
+COMMENT=Timestamp input, so gmtime() computes weekday/month correctly on its own — no manual field math needed here, unlike the array-input cases.
+
+[366-eval]
+LEVEL=eval
+JQ = {{{
+strftime("%Y-%m-%dT%H:%M:%SZ")
+}}}
+INPUT = {{{
+[2024,2,15]
+}}}
+EXPECTED = {{{
+"2024-03-15T00:00:00Z"
+}}}
+JFTL = {{{
+{"main": "$pyeval=__import__('time').strftime('%Y-%m-%dT%H:%M:%SZ', (_[0], _[1]+1, _[2], _[3] if len(_) > 3 else 0, _[4] if len(_) > 4 else 0, _[5] if len(_) > 5 else 0, 0, 1, 0))"}
+}}}
+COMMENT=Input array only has 3 fields; padded missing hour/min/sec with 0, matching jq's apparent default here.
+
+[367-eval]
+LEVEL=eval
+JQ = {{{
+mktime
+}}}
+INPUT = {{{
+[2024,8,21]
+}}}
+EXPECTED = {{{
+1726876800
+}}}
+JFTL = {{{
+{"main": "$pyeval=__import__('calendar').timegm((_[0], _[1]+1, _[2], _[3] if len(_) > 3 else 0, _[4] if len(_) > 4 else 0, _[5] if len(_) > 5 else 0, 0, 1, 0))"}
+}}}
+COMMENT=calendar.timegm treats its tuple as UTC (unlike time.mktime, which is local-time and would be wrong here) — same month-offset and padding as 366.
+
+[368-run]
+LEVEL=run
+JQ = {{{
+gmtime
+}}}
+INPUT = {{{
+1425599507
+}}}
+EXPECTED = {{{
+[2015,2,5,23,51,47,4,63]
+}}}
+JFTL = {{{
+{"main": "$pyrun=t = __import__('time').gmtime(_)\nsec = t.tm_sec + (_ - int(_))\nreturn [t.tm_year, t.tm_mon - 1, t.tm_mday, t.tm_hour, t.tm_min, sec, (t.tm_wday + 1) % 7, t.tm_yday - 1]"}
+}}}
+COMMENT=Bound gmtime(_) once via a real local variable (run tier) instead of calling it 8 times in one giant expression — applies all three offset rules from the chunk header, plus recombining the fractional-second remainder that tm_sec alone would drop.
+
+[369-eval]
+LEVEL=eval
+JQ = {{{
+gmtime[5]
+}}}
+INPUT = {{{
+1425599507.25
+}}}
+EXPECTED = {{{
+47.25
+}}}
+JFTL = {{{
+{"main": "$pyeval=__import__('time').gmtime(_).tm_sec + (_ - int(_))"}
+}}}
+COMMENT=Only the seconds field is needed here, so a single (mildly redundant) expression is fine without dropping to run tier.
+
+[370-skip]
+COMMENT=test invalid tm input
+JQ = {{{
+try strftime("%Y-%m-%dT%H:%M:%SZ") catch .
+}}}
+INPUT = {{{
+["a",1,2,3,4,5,6,7]
+}}}
+EXPECTED = {{{
+"strftime/1 requires parsed datetime inputs"
+}}}
+SKIP=needs try/catch.
+
+[371-skip]
+JQ = {{{
+try strflocaltime("%Y-%m-%dT%H:%M:%SZ") catch .
+}}}
+INPUT = {{{
+["a",1,2,3,4,5,6,7]
+}}}
+EXPECTED = {{{
+"strflocaltime/1 requires parsed datetime inputs"
+}}}
+SKIP=needs try/catch.
+
+[372-skip]
+JQ = {{{
+try mktime catch .
+}}}
+INPUT = {{{
+["a",1,2,3,4,5,6,7]
+}}}
+EXPECTED = {{{
+"mktime requires parsed datetime inputs"
+}}}
+SKIP=needs try/catch.
+
+[373-skip]
+COMMENT=oss-fuzz #67403: non-string argument with number input fails assert
+JQ = {{{
+try ["OK", strftime([])] catch ["KO", .]
+}}}
+INPUT = {{{
+0
+}}}
+EXPECTED = {{{
+["KO","strftime/1 requires a string format"]
+}}}
+SKIP=needs try/catch.
+
+[374-skip]
+JQ = {{{
+try ["OK", strflocaltime({})] catch ["KO", .]
+}}}
+INPUT = {{{
+0
+}}}
+EXPECTED = {{{
+["KO","strflocaltime/1 requires a string format"]
+}}}
+SKIP=needs try/catch.
+
+[375-run]
+LEVEL=run
+JQ = {{{
+[strptime("%Y-%m-%dT%H:%M:%SZ")|(.,mktime)]
+}}}
+INPUT = {{{
+"2015-03-05T23:51:47Z"
+}}}
+EXPECTED = {{{
+[[2015,2,5,23,51,47,4,63],1425599507]
+}}}
+JFTL = {{{
+{"main": "$pyrun=t = __import__('time').strptime(_, '%Y-%m-%dT%H:%M:%SZ')\narr = [t.tm_year, t.tm_mon - 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, (t.tm_wday + 1) % 7, t.tm_yday - 1]\nts = __import__('calendar').timegm(t)\nreturn [arr, ts]"}
+}}}
+COMMENT=strptime (string -> broken-down array) is the reverse of gmtime's conversion, plus a mktime-equivalent from the same parsed struct — binding "t" once via run tier avoids re-parsing the string 8+ times.

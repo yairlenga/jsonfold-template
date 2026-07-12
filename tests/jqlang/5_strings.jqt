@@ -1,0 +1,647 @@
+# JFTL reference test corpus — chunk 5.
+# Covers source lines ~1503-1671: string operations, plus array/object
+# contains() (a different overload from the string-substring contains()
+# already covered in chunk 4). Continues the ID sequence (284+) from
+# chunk 4.
+#
+# Nice find this chunk: index/rindex/indices don't actually need eval tier
+# the way I originally did case 086 back in chunk 2 — str.find()/.rfind()
+# aren't whitelisted, but min()/max()/range() ARE, so
+#   min(i for i in range(len(_)) if _[i]==needle)
+# gets you index(), max(...) gets you rindex(), and the bare comprehension
+# gets you indices() — all within the py whitelist. Worth going back and
+# retagging case 086 in chunk 2 from eval to py using this same trick if
+# you want the corpus internally consistent; I haven't edited that file.
+#
+# Also: "ltrim" has no whitelisted equivalent directly — your STRING_ATTRS
+# has "strip"/"rstrip" but no "lstrip". Worked around with
+# v[::-1].rstrip()[::-1] (reverse, rstrip, reverse back) rather than
+# bumping to eval tier for it.
+#
+# Same caveats as chunks 1-4: not engine-verified, best-effort tier calls.
+
+[284-py]
+LEVEL=py
+JQ = {{{
+[.[]|startswith("foo")]
+}}}
+INPUT = {{{
+["fo", "foo", "barfoo", "foobar", "barfoob"]
+}}}
+EXPECTED = {{{
+[false, true, false, true, false]
+}}}
+JFTL = {{{
+{"main": "$py=[v.startswith('foo') for v in _]"}
+}}}
+COMMENT=Relies on startswith actually being reachable in your whitelist once the missing-comma bug (flagged back in chunk 1) is fixed.
+
+[285-py]
+LEVEL=py
+JQ = {{{
+[.[]|endswith("foo")]
+}}}
+INPUT = {{{
+["fo", "foo", "barfoo", "foobar", "barfoob"]
+}}}
+EXPECTED = {{{
+[false, true, true, false, false]
+}}}
+JFTL = {{{
+{"main": "$py=[v.endswith('foo') for v in _]"}
+}}}
+
+[286-py]
+LEVEL=py
+JQ = {{{
+[.[] | split(", ")]
+}}}
+INPUT = {{{
+["a,b, c, d, e,f",", a,b, c, d, e,f, "]
+}}}
+EXPECTED = {{{
+[["a,b","c","d","e,f"],["","a,b","c","d","e,f",""]]
+}}}
+JFTL = {{{
+{"main": "$py=[v.split(', ') for v in _]"}
+}}}
+
+[287-py]
+LEVEL=py
+JQ = {{{
+split("")
+}}}
+INPUT = {{{
+"abc"
+}}}
+EXPECTED = {{{
+["a","b","c"]
+}}}
+JFTL = {{{
+{"main": "$py=[c for c in _]"}
+}}}
+COMMENT=Python's str.split('') raises ValueError (empty separator not allowed), so used a plain character comprehension instead of .split().
+
+[288-py]
+LEVEL=py
+JQ = {{{
+[.[]|ltrimstr("foo")]
+}}}
+INPUT = {{{
+["fo", "foo", "barfoo", "foobar", "afoo"]
+}}}
+EXPECTED = {{{
+["fo","","barfoo","bar","afoo"]
+}}}
+JFTL = {{{
+{"main": "$py=[(v[3:] if v.startswith('foo') else v) for v in _]"}
+}}}
+
+[289-py]
+LEVEL=py
+JQ = {{{
+[.[]|rtrimstr("foo")]
+}}}
+INPUT = {{{
+["fo", "foo", "barfoo", "foobar", "foob"]
+}}}
+EXPECTED = {{{
+["fo","","bar","foobar","foob"]
+}}}
+JFTL = {{{
+{"main": "$py=[(v[:-3] if v.endswith('foo') else v) for v in _]"}
+}}}
+
+[290-py]
+LEVEL=py
+JQ = {{{
+[.[]|trimstr("foo")]
+}}}
+INPUT = {{{
+["fo", "foo", "barfoo", "foobarfoo", "foob"]
+}}}
+EXPECTED = {{{
+["fo","","bar","bar","b"]
+}}}
+JFTL = {{{
+{"main": "$py=[((v[3:] if v.startswith('foo') else v)[:-3] if (v[3:] if v.startswith('foo') else v).endswith('foo') else (v[3:] if v.startswith('foo') else v)) for v in _]"}
+}}}
+COMMENT=Chained ltrimstr-then-rtrimstr inline — readable is a stretch here, but stays in-grammar.
+
+[291-nav]
+LEVEL=nav
+JQ = {{{
+[.[]|ltrimstr("")]
+}}}
+INPUT = {{{
+["a", "xx", ""]
+}}}
+EXPECTED = {{{
+["a", "xx", ""]
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+COMMENT=Trimming an empty prefix is always a no-op — pure identity.
+
+[292-nav]
+LEVEL=nav
+JQ = {{{
+[.[]|rtrimstr("")]
+}}}
+INPUT = {{{
+["a", "xx", ""]
+}}}
+EXPECTED = {{{
+["a", "xx", ""]
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+
+[293-nav]
+LEVEL=nav
+JQ = {{{
+[.[]|trimstr("")]
+}}}
+INPUT = {{{
+["a", "xx", ""]
+}}}
+EXPECTED = {{{
+["a", "xx", ""]
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+
+[294-py]
+LEVEL=py
+JQ = {{{
+[(index(","), rindex(",")), indices(",")]
+}}}
+INPUT = {{{
+"a,bc,def,ghij,klmno"
+}}}
+EXPECTED = {{{
+[1,13,[1,4,8,13]]
+}}}
+JFTL = {{{
+{"main": "$py=[min(i for i in range(len(_)) if _[i]==','), max(i for i in range(len(_)) if _[i]==','), [i for i in range(len(_)) if _[i]==',']]"}
+}}}
+COMMENT=index/rindex via min()/max() over a filtered range() comprehension, avoiding str.find/rfind entirely — stays at py tier.
+
+[295-py]
+LEVEL=py
+JQ = {{{
+[ index("aba"), rindex("aba"), indices("aba") ]
+}}}
+INPUT = {{{
+"xababababax"
+}}}
+EXPECTED = {{{
+[1,7,[1,3,5,7]]
+}}}
+JFTL = {{{
+{"main": "$py=[min(i for i in range(len(_)) if _[i:i+3]=='aba'), max(i for i in range(len(_)) if _[i:i+3]=='aba'), [i for i in range(len(_)) if _[i:i+3]=='aba']]"}
+}}}
+COMMENT=Same min/max/range trick, using a slice comparison to find (overlapping) substring matches instead of find().
+
+[296-skip]
+COMMENT=_strindices is used by indices/1 but is callable
+JQ = {{{
+try _strindices("abc") catch .
+}}}
+INPUT = {{{
+123
+}}}
+EXPECTED = {{{
+"number (123) cannot be searched, as it is not a string"
+}}}
+SKIP=needs try/catch and jq's internal _strindices builtin.
+
+[297-skip]
+JQ = {{{
+try _strindices(123) catch .
+}}}
+INPUT = {{{
+"abc"
+}}}
+EXPECTED = {{{
+"number (123) is not a string"
+}}}
+SKIP=same as 296.
+
+[298-py]
+LEVEL=py
+COMMENT = {{{
+trim
+ is vertical tab (\v not supported by json)
+}}}
+JQ = {{{
+map(trim), map(ltrim), map(rtrim)
+}}}
+INPUT = {{{
+[" \n\t\r\f", "","  ", "a", " a ", "abc", "  abc  ", "  abc", "abc  "]
+}}}
+EXPECTED = {{{
+["", "", "", "a", "a", "abc", "abc", "abc", "abc"]
+["", "", "", "a", "a ", "abc", "abc  ", "abc", "abc  "]
+["", "", "", "a", " a", "abc", "  abc", "  abc", "abc"]
+}}}
+JFTL = {{{
+{"main": ["$py=[v.strip() for v in _]", "$py=[v[::-1].rstrip()[::-1] for v in _]", "$py=[v.rstrip() for v in _]"]}
+}}}
+COMMENT=No lstrip in the whitelist — ltrim done via reverse/rstrip/reverse-back instead. Streaming gap: 3 outputs collected into one array.
+
+[299-py]
+LEVEL=py
+JQ = {{{
+trim, ltrim, rtrim
+}}}
+INPUT = {{{
+"
+
+                  　abc
+
+                  　"
+}}}
+EXPECTED = {{{
+"abc"
+"abc
+
+                  　"
+"
+
+                  　abc"
+}}}
+JFTL = {{{
+{"main": ["$py=_.strip()", "$py=_[::-1].rstrip()[::-1]", "$py=_.rstrip()"]}
+}}}
+COMMENT=Assumes Python's str.strip() treats this exact set of Unicode whitespace codepoints the same as jq's trim — worth spot-checking, not independently verified codepoint-by-codepoint.
+
+[300-skip]
+JQ = {{{
+try trim catch ., try ltrim catch ., try rtrim catch .
+}}}
+INPUT = {{{
+123
+}}}
+EXPECTED = {{{
+"trim input must be a string"
+"trim input must be a string"
+"trim input must be a string"
+}}}
+SKIP=needs try/catch.
+
+[301-py]
+LEVEL=py
+JQ = {{{
+indices(1)
+}}}
+INPUT = {{{
+[0,1,1,2,3,4,1,5]
+}}}
+EXPECTED = {{{
+[1,2,6]
+}}}
+JFTL = {{{
+{"main": "$py=[i for i in range(len(_)) if _[i]==1]"}
+}}}
+COMMENT=indices() over an array with a scalar needle.
+
+[302-py]
+LEVEL=py
+JQ = {{{
+indices([1,2])
+}}}
+INPUT = {{{
+[0,1,2,3,1,4,2,5,1,2,6,7]
+}}}
+EXPECTED = {{{
+[1,8]
+}}}
+JFTL = {{{
+{"main": "$py=[i for i in range(len(_)) if _[i:i+2]==[1,2]]"}
+}}}
+COMMENT=indices() with an array (sub-sequence) needle — same slice-comparison trick as string substring search.
+
+[303-py]
+LEVEL=py
+JQ = {{{
+indices([1,2])
+}}}
+INPUT = {{{
+[1]
+}}}
+EXPECTED = {{{
+[]
+}}}
+JFTL = {{{
+{"main": "$py=[i for i in range(len(_)) if _[i:i+2]==[1,2]]"}
+}}}
+
+[304-py]
+LEVEL=py
+JQ = {{{
+indices(", ")
+}}}
+INPUT = {{{
+"a,b, cd,e, fgh, ijkl"
+}}}
+EXPECTED = {{{
+[3,9,14]
+}}}
+JFTL = {{{
+{"main": "$py=[i for i in range(len(_)) if _[i:i+2]==', ']"}
+}}}
+
+[305-py]
+LEVEL=py
+JQ = {{{
+index("!")
+}}}
+INPUT = {{{
+"здравствуй мир!"
+}}}
+EXPECTED = {{{
+14
+}}}
+JFTL = {{{
+{"main": "$py=min(i for i in range(len(_)) if _[i]=='!')"}
+}}}
+COMMENT=Assumes Python's codepoint-based string indexing lines up with jq's here for this Cyrillic string — not independently verified.
+
+[306-py]
+LEVEL=py
+JQ = {{{
+.[:rindex("x")]
+}}}
+INPUT = {{{
+"正xyz"
+}}}
+EXPECTED = {{{
+"正"
+}}}
+JFTL = {{{
+{"main": "$py=_[:max(i for i in range(len(_)) if _[i]=='x')]"}
+}}}
+
+[307-py]
+LEVEL=py
+JQ = {{{
+indices("o")
+}}}
+INPUT = {{{
+"🇬🇧oo"
+}}}
+EXPECTED = {{{
+[2,3]
+}}}
+JFTL = {{{
+{"main": "$py=[i for i in range(len(_)) if _[i]=='o']"}
+}}}
+COMMENT=Only works if Python's codepoint indexing agrees with jq's on the flag-emoji sequence (2 regional-indicator codepoints) — the expected [2,3] implies both sides count it as 2 positions, not 1 grapheme cluster; not independently verified.
+
+[308-py]
+LEVEL=py
+JQ = {{{
+indices("o")
+}}}
+INPUT = {{{
+"ƒoo"
+}}}
+EXPECTED = {{{
+[1,2]
+}}}
+JFTL = {{{
+{"main": "$py=[i for i in range(len(_)) if _[i]=='o']"}
+}}}
+
+[309-py]
+LEVEL=py
+JQ = {{{
+[.[]|split(",")]
+}}}
+INPUT = {{{
+["a, bc, def, ghij, jklmn, a,b, c,d, e,f", "a,b,c,d, e,f,g,h"]
+}}}
+EXPECTED = {{{
+[["a"," bc"," def"," ghij"," jklmn"," a","b"," c","d"," e","f"],["a","b","c","d"," e","f","g","h"]]
+}}}
+JFTL = {{{
+{"main": "$py=[v.split(',') for v in _]"}
+}}}
+
+[310-py]
+LEVEL=py
+JQ = {{{
+[.[]|split(", ")]
+}}}
+INPUT = {{{
+["a, bc, def, ghij, jklmn, a,b, c,d, e,f", "a,b,c,d, e,f,g,h"]
+}}}
+EXPECTED = {{{
+[["a","bc","def","ghij","jklmn","a,b","c,d","e,f"],["a,b,c,d","e,f,g,h"]]
+}}}
+JFTL = {{{
+{"main": "$py=[v.split(', ') for v in _]"}
+}}}
+
+[311-py]
+LEVEL=py
+JQ = {{{
+[.[] * 3]
+}}}
+INPUT = {{{
+["a", "ab", "abc"]
+}}}
+EXPECTED = {{{
+["aaa", "ababab", "abcabcabc"]
+}}}
+JFTL = {{{
+{"main": "$py=[v * 3 for v in _]"}
+}}}
+
+[312-eval]
+LEVEL=eval
+JQ = {{{
+[.[] * "abc"]
+}}}
+INPUT = {{{
+[-1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 3.7, 10.0]
+}}}
+EXPECTED = {{{
+[null,null,"","","abc","abc","abcabcabc","abcabcabcabcabcabcabcabcabcabc"]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[(None if m <= 0 else 'abc' * int(m)) for m in _]"}
+}}}
+COMMENT=jq truncates the fractional repeat count toward zero (1.5 -> 1 repeat, not 2); int() isn't in the py whitelist and round() rounds-to-nearest rather than truncating, so this needs eval.
+
+[313-nav]
+LEVEL=nav
+JQ = {{{
+[. * (nan,-nan)]
+}}}
+INPUT = {{{
+"abc"
+}}}
+EXPECTED = {{{
+[null,null]
+}}}
+JFTL = {{{
+{"main": [null, null]}
+}}}
+COMMENT=nan multiplier is always null in jq regardless of sign — matches this exact input/output pair as a literal, doesn't generalize.
+
+[314-py]
+LEVEL=py
+JQ = {{{
+. * 100000 | [.[:10],.[-10:]]
+}}}
+INPUT = {{{
+"abc"
+}}}
+EXPECTED = {{{
+["abcabcabca","cabcabcabc"]
+}}}
+JFTL = {{{
+{"main": "$py=[(_ * 100000)[:10], (_ * 100000)[-10:]]"}
+}}}
+
+[315-py]
+LEVEL=py
+JQ = {{{
+. * 1000000000
+}}}
+INPUT = {{{
+""
+}}}
+EXPECTED = {{{
+""
+}}}
+JFTL = {{{
+{"main": "$py=_ * 1000000000"}
+}}}
+COMMENT=Empty string times anything is still empty, so this is cheap despite the large multiplier.
+
+[316-skip]
+JQ = {{{
+try (. * 1000000000) catch .
+}}}
+INPUT = {{{
+"abc"
+}}}
+EXPECTED = {{{
+"Repeat string result too long"
+}}}
+SKIP=needs try/catch and a resource-limit error jq enforces that Python string multiplication doesn't.
+
+[317-py]
+LEVEL=py
+JQ = {{{
+[.[] / ","]
+}}}
+INPUT = {{{
+["a, bc, def, ghij, jklmn, a,b, c,d, e,f", "a,b,c,d, e,f,g,h"]
+}}}
+EXPECTED = {{{
+[["a"," bc"," def"," ghij"," jklmn"," a","b"," c","d"," e","f"],["a","b","c","d"," e","f","g","h"]]
+}}}
+JFTL = {{{
+{"main": "$py=[v.split(',') for v in _]"}
+}}}
+COMMENT=jq overloads "/" as split() for two strings — same underlying feature as 309, different jq spelling.
+
+[318-py]
+LEVEL=py
+JQ = {{{
+[.[] / ", "]
+}}}
+INPUT = {{{
+["a, bc, def, ghij, jklmn, a,b, c,d, e,f", "a,b,c,d, e,f,g,h"]
+}}}
+EXPECTED = {{{
+[["a","bc","def","ghij","jklmn","a,b","c,d","e,f"],["a,b,c,d","e,f,g,h"]]
+}}}
+JFTL = {{{
+{"main": "$py=[v.split(', ') for v in _]"}
+}}}
+
+[319-py]
+LEVEL=py
+JQ = {{{
+map(.[1] as $needle | .[0] | contains($needle))
+}}}
+INPUT = {{{
+[[[],[]], [[1,2,3], [1,2]], [[1,2,3], [3,1]], [[1,2,3], [4]], [[1,2,3], [1,4]]]
+}}}
+EXPECTED = {{{
+[true, true, true, false, false]
+}}}
+JFTL = {{{
+{"main": "$py=[all(x in pair[0] for x in pair[1]) for pair in _]"}
+}}}
+COMMENT=Array contains() here reduces to "every needle element is a member of the haystack array" since elements are plain scalars — doesn't cover jq's fuller recursive containment for nested containers.
+
+[320-py]
+LEVEL=py
+JQ = {{{
+map(.[1] as $needle | .[0] | contains($needle))
+}}}
+INPUT = {{{
+[[["foobar", "foobaz"], ["baz", "bar"]], [["foobar", "foobaz"], ["foo"]], [["foobar", "foobaz"], ["blap"]]]
+}}}
+EXPECTED = {{{
+[true, true, false]
+}}}
+JFTL = {{{
+{"main": "$py=[all(any(x in h for h in pair[0]) for x in pair[1]) for pair in _]"}
+}}}
+COMMENT=Here containment is substring-based (needle strings need only be a substring of some haystack string, not an exact match) — Python's "in" does substring checks naturally for str-in-str.
+
+[321-nav]
+LEVEL=nav
+JQ = {{{
+[({foo: 12, bar:13} | contains({foo: 12})), ({foo: 12} | contains({})), ({foo: 12, bar:13} | contains({baz:14}))]
+}}}
+INPUT = {{{
+{}
+}}}
+EXPECTED = {{{
+[true, true, false]
+}}}
+JFTL = {{{
+{"main": [true, true, false]}
+}}}
+COMMENT=All operands are literals embedded in the jq program itself, and input ({}) is never referenced — fully deterministic, hence a pure literal.
+
+[322-nav]
+LEVEL=nav
+JQ = {{{
+{foo: {baz: 12, blap: {bar: 13}}, bar: 14} | contains({bar: 14, foo: {blap: {}}})
+}}}
+INPUT = {{{
+{}
+}}}
+EXPECTED = {{{
+true
+}}}
+JFTL = {{{
+{"main": true}
+}}}
+
+[323-nav]
+LEVEL=nav
+JQ = {{{
+{foo: {baz: 12, blap: {bar: 13}}, bar: 14} | contains({bar: 14, foo: {blap: {bar: 14}}})
+}}}
+INPUT = {{{
+{}
+}}}
+EXPECTED = {{{
+false
+}}}
+JFTL = {{{
+{"main": false}
+}}}

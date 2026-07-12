@@ -63,7 +63,7 @@ class SimpleEvalPlugin(Compiler):
             "upper",
             "strip",
             "rstrip",
-            "startswith"
+            "startswith",
             "endswith",
             "replace",
             "split"

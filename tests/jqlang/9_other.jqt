@@ -1,0 +1,1244 @@
+# JFTL reference test corpus — chunk 9 (FINAL).
+# Covers source lines ~2200-2635: remaining numeric-literal-precision tests,
+# abs/fabs/length, keyword-as-variable/label-name tests, object construction
+# edge cases, NaN parsing, input/debug, a long run of try/catch regression
+# tests for issue #1859, explode/implode clamping, walk, float/NaN array
+# slicing, setpath/ltrimstr/rtrimstr leak regressions, and finally the
+# CVE deep-recursion stress tests at the very end of the file. Continues
+# the ID sequence (435+) from chunk 8. This is the last chunk — after this,
+# every line of the 2635-line source has been processed.
+#
+# Same caveats as prior chunks: not engine-verified.
+#
+# A recurring, genuine model gap shows up repeatedly in this chunk: JFTL's
+# navigation grammar has no slice syntax (`.[a:b]`), so the entire float/NaN
+# array-slicing section (tests around source lines 2435-2489) is skip, not
+# because the arithmetic is hard but because there's no JFTL slice construct
+# to express it in at all. Similarly, several tests here depend on jq's
+# have_decnum arbitrary-precision-number flag, which has no JFTL analogue.
+
+[435-skip]
+JQ = {{{
+.x | tojson | . == if have_decnum then "13911860366432393" else "13911860366432392" end
+}}}
+INPUT = {{{
+{"x":13911860366432393}
+}}}
+EXPECTED = {{{
+true
+}}}
+SKIP=depends on jq's have_decnum arbitrary-precision-number flag; no JFTL analogue.
+
+[436-skip]
+JQ = {{{
+(13911860366432393 == 13911860366432392) | . == if have_decnum then false else true end
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+true
+}}}
+SKIP=depends on have_decnum.
+
+[437-eval]
+LEVEL=eval
+COMMENT=Applying arithmetic to the value will truncate the result to double
+JQ = {{{
+. - 10
+}}}
+INPUT = {{{
+13911860366432393
+}}}
+EXPECTED = {{{
+13911860366432382
+}}}
+JFTL = {{{
+{"main": "$pyeval=float(_) - 10"}
+}}}
+COMMENT=Forcing float(_) replicates jq's double-precision truncation regardless of whether JFTL's own number model preserves big-int precision internally, since it forces the same IEEE-754 rounding jq applies once arithmetic touches the value. Not hand-verified bit-for-bit.
+
+[438-eval]
+LEVEL=eval
+JQ = {{{
+.[0] - 10
+}}}
+INPUT = {{{
+[13911860366432393]
+}}}
+EXPECTED = {{{
+13911860366432382
+}}}
+JFTL = {{{
+{"main": "$pyeval=float(_[0]) - 10"}
+}}}
+COMMENT=Same truncation logic as 437, applied through an array index.
+
+[439-eval]
+LEVEL=eval
+JQ = {{{
+.x - 10
+}}}
+INPUT = {{{
+{"x":13911860366432393}
+}}}
+EXPECTED = {{{
+13911860366432382
+}}}
+JFTL = {{{
+{"main": "$pyeval=float(_['x']) - 10"}
+}}}
+COMMENT=Same truncation logic as 437, applied through an object field.
+
+[440-skip]
+COMMENT=Unary negation preserves numerical precision
+JQ = {{{
+-. | tojson == if have_decnum then "-13911860366432393" else "-13911860366432392" end
+}}}
+INPUT = {{{
+13911860366432393
+}}}
+EXPECTED = {{{
+true
+}}}
+SKIP=depends on have_decnum.
+
+[441-skip]
+JQ = {{{
+-. | tojson == if have_decnum then "0.12345678901234567890123456789" else "0.12345678901234568" end
+}}}
+INPUT = {{{
+-0.12345678901234567890123456789
+}}}
+EXPECTED = {{{
+true
+}}}
+SKIP=depends on have_decnum.
+
+[442-skip]
+JQ = {{{
+[1E+1000,-1E+1000 | tojson] == if have_decnum then ["1E+1000","-1E+1000"] else ["1.7976931348623157e+308","-1.7976931348623157e+308"] end
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+true
+}}}
+SKIP=depends on have_decnum and jq's overflow-to-max-double behavior.
+
+[443-nav]
+LEVEL=nav
+JQ = {{{
+. |= try . catch .
+}}}
+INPUT = {{{
+1
+}}}
+EXPECTED = {{{
+1
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+COMMENT=The try never actually throws here (". catch ." on a non-erroring value), so the whole expression reduces to plain identity for this input — this does NOT model try/catch in general.
+
+[444-skip]
+COMMENT=decnum to double conversion
+JQ = {{{
+.[] as $n | $n+0 | [., tostring, . == $n]
+}}}
+INPUT = {{{
+[-9007199254740993, -9007199254740992, 9007199254740992, 9007199254740993, 13911860366432393]
+}}}
+EXPECTED = {{{
+[-9007199254740992,"-9007199254740992",true]
+[-9007199254740992,"-9007199254740992",true]
+[9007199254740992,"9007199254740992",true]
+[9007199254740992,"9007199254740992",true]
+[13911860366432392,"13911860366432392",true]
+}}}
+SKIP=tests jq's specific decnum-to-double conversion/rounding behavior at the int53 boundary; too implementation-specific to a numeric model JFTL doesn't expose.
+
+[445-nav]
+LEVEL=nav
+COMMENT=abs, fabs, length
+JQ = {{{
+abs
+}}}
+INPUT = {{{
+"abc"
+}}}
+EXPECTED = {{{
+"abc"
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+COMMENT=jq's abs is a no-op identity on non-numeric input.
+
+[446-eval]
+LEVEL=eval
+JQ = {{{
+map(abs)
+}}}
+INPUT = {{{
+[-0, 0, -10, -1.1]
+}}}
+EXPECTED = {{{
+[0,0,10,1.1]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[abs(x) for x in _]"}
+}}}
+COMMENT=Python's builtin abs() isn't in the simpleeval whitelist, so this needs eval tier rather than py.
+
+[447-eval]
+LEVEL=eval
+JQ = {{{
+map(fabs)
+}}}
+INPUT = {{{
+[-0, 0, -10, -1.1]
+}}}
+EXPECTED = {{{
+[0,0,10,1.1]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[abs(x) for x in _]"}
+}}}
+COMMENT=fabs and abs coincide on these inputs; same expression as 446.
+
+[448-eval]
+LEVEL=eval
+JQ = {{{
+map(abs == length) | unique
+}}}
+INPUT = {{{
+[-10, -1.1, -1e-1, 1000000000000000002]
+}}}
+EXPECTED = {{{
+[true]
+}}}
+JFTL = {{{
+{"main": "$pyeval=sorted(set(abs(x) == abs(x) for x in _))"}
+}}}
+COMMENT=jq's length on a number equals its absolute value, so "abs == length" is really "abs(x) == abs(x)" here — tautological by construction, which is also why jq's own test always collapses to [true] regardless of the specific numbers.
+
+[449-skip]
+COMMENT=The following is NOT prescriptive
+JQ = {{{
+map(abs)
+}}}
+INPUT = {{{
+[0.1,1000000000000000002]
+}}}
+EXPECTED = {{{
+[1e-1, 1000000000000000002]
+}}}
+SKIP=jq's own comment marks this as non-normative (not a requirement), and it hinges on exact big-integer/float literal preservation that isn't safe to guess at.
+
+[450-skip]
+JQ = {{{
+[1E+1000,-1E+1000 | abs | tojson] | unique == if have_decnum then ["1E+1000"] else ["1.7976931348623157e+308"] end
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+true
+}}}
+SKIP=depends on have_decnum and overflow-to-max-double behavior.
+
+[451-skip]
+JQ = {{{
+[1E+1000,-1E+1000 | length | tojson] | unique == if have_decnum then ["1E+1000"] else ["1.7976931348623157e+308"] end
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+true
+}}}
+SKIP=depends on have_decnum.
+
+[452-nav]
+LEVEL=nav
+COMMENT=Using a keyword as variable/label name
+JQ = {{{
+123 as $label | $label
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+123
+}}}
+JFTL = {{{
+{"main": 123}
+}}}
+COMMENT=Purely a parser test that "label" is usable as an ordinary variable name; the computation itself is a constant.
+
+[453-skip]
+JQ = {{{
+[ label $if | range(10) | ., (select(. == 5) | break $if) ]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,1,2,3,4,5]
+}}}
+SKIP=needs label/break early-exit control flow, unimplemented in the engine.
+
+[454-run]
+LEVEL=run
+JQ = {{{
+reduce .[] as $then (4 as $else | $else; . as $elif | . + $then * $elif)
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+96
+}}}
+JFTL = {{{
+{"main": "$pyrun=acc = 4\nfor x in _:\n    acc = acc + x * acc\nreturn acc"}
+}}}
+COMMENT=$then/$else/$elif here are just keyword-shadowed variable names, not real if/then/else — stripping that away, this is a plain fold: acc *= (1 + x) for each x, starting from 4.
+
+[455-nav]
+LEVEL=nav
+JQ = {{{
+1 as $foreach | 2 as $and | 3 as $or | { $foreach, $and, $or, a }
+}}}
+INPUT = {{{
+{"a":4,"b":5}
+}}}
+EXPECTED = {{{
+{"foreach":1,"and":2,"or":3,"a":4}
+}}}
+JFTL = {{{
+{"main": {"foreach": 1, "and": 2, "or": 3, "a": "$.a"}}
+}}}
+COMMENT=$foreach/$and/$or are keyword-shadowed variable names bound to constants; the object construction itself is a plain literal skeleton plus one field nav for "a".
+
+[456-run]
+LEVEL=run
+JQ = {{{
+[ foreach .[] as $try (1 as $catch | $catch - 1; . + $try; .) ]
+}}}
+INPUT = {{{
+[10,9,8,7]
+}}}
+EXPECTED = {{{
+[10,19,27,34]
+}}}
+JFTL = {{{
+{"main": "$pyrun=state = 0\nout = []\nfor x in _:\n    state = state + x\n    out.append(state)\nreturn out"}
+}}}
+COMMENT=$try/$catch are keyword-shadowed names, not real try/catch. This is jq's foreach init;update;extract running total; JFTL's foreach construct doesn't carry a fold accumulator across iterations, so a real loop at run tier collects the running totals directly. Streaming gap: jq's 4 outputs collected into one array.
+
+[457-skip]
+COMMENT=Object construction
+JQ = {{{
+{ a, $__loc__, c }
+}}}
+INPUT = {{{
+{"a":[1,2,3],"b":"foo","c":{"hi":"hey"}}
+}}}
+EXPECTED = {{{
+{"a":[1,2,3],"__loc__":{"file":"<top-level>","line":1},"c":{"hi":"hey"}}
+}}}
+SKIP=$__loc__ is jq compile-time source-location metadata (file/line); JFTL has no equivalent to surface.
+
+[458-eval]
+LEVEL=eval
+JQ = {{{
+1 as $x | "2" as $y | "3" as $z | { $x, as, $y: 4, ($z): 5, if: 6, foo: 7 }
+}}}
+INPUT = {{{
+{"as":8}
+}}}
+EXPECTED = {{{
+{"x":1,"as":8,"2":4,"3":5,"if":6,"foo":7}
+}}}
+JFTL = {{{
+{"main": "$pyeval={'x': 1, 'as': _['as'], '2': 4, '3': 5, 'if': 6, 'foo': 7}"}
+}}}
+COMMENT=$x/$y/$z are all compile-time-constant bindings (1, "2", "3") used partly as values and partly as dynamic dict keys, so they're folded directly into the dict literal; "as" (the bareword shorthand) is the only piece that actually reads from input.
+
+[459-eval]
+LEVEL=eval
+COMMENT=nan is parsed as a valid NaN value from JSON
+JQ = {{{
+fromjson | isnan
+}}}
+INPUT = {{{
+"nan"
+}}}
+EXPECTED = {{{
+true
+}}}
+JFTL = {{{
+{"main": "$pyeval=__import__('math').isnan(float(_))"}
+}}}
+COMMENT=Python's float() is case-insensitive for "nan"/"inf" the same way jq's JSON parser is, so this works without needing a real fromjson implementation.
+
+[460-skip]
+JQ = {{{
+tojson | fromjson
+}}}
+INPUT = {{{
+{"a":nan}
+}}}
+EXPECTED = {{{
+{"a":null}
+}}}
+SKIP=the INPUT itself uses a non-standard bare "nan" JSON token; whether JFTL's own input loader (as opposed to my conversion) accepts that at all is unverifiable without running the engine, so this is unsafe to convert with confidence.
+
+[461-skip]
+COMMENT=NaN with payload is not parsed
+JQ = {{{
+.[] | try (fromjson | isnan) catch .
+}}}
+INPUT = {{{
+["NaN","-NaN","NaN1","NaN10","NaN100","NaN1000","NaN10000","NaN100000"]
+}}}
+EXPECTED = {{{
+true
+true
+"Invalid numeric literal at EOF at line 1, column 4 (while parsing 'NaN1')"
+"Invalid numeric literal at EOF at line 1, column 5 (while parsing 'NaN10')"
+"Invalid numeric literal at EOF at line 1, column 6 (while parsing 'NaN100')"
+"Invalid numeric literal at EOF at line 1, column 7 (while parsing 'NaN1000')"
+"Invalid numeric literal at EOF at line 1, column 8 (while parsing 'NaN10000')"
+"Invalid numeric literal at EOF at line 1, column 9 (while parsing 'NaN100000')"
+}}}
+SKIP=needs try/catch plus jq's exact numeric-literal-parser error text; not something a Python float() shim can reproduce faithfully.
+
+[462-skip]
+COMMENT=calling input/0, or debug/0 in a test doesn't crash jq
+JQ = {{{
+try input catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"break"
+}}}
+SKIP=needs both try/catch and jq's input/0 builtin (reading the next input value), neither available.
+
+[463-nav]
+LEVEL=nav
+JQ = {{{
+debug
+}}}
+INPUT = {{{
+1
+}}}
+EXPECTED = {{{
+1
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+COMMENT=debug's only observable effect on the result value is identity passthrough; its stderr side effect isn't modeled.
+
+[464-skip]
+COMMENT=try/catch catches more than it should #1859
+JQ = {{{
+"foo" | try ((try . catch "caught too much") | error) catch "caught just right"
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"caught just right"
+}}}
+SKIP=needs try/catch.
+
+[465-skip]
+JQ = {{{
+.[]|(try (if .=="hi" then . else error end) catch empty) | "\(.) there!"
+}}}
+INPUT = {{{
+["hi","ho"]
+}}}
+EXPECTED = {{{
+"hi there!"
+}}}
+SKIP=needs try/catch, and "catch empty" drops the failing item entirely (the item-dropping gap).
+
+[466-skip]
+JQ = {{{
+try (["hi","ho"]|.[]|(try . catch (if .=="ho" then "BROKEN"|error else empty end)) | if .=="ho" then error else "\(.) there!" end) catch "caught outside \(.)"
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"hi there!"
+"caught outside ho"
+}}}
+SKIP=needs nested try/catch with error-value interpolation.
+
+[467-skip]
+JQ = {{{
+.[]|(try . catch (if .=="ho" then "BROKEN"|error else empty end)) | if .=="ho" then error else "\(.) there!" end
+}}}
+INPUT = {{{
+["hi","ho"]
+}}}
+EXPECTED = {{{
+"hi there!"
+}}}
+SKIP=needs try/catch.
+
+[468-skip]
+JQ = {{{
+try (try error catch "inner catch \(.)") catch "outer catch \(.)"
+}}}
+INPUT = {{{
+"foo"
+}}}
+EXPECTED = {{{
+"inner catch foo"
+}}}
+SKIP=needs nested try/catch.
+
+[469-skip]
+JQ = {{{
+try ((try error catch "inner catch \(.)")|error) catch "outer catch \(.)"
+}}}
+INPUT = {{{
+"foo"
+}}}
+EXPECTED = {{{
+"outer catch inner catch foo"
+}}}
+SKIP=needs nested try/catch.
+
+[470-skip]
+COMMENT=Also #1859, but from #1885
+JQ = {{{
+first(.?,.?)
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+null
+}}}
+SKIP=needs "?" error-suppression generator semantics.
+
+[471-skip]
+COMMENT=Also #1859, but from #2140
+JQ = {{{
+{foo: "bar"} | .foo |= .?
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+{"foo": "bar"}
+}}}
+SKIP=needs "?" error-suppression inside an update-assignment.
+
+[472-nav]
+LEVEL=nav
+COMMENT=Also #1859, but from #2220
+JQ = {{{
+. |= try 2
+}}}
+INPUT = {{{
+1
+}}}
+EXPECTED = {{{
+2
+}}}
+JFTL = {{{
+{"main": 2}
+}}}
+COMMENT=try never throws here (2 is a constant), so this reduces to always assigning the literal 2 — not a general try/catch model.
+
+[473-nav]
+LEVEL=nav
+JQ = {{{
+. |= try 2 catch 3
+}}}
+INPUT = {{{
+1
+}}}
+EXPECTED = {{{
+2
+}}}
+JFTL = {{{
+{"main": 2}
+}}}
+COMMENT=Same as 472 — the catch branch is unreachable for this input, so it's a constant.
+
+[474-skip]
+JQ = {{{
+.[] |= try tonumber
+}}}
+INPUT = {{{
+["1", "2a", "3", " 4", "5 ", "6.7", ".89", "-876", "+5.43", 21]
+}}}
+EXPECTED = {{{
+[1, 3, 6.7, 0.89, -876, 5.43, 21]
+}}}
+SKIP="try tonumber" without a catch silently drops the one item ("2a") that fails to parse, shrinking the array — JFTL has no equivalent "drop this item from the result" semantics (the recurring "?"/try item-dropping gap).
+
+[475-py]
+LEVEL=py
+COMMENT=Also 1859, but from 2073
+JQ = {{{
+any(keys[]|tostring?;true)
+}}}
+INPUT = {{{
+{"a":"1","b":"2","c":"3"}
+}}}
+EXPECTED = {{{
+true
+}}}
+JFTL = {{{
+{"main": "$py=len(_) > 0"}
+}}}
+COMMENT=The predicate is unconditionally true, so any(...) here just asks "does this object have at least one key" — keys are already strings so tostring/? never actually does anything.
+
+[476-eval]
+LEVEL=eval
+COMMENT=explode/implode. Test replacement character (65533) for outside codepoint range and 0xd800 (55296) - 0xdfff (57343) utf16 surrogate pair range. 1.1 and 1.9 to test round down of non-ints.
+JQ = {{{
+implode|explode
+}}}
+INPUT = {{{
+[-1,0,1,2,3,1114111,1114112,55295,55296,57343,57344,1.1,1.9]
+}}}
+EXPECTED = {{{
+[65533,0,1,2,3,1114111,65533,55295,65533,65533,57344,1,1]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[65533 if (int(x) < 0 or int(x) > 1114111 or 55296 <= int(x) <= 57343) else int(x) for x in _]"}
+}}}
+COMMENT=Implemented the clamping rule directly (replacement char for out-of-range or surrogate-range codepoints, floor for fractional ones) rather than round-tripping through an actual Python string, which would choke on lone surrogates.
+
+[477-skip]
+JQ = {{{
+map(try implode catch .)
+}}}
+INPUT = {{{
+[123,["a"],[nan]]
+}}}
+EXPECTED = {{{
+["implode input must be an array","string (\"a\") can't be imploded, unicode codepoint needs to be numeric","number (null) can't be imploded, unicode codepoint needs to be numeric"]
+}}}
+SKIP=needs try/catch plus jq's exact type-error message text for three different failure modes.
+
+[478-skip]
+JQ = {{{
+try 0[implode] catch .
+}}}
+INPUT = {{{
+[]
+}}}
+EXPECTED = {{{
+"Cannot index number with string (\"\")"
+}}}
+SKIP=needs try/catch.
+
+[479-nav]
+LEVEL=nav
+COMMENT=walk
+JQ = {{{
+walk(.)
+}}}
+INPUT = {{{
+{"x":0}
+}}}
+EXPECTED = {{{
+{"x":0}
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+COMMENT=walk(.) is always identity regardless of structure — this captures only that special case, not general walk(f).
+
+[480-nav]
+LEVEL=nav
+JQ = {{{
+walk(1)
+}}}
+INPUT = {{{
+{"x":0}
+}}}
+EXPECTED = {{{
+1
+}}}
+JFTL = {{{
+{"main": 1}
+}}}
+COMMENT=walk(constant) collapses every level bottom-up to that constant, so the final result is always just the constant, regardless of input structure — again only this special case, not general walk(f).
+
+[481-skip]
+COMMENT=The following is a regression test, not a requirement
+JQ = {{{
+[walk(.,1)]
+}}}
+INPUT = {{{
+{"x":0}
+}}}
+EXPECTED = {{{
+[{"x":0},1]
+}}}
+SKIP=jq's own comment marks this as non-normative; it also depends on walk's interaction with a multi-output generator, which has no clean JFTL equivalent.
+
+[482-skip]
+COMMENT=Issue #2584
+JQ = {{{
+walk(select(IN({}, []) | not))
+}}}
+INPUT = {{{
+{"a":1,"b":[]}
+}}}
+EXPECTED = {{{
+{"a":1}
+}}}
+SKIP=general walk(f) needs unbounded recursive tree traversal with a real predicate; not reducible to a constant like 479/480, and true recursion/def support in $pyrun= is unconfirmed.
+
+[483-skip]
+COMMENT=#2815
+JQ = {{{
+[range(10)] | .[1.2:3.5]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[1,2,3]
+}}}
+SKIP=needs slice indexing (.[a:b]), which JFTL's navigation grammar doesn't support.
+
+[484-skip]
+JQ = {{{
+[range(10)] | .[1.5:3.5]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[1,2,3]
+}}}
+SKIP=needs slice indexing.
+
+[485-skip]
+JQ = {{{
+[range(10)] | .[1.7:3.5]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[1,2,3]
+}}}
+SKIP=needs slice indexing.
+
+[486-skip]
+JQ = {{{
+[range(10)] | .[1.7:4294967295]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[1,2,3,4,5,6,7,8,9]
+}}}
+SKIP=needs slice indexing.
+
+[487-skip]
+JQ = {{{
+[range(10)] | .[1.7:-4294967296]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[]
+}}}
+SKIP=needs slice indexing.
+
+[488-eval]
+LEVEL=eval
+JQ = {{{
+[[range(10)] | .[1.1,1.5,1.7]]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[1,1,1]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[_[int(i)] for i in (1.1,1.5,1.7)]"}
+}}}
+COMMENT=Not a slice — this is a comma-generator of three ordinary (fractional, floor-truncated) single-element indices, which JFTL's indexing does support. Streaming gap: 3 outputs collected into one array.
+
+[489-eval]
+LEVEL=eval
+JQ = {{{
+[range(5)] | .[1.1] = 5
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,5,2,3,4]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[5 if i == 1 else v for i, v in enumerate(_)]"}
+}}}
+COMMENT=1.1 truncates to the compile-time-constant index 1 (jq floors fractional single-index assignment targets), so the index is hardcoded rather than computed from input.
+
+[490-skip]
+JQ = {{{
+[range(3)] | .[nan:1]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0]
+}}}
+SKIP=needs slice indexing.
+
+[491-skip]
+JQ = {{{
+[range(3)] | .[1:nan]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[1,2]
+}}}
+SKIP=needs slice indexing.
+
+[492-nav]
+LEVEL=nav
+JQ = {{{
+[range(3)] | .[nan]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+null
+}}}
+JFTL = {{{
+{"main": null}
+}}}
+COMMENT=A NaN index for plain (non-slice, non-assignment) array access always yields null in jq, regardless of the array's contents — a compile-time-constant result.
+
+[493-skip]
+JQ = {{{
+try ([range(3)] | .[nan] = 9) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Cannot set array element at NaN index"
+}}}
+SKIP=needs try/catch.
+
+[494-skip]
+JQ = {{{
+try ("foobar" | .[1.5:3.5] = "xyz") catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Cannot update string slices"
+}}}
+SKIP=needs try/catch and slice indexing.
+
+[495-skip]
+JQ = {{{
+try ([range(10)] | .[1.5:3.5] = ["xyz"]) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,"xyz",4,5,6,7,8,9]
+}}}
+SKIP=needs real slice-assignment (replacing a range of elements with a differently-sized list), which JFTL's navigation grammar doesn't support at all.
+
+[496-skip]
+JQ = {{{
+try ("foobar" | .[1.5]) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Cannot index string with number (1.5)"
+}}}
+SKIP=needs try/catch (indexing a string with a number errors, unlike arrays where it returns null).
+
+[497-skip]
+COMMENT=setpath/2 does not leak the input after an invalid get #2970
+JQ = {{{
+try ["ok", setpath([1]; 1)] catch ["ko", .]
+}}}
+INPUT = {{{
+{"hi":"hello"}
+}}}
+EXPECTED = {{{
+["ko","Cannot index object with number (1)"]
+}}}
+SKIP=needs try/catch and setpath's exact error text.
+
+[498-skip]
+JQ = {{{
+try fromjson catch .
+}}}
+INPUT = {{{
+"{'a': 123}"
+}}}
+EXPECTED = {{{
+"Invalid string literal; expected \", but got ' at line 1, column 5 (while parsing '{'a': 123}')"
+}}}
+SKIP=needs try/catch and jq's exact JSON-parser error text.
+
+[499-skip]
+COMMENT=ltrimstr/1 rtrimstr/1 don't leak on invalid input #2977
+JQ = {{{
+try ltrimstr(1) catch "x", try rtrimstr(1) catch "x" | "ok"
+}}}
+INPUT = {{{
+"hi"
+}}}
+EXPECTED = {{{
+"ok"
+"ok"
+}}}
+SKIP=needs try/catch.
+
+[500-skip]
+JQ = {{{
+try ltrimstr("x") catch "x", try rtrimstr("x") catch "x" | "ok"
+}}}
+INPUT = {{{
+{"hey":[]}
+}}}
+EXPECTED = {{{
+"ok"
+"ok"
+}}}
+SKIP=needs try/catch.
+
+[501-skip]
+COMMENT=ltrimstr/1 and rtrimstr/1 return an error for non-strings. #2969
+JQ = {{{
+.[] as [$x, $y] | try ["ok", ($x | ltrimstr($y))] catch ["ko", .]
+}}}
+INPUT = {{{
+[["hi",1],[1,"hi"],["hi","hi"],[1,1]]
+}}}
+EXPECTED = {{{
+["ko","startswith() requires string inputs"]
+["ko","startswith() requires string inputs"]
+["ok",""]
+["ko","startswith() requires string inputs"]
+}}}
+SKIP=needs try/catch and jq's exact error text, plus destructuring of [$x,$y] pairs.
+
+[502-skip]
+JQ = {{{
+.[] as [$x, $y] | try ["ok", ($x | rtrimstr($y))] catch ["ko", .]
+}}}
+INPUT = {{{
+[["hi",1],[1,"hi"],["hi","hi"],[1,1]]
+}}}
+EXPECTED = {{{
+["ko","endswith() requires string inputs"]
+["ko","endswith() requires string inputs"]
+["ok",""]
+["ko","endswith() requires string inputs"]
+}}}
+SKIP=needs try/catch and destructuring.
+
+[503-skip]
+COMMENT=oss-fuzz #66061: setpath/2 leaks when indexing array with array
+JQ = {{{
+try ["OK", setpath([[1]]; 1)] catch ["KO", .]
+}}}
+INPUT = {{{
+[]
+}}}
+EXPECTED = {{{
+["KO","Cannot update field at array index of array"]
+}}}
+SKIP=needs try/catch and setpath's exact error text.
+
+[504-run]
+LEVEL=run
+COMMENT=regression test for #3227
+JQ = {{{
+foreach .[] as $x (0, 1; . + $x)
+}}}
+INPUT = {{{
+[1, 2]
+}}}
+EXPECTED = {{{
+1
+3
+2
+4
+}}}
+JFTL = {{{
+{"main": "$pyrun=out = []\nfor init in (0, 1):\n    state = init\n    for x in _:\n        state = state + x\n        out.append(state)\nreturn out"}
+}}}
+COMMENT=jq's foreach init here is itself a two-value generator (0, 1), which reruns the ENTIRE foreach once per init value, concatenating both runs' outputs — replicated with an explicit outer loop over the two init values. Streaming gap: jq's 4 outputs collected into one array.
+
+[505-skip]
+COMMENT=regression test for CVE-2025-49014 (use of fmt after free). Tests with both empty string literal and empty string created by function as they seem to behave reference-wise differently.
+JQ = {{{
+strflocaltime("" | ., @uri)
+}}}
+INPUT = {{{
+0
+}}}
+EXPECTED = {{{
+""
+""
+}}}
+SKIP=a memory-safety regression test specific to jq's C implementation (use-after-free in string reference counting); not a semantic behavior to port, and strflocaltime itself is timezone-dependent.
+
+[506-skip]
+COMMENT=regression tests for #3413. Upper range bounds should be in sync with the constants defined at src/jv_parse.c MAX_PARSING_DEPTH and src/jv_print.c MAX_PRINT_DEPTH. This case: N-1 (just under the limit).
+JQ = {{{
+reduce range(9999) as $_ ([];[.]) | tojson | fromjson | flatten
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[]
+}}}
+SKIP=CVE/robustness stress test for jq's internal recursion-depth limits (parse/print depth of ~10000 nested arrays); excluded per agreed policy — not a feature gap, a stress test of jq's own C implementation limits.
+
+[507-skip]
+COMMENT=#3413, case N (exactly at the limit)
+JQ = {{{
+reduce range(10000) as $_ ([];[.]) | tojson | try (fromjson) catch . | (contains("<skipped: too deep>") | not) and contains("Exceeds depth limit for parsing")
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+true
+}}}
+SKIP=deep-recursion stress test; excluded per agreed policy.
+
+[508-skip]
+COMMENT=#3413, case N+1 (just over the limit)
+JQ = {{{
+reduce range(10001) as $_ ([];[.]) | tojson | contains("<skipped: too deep>")
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+true
+}}}
+SKIP=deep-recursion stress test; excluded per agreed policy.
+
+[509-skip]
+COMMENT=regression test for CVE-2026-33947
+JQ = {{{
+setpath([range(10000) | 0]; 0) | flatten
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0]
+}}}
+SKIP=deep-recursion stress test (setpath depth limit); excluded per agreed policy.
+
+[510-skip]
+JQ = {{{
+try setpath([range(10001) | 0]; 0) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Path too deep"
+}}}
+SKIP=deep-recursion stress test; excluded per agreed policy.
+
+[511-skip]
+JQ = {{{
+getpath([range(10000) | 0])
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+null
+}}}
+SKIP=deep-recursion stress test (getpath depth limit); excluded per agreed policy.
+
+[512-skip]
+JQ = {{{
+try getpath([range(10001) | 0]) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Path too deep"
+}}}
+SKIP=deep-recursion stress test; excluded per agreed policy.
+
+[513-skip]
+JQ = {{{
+delpaths([[range(10000) | 0]])
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+null
+}}}
+SKIP=deep-recursion stress test (delpaths depth limit); excluded per agreed policy.
+
+[514-skip]
+JQ = {{{
+try delpaths([[range(10001) | 0]]) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Path too deep"
+}}}
+SKIP=deep-recursion stress test; excluded per agreed policy.
+
+[515-skip]
+COMMENT=regression test for CVE-2026-40612
+JQ = {{{
+reduce range(10000) as $_ ([]; [.]) | contains([[]])
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+true
+}}}
+SKIP=deep-recursion stress test (contains depth limit); excluded per agreed policy.
+
+[516-skip]
+JQ = {{{
+try (reduce range(10001) as $_ ([]; [.]) as $x | $x | contains($x)) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Containment check too deep"
+}}}
+SKIP=deep-recursion stress test; excluded per agreed policy.
+
+[517-skip]
+COMMENT=regression test for CVE-2026-43896
+JQ = {{{
+reduce range(10000) as $_ ({}; {a: .}) as $x | $x * $x | length
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+1
+}}}
+SKIP=deep-recursion stress test (recursive object-merge depth limit); excluded per agreed policy.
+
+[518-skip]
+JQ = {{{
+try (reduce range(10001) as $_ ({}; {a: .}) as $x | $x * $x) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Object merge too deep"
+}}}
+SKIP=deep-recursion stress test; excluded per agreed policy.
+
+[519-skip]
+COMMENT=regression test for deep structural equality recursion
+JQ = {{{
+try ((reduce range(10001) as $_ ([]; [.])) as $x | (reduce range(10001) as $_ ([]; [.])) as $y | $x == $y) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Equality check too deep"
+}}}
+SKIP=deep-recursion stress test (equality-check depth limit); excluded per agreed policy.
+
+[520-skip]
+COMMENT=regression tests for deep ordering comparisons
+JQ = {{{
+try ((reduce range(10001) as $_ ([]; [.])) as $x | [$x, $x] | sort) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Comparison too deep"
+}}}
+SKIP=deep-recursion stress test (sort depth limit); excluded per agreed policy.
+
+[521-skip]
+JQ = {{{
+try ((reduce range(10001) as $_ ([]; [.])) as $x | [$x, $x] | unique) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Comparison too deep"
+}}}
+SKIP=deep-recursion stress test (unique depth limit); excluded per agreed policy.
+
+[522-skip]
+JQ = {{{
+try ((reduce range(10001) as $_ ({}; {a: .})) as $x | [$x, $x] | sort) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Comparison too deep"
+}}}
+SKIP=deep-recursion stress test (sort depth limit, object variant); excluded per agreed policy.
+
+[523-skip]
+JQ = {{{
+try ((reduce range(10001) as $_ ({}; {a: .})) as $x | [$x, $x] | unique) catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"Comparison too deep"
+}}}
+SKIP=deep-recursion stress test (unique depth limit, object variant); excluded per agreed policy. This is the final test case in the source file (source line 2635).

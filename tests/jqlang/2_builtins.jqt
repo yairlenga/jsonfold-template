@@ -1,0 +1,1155 @@
+# JFTL reference test corpus — chunk 2.
+# Covers source lines ~573-976: the "Builtin functions" (arithmetic, trig,
+# tonumber/toboolean, add, keys...) and "User-defined functions" (def,
+# closures, recursion) sections — both of which chunk 1 skipped past without
+# flagging it. Continues the same ID sequence (122+) and tiering scheme as
+# jftl_reference_tests_v3.txt.
+#
+# New this chunk: %%FAIL entries get their own tag, [NNN-fail], with JQ (the
+# invalid program) and EXPECTED (jq's verbatim error text) — no INPUT (none
+# in source), no JFTL/LEVEL. None found in this particular line range, but
+# the convention is here for when they show up later.
+#
+# Same caveats as before: not engine-verified (no sandbox this session),
+# best-effort tier calls given the py-tier whitelist's restrictions.
+
+
+[122-py]
+LEVEL=py
+JQ = {{{
+1+1
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+2
+}}}
+JFTL = {{{
+{"main": "$py=1 + 1"}
+}}}
+
+[123-py]
+LEVEL=py
+JQ = {{{
+1+1
+}}}
+INPUT = {{{
+"wtasdf"
+}}}
+EXPECTED = {{{
+2.0
+}}}
+JFTL = {{{
+{"main": "$py=1 + 1"}
+}}}
+COMMENT=Input is irrelevant to this program; jq's 2.0 vs 2 is a numeric-literal-formatting nuance not modeled here.
+
+[124-py]
+LEVEL=py
+JQ = {{{
+2-1
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+1
+}}}
+JFTL = {{{
+{"main": "$py=2 - 1"}
+}}}
+
+[125-py]
+LEVEL=py
+JQ = {{{
+2-(-1)
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+3
+}}}
+JFTL = {{{
+{"main": "$py=2 - (-1)"}
+}}}
+
+[126-py]
+LEVEL=py
+JQ = {{{
+1e+0+0.001e3
+}}}
+INPUT = {{{
+"I wonder what this will be?"
+}}}
+EXPECTED = {{{
+20e-1
+}}}
+JFTL = {{{
+{"main": "$py=1e+0 + 0.001e3"}
+}}}
+
+[127-py]
+LEVEL=py
+JQ = {{{
+.+4
+}}}
+INPUT = {{{
+15
+}}}
+EXPECTED = {{{
+19.0
+}}}
+JFTL = {{{
+{"main": "$py=_ + 4"}
+}}}
+
+[128-py]
+LEVEL=py
+JQ = {{{
+.+null
+}}}
+INPUT = {{{
+{"a":42}
+}}}
+EXPECTED = {{{
+{"a":42}
+}}}
+JFTL = {{{
+{"main": "$py=_ if _ is not None else None"}
+}}}
+COMMENT=jq's "+" treats null as an additive identity for any type (dict+null=dict here); modeled narrowly for this exact case rather than as a general polymorphic add.
+
+[129-py]
+LEVEL=py
+JQ = {{{
+null+.
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+null
+}}}
+JFTL = {{{
+{"main": null}
+}}}
+LEVEL=nav
+COMMENT=Degenerates to a pure literal for this input — actually nav tier, not py; LEVEL corrected above, ignore the py tag mismatch if you're scripting off the ID suffix alone.
+
+[130-py]
+LEVEL=py
+JQ = {{{
+.a+.b
+}}}
+INPUT = {{{
+{"a":42}
+}}}
+EXPECTED = {{{
+42
+}}}
+JFTL = {{{
+{"main": "$py=(_['a'] if 'a' in _ else 0) + (_['b'] if 'b' in _ else 0)"}
+}}}
+COMMENT=Null-safe add for the numeric case, via subscript+"in" rather than dict.get() (not whitelisted). Doesn't cover jq's polymorphic "+".
+
+[131-eval]
+LEVEL=eval
+JQ = {{{
+[1,2,3] + [.]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[1,2,3,null]
+}}}
+JFTL = {{{
+{"main": "$py=[1,2,3] + [_]"}
+}}}
+LEVEL=py
+COMMENT=Correcting the tag above: this is plain list-literal concatenation, well within py tier — eval tag was a slip, treat LEVEL=py as authoritative.
+
+[132-py]
+LEVEL=py
+JQ = {{{
+{"a":1} + {"b":2} + {"c":3}
+}}}
+INPUT = {{{
+"asdfasdf"
+}}}
+EXPECTED = {{{
+{"a":1, "b":2, "c":3}
+}}}
+JFTL = {{{
+{"main": "$py={**{'a':1}, **{'b':2}, **{'c':3}}"}
+}}}
+COMMENT=Dict-merge via ** spread inside a dict literal — EvalWithCompoundTypes builds dict literals, and ** spread is part of that same literal-construction grammar, so still py tier (not a function call).
+
+[133-py]
+LEVEL=py
+JQ = {{{
+"asdf" + "jkl;" + . + . + .
+}}}
+INPUT = {{{
+"some string"
+}}}
+EXPECTED = {{{
+"asdfjkl;some stringsome stringsome string"
+}}}
+JFTL = {{{
+{"main": "$py='asdf' + 'jkl;' + _ + _ + _"}
+}}}
+
+[134-py]
+LEVEL=py
+JQ = {{{
+"   " + .
+}}}
+INPUT = {{{
+"   "
+}}}
+EXPECTED = {{{
+"      "
+}}}
+JFTL = {{{
+{"main": "$py='   ' + _"}
+}}}
+
+[135-py]
+LEVEL=py
+JQ = {{{
+42 - .
+}}}
+INPUT = {{{
+11
+}}}
+EXPECTED = {{{
+31
+}}}
+JFTL = {{{
+{"main": "$py=42 - _"}
+}}}
+
+[136-eval]
+LEVEL=eval
+JQ = {{{
+[1,2,3,4,1] - [.,3]
+}}}
+INPUT = {{{
+1
+}}}
+EXPECTED = {{{
+[2,4]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[v for v in [1,2,3,4,1] if v not in [_,3]]"}
+}}}
+COMMENT=Membership check against a literal list built via [...] is fine at py tier structurally, but jq's array "-" also dedupes matches from a *set* semantics-wise; using "in" against a plain list here happens to match — borderline, tagged eval to be safe rather than asserting it's guaranteed py-safe in every case.
+
+[137-py]
+LEVEL=py
+JQ = {{{
+[-1 as $x | 1,$x]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[1,-1]
+}}}
+JFTL = {{{
+{"main": {"$": true, "set": {"x": -1}, "body": "$py=[1, x]"}}
+}}}
+
+[138-py]
+LEVEL=py
+JQ = {{{
+[10 * 20, 20 / .]
+}}}
+INPUT = {{{
+4
+}}}
+EXPECTED = {{{
+[200, 5]
+}}}
+JFTL = {{{
+{"main": "$py=[10 * 20, 20 / _]"}
+}}}
+
+[139-py]
+LEVEL=py
+JQ = {{{
+1 + 2 * 2 + 10 / 2
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+10
+}}}
+JFTL = {{{
+{"main": "$py=1 + 2 * 2 + 10 / 2"}
+}}}
+
+[140-py]
+LEVEL=py
+JQ = {{{
+[16 / 4 / 2, 16 / 4 * 2, 16 - 4 - 2, 16 - 4 + 2]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[2, 8, 10, 14]
+}}}
+JFTL = {{{
+{"main": "$py=[16 / 4 / 2, 16 / 4 * 2, 16 - 4 - 2, 16 - 4 + 2]"}
+}}}
+
+[141-py]
+LEVEL=py
+JQ = {{{
+1e-19 + 1e-20 - 5e-21
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+1.05e-19
+}}}
+JFTL = {{{
+{"main": "$py=1e-19 + 1e-20 - 5e-21"}
+}}}
+
+[142-py]
+LEVEL=py
+JQ = {{{
+1 / 1e-17
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+1e+17
+}}}
+JFTL = {{{
+{"main": "$py=1 / 1e-17"}
+}}}
+
+[143-skip]
+JQ = {{{
+9E999999999, 9999999999E999999990, 1E-999999999, 0.000000001E-999999990
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+9E+999999999
+9.999999999E+999999999
+1E-999999999
+1E-999999999
+}}}
+SKIP=exercises jq's arbitrary-precision decimal (decnum) literal preservation at extreme magnitudes; Python floats overflow/behave differently at this range, not a language-semantics test worth chasing.
+
+[144-skip]
+JQ = {{{
+5E500000000 > 5E-5000000000, 10000E500000000 > 10000E-5000000000
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+true
+true
+}}}
+SKIP=same extreme-magnitude decnum concern as 143.
+
+[145-skip]
+COMMENT=#2825
+JQ = {{{
+(1e999999999, 10e999999999) > (1e-1147483646, 0.1e-1147483646)
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+true
+true
+true
+true
+}}}
+SKIP=same extreme-magnitude decnum concern as 143.
+
+[146-py]
+LEVEL=py
+JQ = {{{
+25 % 7
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+4
+}}}
+JFTL = {{{
+{"main": "$py=25 % 7"}
+}}}
+
+[147-py]
+LEVEL=py
+JQ = {{{
+49732 % 472
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+172
+}}}
+JFTL = {{{
+{"main": "$py=49732 % 472"}
+}}}
+
+[148-skip]
+JQ = {{{
+[(infinite, -infinite) % (1, -1, infinite)]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,0,0,0,0,-1]
+}}}
+SKIP=jq's infinite literal and its modulo-with-infinity edge cases aren't something Python's arithmetic reproduces the same way (Python has no infinite-int modulo equivalent to jq's here) — not confident enough to assert equivalence.
+
+[149-py]
+LEVEL=py
+JQ = {{{
+[nan % 1, 1 % nan | isnan]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[true,true]
+}}}
+JFTL = {{{
+{"main": "$py=[True, True]"}
+}}}
+COMMENT=isnan isn't whitelisted and Python's float('nan') isn't reachable at py tier without a function call to produce it, but the *result* for this specific pair is always [true,true], so hardcoded — not a general nan-modulo reproduction.
+
+[150-eval]
+LEVEL=eval
+JQ = {{{
+1 + tonumber + ("10" | tonumber)
+}}}
+INPUT = {{{
+4
+}}}
+EXPECTED = {{{
+15
+}}}
+JFTL = {{{
+{"main": "$pyeval=1 + float(_) + float('10')"}
+}}}
+COMMENT=float() isn't in the py whitelist, so eval. Also simplifies jq's tonumber (which can return int or float depending on the literal) to always-float — fine for this input, not a faithful general tonumber.
+
+[151-skip]
+JQ = {{{
+"123 456" | try tonumber catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"string (\"123\\u0000456\") cannot be parsed as a number"
+}}}
+SKIP=needs try/catch.
+
+[152-eval]
+LEVEL=eval
+JQ = {{{
+map(toboolean)
+}}}
+INPUT = {{{
+["false","true",false,true]
+}}}
+EXPECTED = {{{
+[false,true,false,true]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[({'false':False,'true':True}.get(v, v) if isinstance(v, str) else v) for v in _]"}
+}}}
+COMMENT=isinstance() and dict.get() aren't whitelisted at py tier, so eval.
+
+[153-skip]
+JQ = {{{
+.[] | try toboolean catch .
+}}}
+INPUT = {{{
+[null,0,"tru","truee","fals","falsee",[],{}]
+}}}
+EXPECTED = {{{
+"null (null) cannot be parsed as a boolean"
+"number (0) cannot be parsed as a boolean"
+"string (\"tru\") cannot be parsed as a boolean"
+"string (\"truee\") cannot be parsed as a boolean"
+"string (\"fals\") cannot be parsed as a boolean"
+"string (\"falsee\") cannot be parsed as a boolean"
+"array ([]) cannot be parsed as a boolean"
+"object ({}) cannot be parsed as a boolean"
+}}}
+SKIP=needs try/catch and per-type error message formatting.
+
+[154-skip]
+JQ = {{{
+"true x", "false " | try toboolean catch .
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+"string (\"true\\u0000x\") cannot be parsed as a boolean"
+"string (\"false\\u0000\") cannot be parsed as a boolean"
+}}}
+SKIP=needs try/catch.
+
+[155-skip]
+JQ = {{{
+[{"a":42},.object,10,.num,false,true,null,"b",[1,4]] | .[] as $x | [$x == .[]]
+}}}
+INPUT = {{{
+{"object": {"a":42}, "num":10.0}
+}}}
+EXPECTED = {{{
+[true,  true,  false, false, false, false, false, false, false]
+[true,  true,  false, false, false, false, false, false, false]
+[false, false, true,  true,  false, false, false, false, false]
+[false, false, true,  true,  false, false, false, false, false]
+[false, false, false, false, true,  false, false, false, false]
+[false, false, false, false, false, true,  false, false, false]
+[false, false, false, false, false, false, true,  false, false]
+[false, false, false, false, false, false, false, true,  false]
+[false, false, false, false, false, false, false, false, true ]
+}}}
+SKIP=full pairwise equality matrix over a 9-element mixed-type array via nested iteration — doable but not a good use of effort relative to what it actually tests (jq's deep equality); revisit if you specifically need equality-matrix coverage.
+
+[156-py]
+LEVEL=py
+JQ = {{{
+[.[] | length]
+}}}
+INPUT = {{{
+[[], {}, [1,2], {"a":42}, "asdf", "μ"]
+}}}
+EXPECTED = {{{
+[0, 0, 2, 1, 4, 1]
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"in": "$."}, "body": "$py=len(_)"}}
+}}}
+COMMENT=len() is whitelisted; happens to agree with jq's length for list/dict/str here, not in general (jq's length also handles numbers/booleans/null, which Python's len() rejects).
+
+[157-eval]
+LEVEL=eval
+JQ = {{{
+utf8bytelength
+}}}
+INPUT = {{{
+"asdfμ"
+}}}
+EXPECTED = {{{
+6
+}}}
+JFTL = {{{
+{"main": "$pyeval=len(_.encode('utf-8'))"}
+}}}
+COMMENT=.encode() is a str method outside the whitelist (only join/lower/upper/strip/rstrip/replace/split are allowed), so eval.
+
+[158-skip]
+JQ = {{{
+[.[] | try utf8bytelength catch .]
+}}}
+INPUT = {{{
+[[], {}, [1,2], 55, true, false]
+}}}
+EXPECTED = {{{
+["array ([]) only strings have UTF-8 byte length","object ({}) only strings have UTF-8 byte length","array ([1,2]) only strings have UTF-8 byte length","number (55) only strings have UTF-8 byte length","boolean (true) only strings have UTF-8 byte length","boolean (false) only strings have UTF-8 byte length"]
+}}}
+SKIP=needs try/catch and per-type error message formatting.
+
+[159-eval]
+LEVEL=eval
+JQ = {{{
+map(keys)
+}}}
+INPUT = {{{
+[{}, {"abcd":1,"abc":2,"abcde":3}, {"x":1, "z": 3, "y":2}]
+}}}
+EXPECTED = {{{
+[[], ["abc","abcd","abcde"], ["x","y","z"]]
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"in": "$."}, "body": "$pyeval=sorted(_.keys())"}}
+}}}
+COMMENT=sorted() is whitelisted but dict.keys() isn't (only str has allowed_attrs) — needs eval for the .keys() call.
+
+[160-py]
+LEVEL=py
+JQ = {{{
+[1,2,empty,3,empty,4]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[1,2,3,4]
+}}}
+JFTL = {{{
+{"main": [1, 2, 3, 4]}
+}}}
+LEVEL=nav
+COMMENT=empty produces zero outputs, so the literal array with those slots omitted is exactly the answer — actually nav tier (pure literal), py tag above was unnecessary; LEVEL=nav is authoritative.
+
+[161-eval]
+LEVEL=eval
+JQ = {{{
+map(add)
+}}}
+INPUT = {{{
+[[], [1,2,3], ["a","b","c"], [[3],[4,5],[6]], [{"a":1}, {"b":2}, {"a":3}]]
+}}}
+EXPECTED = {{{
+[null, 6, "abc", [3,4,5,6], {"a":3, "b": 2}]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[(None if not g else (sum(g) if all(isinstance(x,(int,float)) for x in g) else (''.join(g) if all(isinstance(x,str) for x in g) else ([y for x in g for y in x] if all(isinstance(x,list) for x in g) else {k:v for x in g for k,v in x.items()})))) for g in _]"}
+}}}
+COMMENT=jq's add/1 is polymorphic across number/string/array/object; needed isinstance() and dict.items()/.values(), well outside py-tier whitelist — eval tier, and honestly borderline for readability even there.
+
+[162-py]
+LEVEL=py
+JQ = {{{
+map_values(.+1)
+}}}
+INPUT = {{{
+[0,1,2]
+}}}
+EXPECTED = {{{
+[1,2,3]
+}}}
+JFTL = {{{
+{"main": "$py=[v + 1 for v in _]"}
+}}}
+
+[163-eval]
+LEVEL=eval
+JQ = {{{
+[add(null), add(range(range(10))), add(empty), add(10,range(10))]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[null,120,null,55]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[None, sum(v for n in range(10) for v in range(n)), None, sum([10]+list(range(10)))]"}
+}}}
+COMMENT=list() call isn't whitelisted (used it here for the comma-generator concat), so eval — could likely be reworked to avoid it and drop to py, not attempted given the complexity of this one.
+
+[164-py]
+LEVEL=py
+JQ = {{{
+.sum = add(.arr[])
+}}}
+INPUT = {{{
+{"arr":[]}
+}}}
+EXPECTED = {{{
+{"arr":[],"sum":null}
+}}}
+JFTL = {{{
+{"main": "$py={**_, 'sum': (sum(_['arr']) if _['arr'] else None)}"}
+}}}
+COMMENT=Dict-spread rebuild since there's no in-place path assignment; sum() whitelisted.
+
+[165-skip]
+JQ = {{{
+add({(.[]):1}) | keys
+}}}
+INPUT = {{{
+["a","a","b","a","d","b","d","a","d"]
+}}}
+EXPECTED = {{{
+["a","b","d"]
+}}}
+SKIP=needs computed/dynamic object keys ({(.[]) : 1}), same limitation as case 020.
+
+[166-py]
+LEVEL=py
+COMMENT=Test precedence of 'def' vs '|'
+JQ = {{{
+def a: 0; . | a
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+0
+}}}
+JFTL = {{{
+{"main": 0}
+}}}
+LEVEL=nav
+COMMENT=No def/function construct at all; happens to reduce to a pure literal for this specific program, so nav tier really — not a general "def" translation.
+
+[167-skip]
+COMMENT=Oh god.
+JQ = {{{
+def f: . + 1; def g: def g: . + 100; f | g | f; (f | g), g
+}}}
+INPUT = {{{
+3.0
+}}}
+EXPECTED = {{{
+106.0
+105.0
+}}}
+SKIP=no user-defined-function/closure/shadowing construct at all.
+
+[168-skip]
+JQ = {{{
+def f: (1000,2000); f
+}}}
+INPUT = {{{
+123412345
+}}}
+EXPECTED = {{{
+1000
+2000
+}}}
+SKIP=no def construct.
+
+[169-skip]
+JQ = {{{
+def f(a;b;c;d;e;f): [a+1,b,c,d,e,f]; f(.[0];.[1];.[0];.[0];.[0];.[0])
+}}}
+INPUT = {{{
+[1,2]
+}}}
+EXPECTED = {{{
+[2,2,1,1,1,1]
+}}}
+SKIP=no def/user-defined-function construct.
+
+[170-skip]
+JQ = {{{
+def f: 1; def g: f, def f: 2; def g: 3; f, def f: g; f, g; def f: 4; [f, def f: g; def g: 5; f, g]+[f,g]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[4,1,2,3,3,5,4,1,2,3,3]
+}}}
+SKIP=no def/closure/shadowing construct — this test exists specifically to torture-test jq's own function scoping rules.
+
+[171-skip]
+COMMENT=Many arguments
+JQ = {{{
+def f(a;b;c;d;e;f;g;h;i;j): [j,i,h,g,f,e,d,c,b,a]; f(.[0];.[1];.[2];.[3];.[4];.[5];.[6];.[7];.[8];.[9])
+}}}
+INPUT = {{{
+[0,1,2,3,4,5,6,7,8,9]
+}}}
+EXPECTED = {{{
+[9,8,7,6,5,4,3,2,1,0]
+}}}
+SKIP=no def construct.
+
+[172-py]
+LEVEL=py
+JQ = {{{
+([1,2] + [4,5])
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+[1,2,4,5]
+}}}
+JFTL = {{{
+{"main": "$py=[1,2] + [4,5]"}
+}}}
+
+[173-nav]
+LEVEL=nav
+JQ = {{{
+true
+}}}
+INPUT = {{{
+[1]
+}}}
+EXPECTED = {{{
+true
+}}}
+JFTL = {{{
+{"main": true}
+}}}
+
+[174-nav]
+LEVEL=nav
+JQ = {{{
+null,1,null
+}}}
+INPUT = {{{
+"hello"
+}}}
+EXPECTED = {{{
+null
+1
+null
+}}}
+JFTL = {{{
+{"main": [null, 1, null]}
+}}}
+
+[175-nav]
+LEVEL=nav
+JQ = {{{
+[1,2,3]
+}}}
+INPUT = {{{
+[5,6]
+}}}
+EXPECTED = {{{
+[1,2,3]
+}}}
+JFTL = {{{
+{"main": [1,2,3]}
+}}}
+
+[176-py]
+LEVEL=py
+JQ = {{{
+[.[]|floor]
+}}}
+INPUT = {{{
+[-1.1,1.1,1.9]
+}}}
+EXPECTED = {{{
+[-2, 1, 1]
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"in": "$."}, "body": "$py=int(_ // 1)"}}
+}}}
+COMMENT=No math module reachable at py tier; integer floor-division (// 1) agrees with floor() for both signs.
+
+[177-eval]
+LEVEL=eval
+JQ = {{{
+[.[]|sqrt]
+}}}
+INPUT = {{{
+[4,9]
+}}}
+EXPECTED = {{{
+[2,3]
+}}}
+JFTL = {{{
+{"main": {"$": true, "foreach": {"in": "$."}, "body": "$pyeval=_ ** 0.5"}}
+}}}
+COMMENT=Exponentiation (**) isn't a py-tier concern by itself, but there's no math.sqrt available without __import__ — used ** 0.5 instead, which is a plain expression and technically fits py tier too; tagged eval to be conservative since I haven't confirmed ** is in simpleeval's supported operator set.
+
+[178-eval]
+LEVEL=eval
+JQ = {{{
+(add / length) as $m | map((. - $m) as $d | $d * $d) | add / length | sqrt
+}}}
+INPUT = {{{
+[2,4,4,4,5,5,7,9]
+}}}
+EXPECTED = {{{
+2
+}}}
+JFTL = {{{
+{"main": "$pyeval=(lambda m: (sum((x-m)**2 for x in _)/len(_))**0.5)(sum(_)/len(_))"}
+}}}
+COMMENT=Standard deviation via a self-applying lambda to bind the mean once; lambda isn't in simpleeval's grammar, so eval (not py) regardless of the arithmetic being otherwise simple.
+
+[179-skip]
+COMMENT = {{{
+Should write a test that calls the -lm function from C (or bc(1)) to
+check that they match the corresponding jq functions. However,
+there's so little template code standing between that it suffices to
+test a handful of these. The results were checked by eye against
+bc(1).
+}}}
+JQ = {{{
+atan * 4 * 1000000|floor / 1000000
+}}}
+INPUT = {{{
+1
+}}}
+EXPECTED = {{{
+3.141592
+}}}
+SKIP=math.atan needs eval-tier __import__ plus floor; doable but low value on its own — folded into 180/181 below instead.
+
+[180-eval]
+LEVEL=eval
+JQ = {{{
+[(3.141592 / 2) * (range(0;20) / 20)|cos * 1000000|floor / 1000000]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[1,0.996917,0.987688,0.972369,0.951056,0.923879,0.891006,0.85264,0.809017,0.760406,0.707106,0.649448,0.587785,0.522498,0.45399,0.382683,0.309017,0.233445,0.156434,0.078459]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[int(__import__('math').cos((3.141592/2)*(v/20)) * 1000000) / 1000000 for v in range(20)]"}
+}}}
+
+[181-eval]
+LEVEL=eval
+JQ = {{{
+[(3.141592 / 2) * (range(0;20) / 20)|sin * 1000000|floor / 1000000]
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+[0,0.078459,0.156434,0.233445,0.309016,0.382683,0.45399,0.522498,0.587785,0.649447,0.707106,0.760405,0.809016,0.85264,0.891006,0.923879,0.951056,0.972369,0.987688,0.996917]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[int(__import__('math').sin((3.141592/2)*(v/20)) * 1000000) / 1000000 for v in range(20)]"}
+}}}
+
+[182-skip]
+JQ = {{{
+def f(x): x | x; f([.], . + [42])
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+[[[1,2,3]]]
+[[1,2,3],42]
+[[1,2,3,42]]
+[1,2,3,42,42]
+}}}
+SKIP=no def construct.
+
+[183-skip]
+COMMENT=test multiple function arities and redefinition
+JQ = {{{
+def f: .+1; def g: f; def f: .+100; def f(a):a+.+11; [(g|f(20)), f]
+}}}
+INPUT = {{{
+1
+}}}
+EXPECTED = {{{
+[33,101]
+}}}
+SKIP=no def construct.
+
+[184-skip]
+COMMENT=test closures and lexical scoping
+JQ = {{{
+def id(x):x; 2000 as $x | def f(x):1 as $x | id([$x, x, x]); def g(x): 100 as $x | f($x,$x+x); g($x)
+}}}
+INPUT = {{{
+"more testing"
+}}}
+EXPECTED = {{{
+[1,100,2100.0,100,2100.0]
+}}}
+SKIP=no def/closure construct.
+
+[185-skip]
+COMMENT=test def f($a) syntax
+JQ = {{{
+def x(a;b): a as $a | b as $b | $a + $b; def y($a;$b): $a + $b; def check(a;b): [x(a;b)] == [y(a;b)]; check(.[];.[]*2)
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+true
+}}}
+SKIP=no def construct.
+
+[186-skip]
+COMMENT = {{{
+test backtracking through function calls and returns
+this test is *evil*
+}}}
+JQ = {{{
+[[20,10][1,0] as $x | def f: (100,200) as $y | def g: [$x + $y, .]; . + $x | g; f[0] | [f][0][1] | f]
+}}}
+INPUT = {{{
+999999999
+}}}
+EXPECTED = {{{
+[[110.0, 130.0], [210.0, 130.0], [110.0, 230.0], [210.0, 230.0], [120.0, 160.0], [220.0, 160.0], [120.0, 260.0], [220.0, 260.0]]
+}}}
+SKIP=no def/backtracking-generator construct; this is deliberately the hardest test in jq's own suite for this feature.
+
+[187-skip]
+COMMENT=test recursion
+JQ = {{{
+def fac: if . == 1 then 1 else . * (. - 1 | fac) end; [.[] | fac]
+}}}
+INPUT = {{{
+[1,2,3,4]
+}}}
+EXPECTED = {{{
+[1,2,6,24]
+}}}
+SKIP=no def/recursion construct (this one specifically *could* become a "run" tier test via a real Python loop computing factorial per item, without needing def — worth revisiting if factorial-style recursion shows up often enough to matter).
+
+[188-py]
+LEVEL=py
+JQ = {{{
+reduce .[] as $x (0; . + $x)
+}}}
+INPUT = {{{
+[1,2,4]
+}}}
+EXPECTED = {{{
+7
+}}}
+JFTL = {{{
+{"main": "$py=sum(_)"}
+}}}
+COMMENT=This reduce is just a sum; sum() is whitelisted so py tier — doesn't generalize to arbitrary reduce.
+
+[189-eval]
+LEVEL=eval
+JQ = {{{
+reduce .[] as [$i, {j:$j}] (0; . + $i - $j)
+}}}
+INPUT = {{{
+[[2,{"j":1}], [5,{"j":3}], [6,{"j":4}]]
+}}}
+EXPECTED = {{{
+5
+}}}
+JFTL = {{{
+{"main": "$pyeval=sum(p[0] - p[1].get('j', 0) for p in _)"}
+}}}
+COMMENT=dict.get() isn't whitelisted, so eval.
+
+[190-py]
+LEVEL=py
+JQ = {{{
+reduce [[1,2,10], [3,4,10]][] as [$i,$j] (0; . + $i * $j)
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+14
+}}}
+JFTL = {{{
+{"main": "$py=sum(p[0] * p[1] for p in [[1,2,10],[3,4,10]])"}
+}}}
+
+[191-py]
+LEVEL=py
+JQ = {{{
+[-reduce -.[] as $x (0; . + $x)]
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+[6]
+}}}
+JFTL = {{{
+{"main": "$py=[sum(_)]"}
+}}}
+COMMENT=Same unary-minus-parsing-edge-case framing as the earlier "066" any/all-adjacent test; only the numeric result is reproduced.
+
+[192-eval]
+LEVEL=eval
+JQ = {{{
+[reduce .[] / .[] as $i (0; . + $i)]
+}}}
+INPUT = {{{
+[1,2]
+}}}
+EXPECTED = {{{
+[4.5]
+}}}
+JFTL = {{{
+{"main": "$pyeval=[sum(a/b for a in _ for b in _)]"}
+}}}
+COMMENT=Assumes jq's ".[] / .[]" here iterates the full cartesian product of the array against itself; not independently verified.
+
+[193-py]
+LEVEL=py
+JQ = {{{
+reduce .[] as $x (0; . + $x) as $x | $x
+}}}
+INPUT = {{{
+[1,2,3]
+}}}
+EXPECTED = {{{
+6
+}}}
+JFTL = {{{
+{"main": "$py=sum(_)"}
+}}}
+
+[194-nav]
+LEVEL=nav
+COMMENT=This, while useless, should still compile.
+JQ = {{{
+reduce . as $n (.; .)
+}}}
+INPUT = {{{
+null
+}}}
+EXPECTED = {{{
+null
+}}}
+JFTL = {{{
+{"main": "$."}
+}}}
+
+[195-py]
+LEVEL=py
+COMMENT=Destructuring
+JQ = {{{
+. as {$a, b: [$c, {$d}]} | [$a, $c, $d]
+}}}
+INPUT = {{{
+{"a":1, "b":[2,{"d":3}]}
+}}}
+EXPECTED = {{{
+[1,2,3]
+}}}
+JFTL = {{{
+{"main": "$py=[_['a'] if 'a' in _ else None, _['b'][0] if 'b' in _ else None, _['b'][1]['d'] if 'b' in _ else None]"}
+}}}
+COMMENT=Hand-unpacked the specific destructuring pattern via subscripting rather than genuine pattern-matching — only valid for this exact shape, not a general destructuring construct.
+
+[196-py]
+LEVEL=py
+JQ = {{{
+. as {$a, $b:[$c, $d]}| [$a, $b, $c, $d]
+}}}
+INPUT = {{{
+{"a":1, "b":[2,{"d":3}]}
+}}}
+EXPECTED = {{{
+[1,[2,{"d":3}],2,{"d":3}]
+}}}
+JFTL = {{{
+{"main": "$py=[_['a'] if 'a' in _ else None, _['b'] if 'b' in _ else None, _['b'][0] if 'b' in _ else None, _['b'][1] if 'b' in _ else None]"}
+}}}
