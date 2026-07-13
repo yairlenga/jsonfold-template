@@ -18,7 +18,7 @@ the only place a template makes a decision.
         "index": "INDEX-VAR",
         "in": "EXPR",
         "if": "EXPR",
-        "shape": "array | range",
+        "shape": null | "array" | "object" | "range",
         "start": "EXPR",
         "stop": "EXPR",
         "limit": "EXPR"
@@ -29,7 +29,7 @@ the only place a template makes a decision.
     ],
     "body": "EXPR",
     "default": "EXPR",
-    "transform": "OBJECT",
+    "transform": null | "object",
     "error": "EXPR"
 }
 ```

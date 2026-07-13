@@ -23,11 +23,18 @@ build: $(SRCS:=.check)
 
 TESTS = $(wildcard tests/test_*.py)
 
+jqman-test:
+	(cd ../tests/jqman && cat *.jqt | ../run_jqt.sh)
+
+jqtest-test:
+	(cd ../tests/jqtests && cat *.jqt | ../run_jqt.sh)
+
 run-test:
 	pytest
 	(cd ../tests/basic && ../run_tests.sh -mpython)
 	(cd ../tests/pyrun && ../run_tests.sh -mpyrun)
-	(cd ../tests/jqlang && cat *.jqt | ./run_jq_tests.sh)
+	$(MAKE) jqtest-test
+	$(MAKE) jqman-test
 
 test:
 	$(MAKE) run-test | tee test.log

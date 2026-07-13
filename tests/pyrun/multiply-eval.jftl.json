@@ -3,14 +3,14 @@
         "$": true,
         "foreach": {
             "shape": "range",
-            "limit": 10,
+            "stop": 10,
             "var": "x"
         },
         "body": {
       		"$": true,
             "foreach": {
                 "shape": "range",
-                "limit": 10,
+                "stop": 10,
                 "var": "y"
             },
             "body": "$pyeval= x * y"

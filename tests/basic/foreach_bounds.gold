@@ -20,13 +20,13 @@
       {
         "start": null,
         "stop": null,
-        "limit": null,
+        "limit": 0,
         "subset": []
       },
       {
         "start": null,
         "stop": null,
-        "limit": null,
+        "limit": 4,
         "subset": [
           "aa",
           "bb",
@@ -52,13 +52,13 @@
       {
         "start": null,
         "stop": 6,
-        "limit": null,
+        "limit": 0,
         "subset": []
       },
       {
         "start": null,
         "stop": 6,
-        "limit": null,
+        "limit": 4,
         "subset": [
           "aa",
           "bb",
@@ -85,13 +85,13 @@
       {
         "start": null,
         "stop": -2,
-        "limit": null,
+        "limit": 0,
         "subset": []
       },
       {
         "start": null,
         "stop": -2,
-        "limit": null,
+        "limit": 4,
         "subset": [
           "aa",
           "bb",
@@ -120,13 +120,13 @@
       {
         "start": 2,
         "stop": null,
-        "limit": null,
+        "limit": 0,
         "subset": []
       },
       {
         "start": 2,
         "stop": null,
-        "limit": null,
+        "limit": 4,
         "subset": [
           "cc",
           "dd",
@@ -150,13 +150,13 @@
       {
         "start": 2,
         "stop": 6,
-        "limit": null,
+        "limit": 0,
         "subset": []
       },
       {
         "start": 2,
         "stop": 6,
-        "limit": null,
+        "limit": 4,
         "subset": [
           "cc",
           "dd",
@@ -181,13 +181,13 @@
       {
         "start": 2,
         "stop": -2,
-        "limit": null,
+        "limit": 0,
         "subset": []
       },
       {
         "start": 2,
         "stop": -2,
-        "limit": null,
+        "limit": 4,
         "subset": [
           "cc",
           "dd",
@@ -212,13 +212,13 @@
       {
         "start": -3,
         "stop": null,
-        "limit": null,
+        "limit": 0,
         "subset": []
       },
       {
         "start": -3,
         "stop": null,
-        "limit": null,
+        "limit": 4,
         "subset": [
           "gg",
           "hh",
@@ -236,13 +236,13 @@
       {
         "start": -3,
         "stop": 6,
-        "limit": null,
+        "limit": 0,
         "subset": []
       },
       {
         "start": -3,
         "stop": 6,
-        "limit": null,
+        "limit": 4,
         "subset": []
       }
     ],
@@ -258,13 +258,13 @@
       {
         "start": -3,
         "stop": -2,
-        "limit": null,
+        "limit": 0,
         "subset": []
       },
       {
         "start": -3,
         "stop": -2,
-        "limit": null,
+        "limit": 4,
         "subset": [
           "gg"
         ]

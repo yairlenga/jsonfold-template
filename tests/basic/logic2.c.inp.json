@@ -1,4 +1,3 @@
-{ "main": 
 {
   "customer": { "name": "Frank" },
   "vipMessage": "Welcome back, valued VIP customer!",
@@ -9,5 +8,4 @@
   "items": [
     { "name": "Solo Widget" }
   ]
-}
 }

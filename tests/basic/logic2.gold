@@ -15,6 +15,10 @@
   "itemNames": []
 }
 {
-  "greeting": null,
-  "itemNames": null
+  "customerName": "Frank",
+  "greeting": "Welcome!",
+  "orderTotal": 75,
+  "itemNames": [
+    "Solo Widget"
+  ]
 }

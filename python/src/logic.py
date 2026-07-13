@@ -1,4 +1,4 @@
-from typing import Any, ItemsView, Iterator, Literal, Optional
+from typing import Any, ItemsView, Iterator, Literal, Optional, cast
 from dataclasses import dataclass, replace
 
 from core import RenderError, Statement, Error, Missing, Frame, Expression, Evaluator, Condition, Compiler
@@ -59,7 +59,7 @@ class LogicStatement(Statement):
     _cases: Optional[list[Case]] = None
     _body: Optional[Statement] = None
     _foreach: Optional[ForeachStatement] = None
-    _transform: Literal["MERGE", "FLATTEN", None] = None
+    _transform: Literal[None, "merge", "flatten", "from_pairs", "to_pairs"] = None
     _default_val: Optional[Statement] = None
     _error_val: Optional[Statement] = None
 
@@ -127,32 +127,73 @@ class LogicStatement(Statement):
         )
         return self
 
-    def _eval_foreach(self, frame: Frame, body: Statement) -> list | dict | Error | Missing:
-        foreach = self._foreach
+    def _eval_foreach(self, frame: Frame, body: Statement) -> list | dict | Error | Missing | None:
+        foreach = cast(ForeachStatement, self._foreach)
         items = frame.eval_value(foreach.items) if foreach.items else frame.current
         loop_iter = None
         count = None
-        if foreach.shape == "range":
-            pass
+        shape = foreach.shape if foreach.shape else "object" if isinstance(items, dict) else "array" if isinstance(items, list) else None
 
-        elif isinstance(items, list):
-            count = len(items)
-            loop_iter = enumerate(items)
-        elif isinstance(items, dict):
+        do_dict = False
+        if shape == "range":
+            if foreach.items:
+                return Error(
+                    code="NOT_ITERABLE", severity="ERROR",
+                    message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
+                    )
+
+        elif shape == "object":
+            if items == None:
+                return None
+            if not isinstance(items, dict):
+                return Error(
+                    code="NOT_OBJECT", severity="ERROR",
+                    message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
+                    )
+            do_dict = True
             count = len(items)
             loop_iter = iter(items.items())
-        elif items is None or isinstance(items, Missing):
-            return None
+            
+        elif isinstance(items, list):
+            if items == None:
+                return None
+            if not isinstance(items, list):
+                return Error(
+                    code="NOT_ARRAY", severity="ERROR",
+                    message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
+                    )
+
+            count = len(items)
+            loop_iter = enumerate(items)
 
         else:
-            raise RenderError(Error(
+            if items == None or isinstance(items, Missing) or isinstance(items, Error):
+                return items
+            
+            return Error(
                 code="NOT_ITERABLE", severity="ERROR",
                 message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
-            ))
+            )
 
         ix_start = frame.eval_value(foreach.start)
+        if ix_start is not None and not isinstance(ix_start, int):
+            return Error(
+                    code="BAD_START", severity="ERROR",
+                    message=f"foreach 'start' must be an integer value",
+                ) 
         ix_stop = frame.eval_value(foreach.stop)
+        if ix_stop is not None and not isinstance(ix_stop, int):
+            return Error(
+                    code="BAD_STOP", severity="ERROR",
+                    message=f"foreach 'stop' must be an integer value",
+                ) 
+
         ix_limit = frame.eval_value(foreach.limit)
+        if ix_limit is not None and not isinstance(ix_limit, int):
+            return Error(
+                    code="BAD_STOP", severity="ERROR",
+                    message=f"foreach 'stop' must be an integer value",
+                ) 
 
         # Support negative indexes if count is known.
         start_index = ix_start if ix_start is not None else 0
@@ -166,10 +207,6 @@ class LogicStatement(Statement):
                 stop_index = count
             elif stop_index < 0:
                 stop_index = count + stop_index
-            # Apply limit, if ix_limit is set
-
-        if ix_limit is not None and (stop_index is None or start_index + ix_limit < stop_index):
-            stop_index = start_index + ix_limit
 
         new_vars = frame.vars
         # Process foreach loop
@@ -179,21 +216,32 @@ class LogicStatement(Statement):
         v_index = foreach.index
         dict_result : dict[str, Any]= {}
         list_result = []
-        do_dict = self._transform == "OBJECT"
         if foreach.shape == "range":
+            if stop_index is None:
+                return Error(
+                    code="MISSING_STOP", severity="ERROR",
+                    message=f"foreach 'stop' must is required when shape='range'",
+                )
+
             count = stop_index - start_index
             loop_iter = enumerate(range(start_index, stop_index))
             start_index = None
             stop_index = None
 
+        result = dict_result if do_dict else list_result
+        if ix_limit == 0 or not loop_iter:
+            return result
+
         pos = -1
+        out_count = 0
         for key, item in loop_iter:
             pos = pos+1
             if (start_index is not None and pos < start_index) or (stop_index is not None and pos >= stop_index):
                 continue
-            new_key = key if do_dict else None
+            new_key = cast(str, key) if do_dict else None
             if v_key:
                 new_vars[v_key] = key
+
             if v_index:
                 new_vars[v_index] = pos
 
@@ -201,6 +249,7 @@ class LogicStatement(Statement):
                 new_vars[v_var] = item
             else:
                 frame.current = item
+
             if not frame.eval_bool(v_cond, True):
                 continue
             new_val = frame.eval_value(body)
@@ -215,6 +264,11 @@ class LogicStatement(Statement):
                     continue
                 dict_result[new_key] = new_val
 
+            # Apply limit, if ix_limit is set
+            out_count = out_count + 1
+            if ix_limit is not None and out_count >= ix_limit:
+                stop_index = start_index + ix_limit
+
         return dict_result if do_dict else list_result
         
     def _choose_body(self, frame: Frame) -> Statement | None:
@@ -226,6 +280,80 @@ class LogicStatement(Statement):
                     break
 
         return v_body
+    
+    def _flatten_transform(self, frame: Frame, input: list[list | None] | Any ) -> list | None | Error:
+        if not isinstance(input, list):
+            return Error(
+                    code="FLATTEN_INPUT", severity="ERROR",
+                    message=f"The 'flatten' transform input is array of array, got non-list",
+                )
+
+        for pos, item in enumerate(input):
+            if item is None:
+                continue
+            if not isinstance(item, list):
+                return Error(
+                    code="FLATTEN_ITEM", severity="ERROR",
+                    message=f"The 'flatten' transformation input is array of array, got non list items in position {pos}",
+                )
+
+        result = [x for sub in input if sub is not None for x in sub]
+        return result
+    
+    def _merge_transform(self, frame: Frame, input: list[dict | None] | Any) -> dict | None | Error:
+        if not isinstance(input, list):
+            return Error(
+                    code="MERGE_INPUT", severity="ERROR",
+                    message=f"The 'merge' transformation input is array of objects, got non-list input",
+                )
+
+        for pos, item in enumerate(input):
+            if item is None:
+                continue
+            if not isinstance(item, dict):
+                return Error(
+                    code="MERGE_ITEM", severity="ERROR",
+                    message=f"The 'merge' transformation input is array of objects, got non list items in position {pos}",
+                )
+
+        result = {k: v for d in input if d for k, v in d.items()}
+        return result
+
+    def _to_pairs_transform(self, frame: Frame, input: dict) -> list[tuple[str, Any]] | Error:
+        if not isinstance(input, dict):
+            return Error(
+                    code="TO_PAIRS_INPUT", severity="ERROR",
+                    message=f"The 'to_pairs' transformation input is array of objects, got non-list input",
+                )
+
+        for pos, item in input:
+            if item is None:
+                continue
+            if not isinstance(item, dict):
+                return Error(
+                    code="TO_PAIRS_ITEM", severity="ERROR",
+                    message=f"The 'to_pairs' Merge transformation input is array of objects, got non list items in position {pos}",
+                )
+
+        return list(input.items())
+
+    def _from_pairs_transform(self, frame: Frame, input: list[tuple[str, Any]]) -> dict | Error :
+        if not isinstance(input, list):
+            return Error(
+                    code="FROM_PAIRS_INPUT", severity="ERROR",
+                    message=f"The 'to_pairs' transformation input is array of objects, got non-list input",
+                )
+
+        for pos, item in input:
+            if item is None:
+                continue
+            if not isinstance(item, list) or len(item) != 2:
+                return Error(
+                    code="FROM_PAIRS_ITEM", severity="ERROR",
+                    message=f"The 'to_pairs' Merge transformation input is array of objects, got non list items in position {pos}",
+                )
+
+        return dict(input)
 
 
     def eval(self, prev_frame: Frame) -> Any | Error | Missing:
@@ -256,17 +384,39 @@ class LogicStatement(Statement):
             return new_frame.eval_value(self._default_val)
 
         # Check if executing foreach loop
+        result = None
         if self._foreach:
             result = self._eval_foreach(new_frame, v_body)
             
-            if result is None:
+            if result is None or isinstance(result, Missing):
                 return new_frame.eval_value(self._default_val)
 
-            return result
         # Process Single result
-        result = new_frame.eval_value(v_body)
+        else:
+            result = new_frame.eval_value(v_body)
 
-        if isinstance(result, Missing):
-            return new_frame.eval_value(self._default_val)
-        
+            if isinstance(result, Missing):
+                return new_frame.eval_value(self._default_val)
+
+        if self._transform is not None and result is not None and not isinstance(result, Error):
+
+            # Check for transformation
+            match self._transform:
+                case "flatten":
+                    result = self._flatten_transform(new_frame, result)
+
+                case "merge":
+                    result = self._merge_transform(new_frame, result)
+
+                case "to_pairs":
+                    result = self._to_pairs_transform(new_frame, result)
+
+                case "from_pairs":
+                    result = self._from_pairs_transform(new_frame, result)
+             
+        # Error handler
+        if isinstance(result, Error):
+            return new_frame.eval_value(self._error_val)        
+
         return result
+    
