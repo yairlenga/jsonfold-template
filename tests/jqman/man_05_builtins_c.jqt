@@ -18,7 +18,7 @@ JFTL = {"main": {"$": true, "body": "$pyrun= [1,2,3]"}}
 COMMENT=PYRUN, constant.
 
 [BC-003-error-passthrough]
-LEVEL=navigation
+LEVEL=nav
 JQ = try error catch .
 INPUT = "error message"
 GOLD = "error message"

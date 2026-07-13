@@ -1,15 +1,16 @@
 See manual_full_00_README.txt for the tier legend (NAV/STREAM/PYRUN/BLOCKED) before reading this file.
 
 [BF-001-identity]
-LEVEL=navigation
+LEVEL=nav
 JQ = .
 INPUT = "Hello, world!"
 GOLD = "Hello, world!"
-JFTL = {"main": {"$": true, "body": "$."}}
+JFTL = {"main": "$."}
 COMMENT=NAV. Same as curated-batch 100.
 
 [BF-002-identity-precision]
-LEVEL=navigation
+LEVEL=nav
+SKIP=JFTL precision is 8 digits by default.
 JQ = .
 INPUT = 0.12345678901234567890123456789
 GOLD = 0.12345678901234567890123456789
@@ -17,15 +18,45 @@ JFTL = {"main": {"$": true, "body": "$."}}
 COMMENT=NAV, same template as BF-001. Whether JFTL preserves the untruncated literal on pass-through is an engine/serializer question, not a template-syntax one.
 
 [BF-003-identity-decnum-family]
-LEVEL=navigation
+SKIP=JFTL does not have decnum build flags
+LEVEL=nav
 JQ = N/A
 INPUT = N/A
 GOLD = N/A
 JFTL = N/A
 COMMENT=N/A (compressed, see README): manual.yml's Identity section has 5 more examples (lines 399-417) all gated on jq's own `have_decnum`/`tojson`/big-integer-literal build flag -- e.g. "[., tojson] == if have_decnum then [...] else [...] end". These test jq's C-level --disable-decnum build option specifically; JFTL has no equivalent concept, so skipping rather than fabricating a meaningless port.
 
+[BF-003A]
+LEVEL=py
+JQ = . < 0.12345678901234567890123456788
+INPUT = 0.12345678901234567890123456789
+GOLD = false
+JFTL = {"main": {"$": true, "body": "$py= _ < 0.12345678901234567890123456788"}}
+
+[BF-003B]
+LEVEL=py
+JQ = [., tojson] == [12345678909876543212345,"12345678909876543212345"]
+INPUT = 12345678909876543212345
+GOLD = true
+JFTL = {"main": {"$": true, "body": "$py= [_, str(_)] == [12345678909876543212345, '12345678909876543212345']"}}
+
+[BF-003C]
+SKIP = JQ BigNum
+JQ = [1234567890987654321,-1234567890987654321 | tojson] == ["1234567890987654321","-1234567890987654321"]
+INPUT = null
+GOLD = true
+JFTL = {"main": {"$": true, "body": "$py= [str(x) for x in [1234567890987654321,-1234567890987654321]] == ['1234567890987654321','-1234567890987654321']"}}
+
+[BF-003D]
+SKIP = JQ BIGNUM
+LEVEL = run
+JQ = map([., . == 1]) | tojson == "[[1,true],[1.000,true],[1.0,true],[1.00,true]]"
+INPUT = [1, 1.000, 1.0, 100e-2]
+GOLD = true
+JFTL = { "main": { "$": true, "foreach": {}, "body": [ "$.", "$py= _ == 1" ] }}
+
 [BF-004-object-identifier-index]
-LEVEL=navigation
+LEVEL=nav
 JQ = .foo
 INPUT = {"foo": 42, "bar": "less interesting data"}
 GOLD = 42
@@ -33,7 +64,7 @@ JFTL = {"main": {"$": true, "body": "$.foo"}}
 COMMENT=NAV. Same as curated-batch 101.
 
 [BF-005-object-identifier-index-missing]
-LEVEL=navigation
+LEVEL=nav
 JQ = .foo
 INPUT = {"notfoo": true, "alsonotfoo": false}
 GOLD = null
@@ -41,7 +72,7 @@ JFTL = {"main": {"$": true, "body": "$.foo"}}
 COMMENT=NAV. Same as curated-batch 102.
 
 [BF-006-object-index-bracket]
-LEVEL=navigation
+LEVEL=nav
 JQ = .["foo"]?
 INPUT = {"foo": 42}
 GOLD = 42
@@ -49,7 +80,7 @@ JFTL = {"main": {"$": true, "body": "$.foo"}}
 COMMENT=NAV. NOTE: the standalone "Object Index: .[<string>]" section has no examples of its own in manual.yml -- this is the verbatim example borrowed from the neighboring "Optional Object Identifier-Index" section (its 3rd example) since it's the only place manual.yml actually exercises bracket-string indexing. Navigation.md's quoted-key form ["foo"] and bare-key form .foo resolve identically here.
 
 [BF-007-optional-object-index]
-LEVEL=navigation
+LEVEL=nav
 JQ = .foo?
 INPUT = {"foo": 42, "bar": "less interesting data"}
 GOLD = 42
@@ -57,7 +88,7 @@ JFTL = {"main": {"$": true, "body": "$.foo"}}
 COMMENT=NAV. jq's `?` suppresses type errors; Navigation.md already makes all navigation null/MISSING-safe by default, so the `?`-suffixed and plain forms map to the identical template. Same input as BF-004.
 
 [BF-008-optional-object-index-nonobject]
-LEVEL=navigation
+LEVEL=nav
 JQ = .foo?
 INPUT = {"notfoo": true, "alsonotfoo": false}
 GOLD = null
@@ -65,15 +96,14 @@ JFTL = {"main": {"$": true, "body": "$.foo"}}
 COMMENT=NAV, same template as BF-007.
 
 [BF-009-optional-index-array-input]
-LEVEL=logic
 JQ = [.foo?]
 INPUT = [1,2]
 GOLD = []
-JFTL = {"main": {"$": true, "body": "$pyrun= ([_['foo']] if isinstance(_, dict) and 'foo' in _ else [])"}}
+JFTL = {"main": {"$": true, "foreach": { "if": "$.foo" }, "body": "$.foo" }}
 COMMENT=PYRUN, revised, lower confidence than most: type-checks before indexing since Python has no null-safe .foo-on-a-list concept. Sidesteps curated-108's array-literal-body question by building the collect result in Python.
 
 [BF-010-array-index]
-LEVEL=navigation
+LEVEL=nav
 JQ = .[0]
 INPUT = [{"name":"JSON", "good":true}, {"name":"XML", "good":false}]
 GOLD = {"name":"JSON", "good":true}
@@ -81,7 +111,7 @@ JFTL = {"main": {"$": true, "body": "$[0]"}}
 COMMENT=NAV, same pattern as curated-batch 104.
 
 [BF-011-array-index-out-of-range]
-LEVEL=navigation
+LEVEL=nav
 JQ = .[2]
 INPUT = [{"name":"JSON", "good":true}, {"name":"XML", "good":false}]
 GOLD = null
@@ -89,7 +119,7 @@ JFTL = {"main": {"$": true, "body": "$[2]"}}
 COMMENT=NAV. Confirms Navigation.md's "out-of-range index -> MISSING" collapses to null at top-level output, same as BF-005/curated-102.
 
 [BF-012-array-index-negative]
-LEVEL=navigation
+LEVEL=nav
 JQ = .[-2]
 INPUT = [1,2,3]
 GOLD = 2
@@ -101,7 +131,8 @@ LEVEL=logic
 JQ = .[2:4]
 INPUT = ["a","b","c","d","e"]
 GOLD = ["c", "d"]
-JFTL = {"main": {"$": true, "body": "$pyrun= _[2:4]"}}
+JFTL = { "main": { "$": true, "foreach": { "start":2, "stop":4 }, "body": "$." }}
+# JFTL = {"main": {"$": true, "body": "$pyrun= _[2:4]"}}
 COMMENT=PYRUN, same pattern as curated-batch 104c.
 
 [BF-014-slice-string]
@@ -109,103 +140,112 @@ LEVEL=logic
 JQ = .[2:4]
 INPUT = "abcdefghi"
 GOLD = "cd"
-JFTL = {"main": {"$": true, "body": "$pyrun= _[2:4]"}}
+JFTL = {"main": {"$": true, "body": "$py= _[2:4]"}}
 COMMENT=PYRUN. Python slicing works identically on str and list, so same template as BF-013 -- a nice free win if the escape-hatch guess is right.
 
 [BF-015-slice-open-start]
-LEVEL=logic
+LEVEL=py
 JQ = .[:3]
 INPUT = ["a","b","c","d","e"]
 GOLD = ["a", "b", "c"]
-JFTL = {"main": {"$": true, "body": "$pyrun= _[:3]"}}
+JFTL = {"main": {"$": true, "body": "$py= _[:3]"}}
 COMMENT=PYRUN, same family as BF-013.
 
 [BF-016-slice-open-end-negative]
-LEVEL=logic
+LEVEL=py
 JQ = .[-2:]
 INPUT = ["a","b","c","d","e"]
 GOLD = ["d", "e"]
-JFTL = {"main": {"$": true, "body": "$pyrun= _[-2:]"}}
+JFTL = {"main": {"$": true, "body": "$py= _[-2:]"}}
 COMMENT=PYRUN, same family as BF-013.
 
 [BF-017-array-iterator]
-LEVEL=navigation
-OUT_FMT=STREAM
+LEVEL=nav
+OUT_FMT=stream
 JQ = .[]
 INPUT = [{"name":"JSON", "good":true}, {"name":"XML", "good":false}]
-GOLD = [{"name":"JSON", "good":true}, {"name":"XML", "good":false}]
-JFTL = {"main": {"$": true, "foreach": {"var": "x"}, "body": "$."}}
+GOLD = {{{
+{"name":"JSON", "good":true}
+{"name":"XML", "good":false}
+}}}
+JFTL = {"main": {"$": true, "foreach": {}, "body": "$."}}
 COMMENT=STREAM, same pattern as curated-batch 105.
 
 [BF-018-array-iterator-empty]
-LEVEL=navigation
-OUT_FMT=STREAM
+LEVEL=nav
+OUT_FMT=stream
 JQ = .[]
 INPUT = []
-GOLD = []
+GOLD = NONE
 JFTL = {"main": {"$": true, "foreach": {"var": "x"}, "body": "$."}}
 COMMENT=STREAM, same template as BF-017 -- zero-iteration edge case, good regression test once foreach is real.
 
 [BF-019-foo-iterator]
-LEVEL=navigation
-OUT_FMT=STREAM
+LEVEL=nav
+OUT_FMT=stream
 JQ = .foo[]
 INPUT = {"foo":[1,2,3]}
-GOLD = [1,2,3]
+GOLD = 1 2 3
 JFTL = {"main": {"$": true, "body": "$.foo"}}
-COMMENT=CORRECTION to curated-batch 106 (which I'd marked blocked): no foreach needed at all for a plain passthrough-iterate-nested-field case. $.foo resolves to the whole array as one item (Navigation.md), and OUT_FMT=STREAM unwraps that array for comparison -- same trick BF-017/105 used before I overcomplicated it with foreach. Foreach is only actually required when a per-item TRANSFORM has to happen during iteration (like BF-025/curated-107's ".name" projection), not for plain iteration.
+COMMENT=Bug in manual - should be 1 2 3 (separate lines)
 
 [BF-020-object-value-iterator]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .[]
 INPUT = {"a": 1, "b": 1}
-GOLD = [1, 1]
-JFTL = {"main": {"$": true, "body": "$pyrun= list(_.values())"}}
+GOLD = 1 1
+JFTL = {"main": {"$": true, "foreach": {}, "body": "$."}}
 COMMENT=PYRUN+STREAM, sidesteps the object-vs-array foreach-default question entirely: compute the values as a real array in Python, then let OUT_FMT=STREAM unwrap that array. Still don't know whether foreach itself auto-detects object input (see curated-batch 106's original concern), but this route doesn't need it.
 
 [BF-021-optional-iterator]
-LEVEL=SKIPPED
+SKIP = Need negative test, no exapmle in code for ".[]?"
 JQ = N/A
 INPUT = N/A
 GOLD = N/A
 JFTL = N/A
 COMMENT=SKIPPED, not fabricated: the ".[]?" section in manual.yml has no examples of its own (body text only). Not manufacturing one to keep this file a faithful "ALL test cases FROM the manual," per your ask -- happy to add a synthetic one if you want the coverage anyway.
+MANUAL = {{{
+    Like `.[]`, but no errors will be output if . is not an array
+    or object. A filter of the form `.foo[]?` is equivalent to
+    `.foo | .[]?`.
+}}}
 
 [BF-022-comma]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .foo, .bar
 INPUT = {"foo": 42, "bar": "something else", "baz": true}
-GOLD = [42, "something else"]
-JFTL = {"main": {"$": true, "body": "$pyrun= [_.get('foo'), _.get('bar')]"}}
+GOLD = 42 "something else"
+JFTL = {"main": [ "$.foo", "$.bar" ] }
 COMMENT=PYRUN+STREAM, revised: build the fan-out as a Python list, OUT_FMT=STREAM unwraps it into jq's two separate outputs.
 
 [BF-023-comma-mixed-scalar-iterator]
-LEVEL=logic
-OUT_FMT=STREAM
+LEVEL=py
+OUT_FMT=stream
 JQ = .user, .projects[]
 INPUT = {"user":"stedolan", "projects": ["jq", "wikiflow"]}
-GOLD = ["stedolan", "jq", "wikiflow"]
-JFTL = {"main": {"$": true, "body": "$pyrun= [_.get('user')] + _.get('projects', [])"}}
+GOLD = "stedolan" "jq" "wikiflow"
+JFTL = {"main": "$py= [_['user']] + _['projects'] " }
 COMMENT=PYRUN+STREAM, revised. Same expression as TV-001, but this one streams (3 separate jq outputs, no enclosing [...]) so OUT_FMT=STREAM is set here where TV-001 didn't need it.
+TODO = Need a way to append multiple lists together, without python
 
 [BF-024-comma-index-list]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .[4,2]
 INPUT = ["a","b","c","d","e"]
-GOLD = ["e", "c"]
-JFTL = {"main": {"$": true, "body": "$pyrun= [_[4], _[2]]"}}
+GOLD = "e" "c"
+JFTL = {"main": [ "$[4]", "$[2]" ]}
 COMMENT=PYRUN+STREAM, revised.
 
 [BF-025-pipe]
-LEVEL=foreach
-OUT_FMT=STREAM
+LEVEL=logic
+OUT_FMT=stream
 JQ = .[] | .name
 INPUT = [{"name":"JSON", "good":true}, {"name":"XML", "good":false}]
-GOLD = ["JSON", "XML"]
-JFTL = {"main": {"$": true, "foreach": {"var": "x"}, "body": "$.name"}}
+GOLD = "JSON" "XML"
+JFTL = {"main": {"$": true, "foreach": { }, "body": "$.name"}}
 COMMENT=STREAM, same pattern as curated-batch 107.
 
 [BF-026-parenthesis]
@@ -213,5 +253,5 @@ LEVEL=logic
 JQ = (. + 2) * 5
 INPUT = 1
 GOLD = 15
-JFTL = {"main": {"$": true, "body": "$pyrun= (_ + 2) * 5"}}
+JFTL = {"main": {"$": true, "body": "$py= (_ + 2) * 5"}}
 COMMENT=PYRUN. Grouping/arithmetic, no native equivalent, straight Python translation.
