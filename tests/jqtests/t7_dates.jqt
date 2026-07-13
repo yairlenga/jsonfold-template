@@ -32,7 +32,7 @@ bsearch(0,1,2,3,4)
 INPUT = {{{
 [1,2,3]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 -1
 0
 1
@@ -42,7 +42,7 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": "$pyeval=[(p if p < len(_) and _[p]==n else -(p+1)) for n in (0,1,2,3,4) if (p := __import__('bisect').bisect_left(_,n)) or True]"}
 }}}
-TRANSFORM=stream
+OUT_MODE=stream
 COMMENT=Walrus (:=) inside the comprehension's "if" clause binds bisect_left's result once per iteration without needing a lambda; "or True" makes that filter clause always pass. Streaming jq's 5 outputs collected into one array.
 
 [362-dates]
@@ -52,7 +52,7 @@ bsearch({x:1})
 INPUT = {{{
 [{ "x": 0 },{ "x": 1 },{ "x": 2 }]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 1
 }}}
 SKIP=needs a dict-aware comparator for bsearch; Python's bisect can't order dicts, and building one without lambda/def isn't worth it for one test.
@@ -64,7 +64,7 @@ try ["OK", bsearch(0)] catch ["KO",.]
 INPUT = {{{
 "aa"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["KO","string (\"aa\") cannot be searched from"]
 }}}
 SKIP=needs try/catch.
@@ -77,7 +77,7 @@ strftime("%Y-%m-%dT%H:%M:%SZ")
 INPUT = {{{
 [2015,2,5,23,51,47,4,63]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "2015-03-05T23:51:47Z"
 }}}
 JFTL = {{{
@@ -93,7 +93,7 @@ strftime("%A, %B %d, %Y")
 INPUT = {{{
 1435677542.822351
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "Tuesday, June 30, 2015"
 }}}
 JFTL = {{{
@@ -109,7 +109,7 @@ strftime("%Y-%m-%dT%H:%M:%SZ")
 INPUT = {{{
 [2024,2,15]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "2024-03-15T00:00:00Z"
 }}}
 JFTL = {{{
@@ -125,7 +125,7 @@ mktime
 INPUT = {{{
 [2024,8,21]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 1726876800
 }}}
 JFTL = {{{
@@ -141,7 +141,7 @@ gmtime
 INPUT = {{{
 1425599507
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [2015,2,5,23,51,47,4,63]
 }}}
 JFTL = {{{
@@ -157,7 +157,7 @@ gmtime[5]
 INPUT = {{{
 1425599507.25
 }}}
-EXPECTED = {{{
+GOLD = {{{
 47.25
 }}}
 JFTL = {{{
@@ -173,7 +173,7 @@ try strftime("%Y-%m-%dT%H:%M:%SZ") catch .
 INPUT = {{{
 ["a",1,2,3,4,5,6,7]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "strftime/1 requires parsed datetime inputs"
 }}}
 SKIP=needs try/catch.
@@ -185,7 +185,7 @@ try strflocaltime("%Y-%m-%dT%H:%M:%SZ") catch .
 INPUT = {{{
 ["a",1,2,3,4,5,6,7]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "strflocaltime/1 requires parsed datetime inputs"
 }}}
 SKIP=needs try/catch.
@@ -197,7 +197,7 @@ try mktime catch .
 INPUT = {{{
 ["a",1,2,3,4,5,6,7]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "mktime requires parsed datetime inputs"
 }}}
 SKIP=needs try/catch.
@@ -210,7 +210,7 @@ try ["OK", strftime([])] catch ["KO", .]
 INPUT = {{{
 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["KO","strftime/1 requires a string format"]
 }}}
 SKIP=needs try/catch.
@@ -222,7 +222,7 @@ try ["OK", strflocaltime({})] catch ["KO", .]
 INPUT = {{{
 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["KO","strflocaltime/1 requires a string format"]
 }}}
 SKIP=needs try/catch.
@@ -235,7 +235,7 @@ JQ = {{{
 INPUT = {{{
 "2015-03-05T23:51:47Z"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[2015,2,5,23,51,47,4,63],1425599507]
 }}}
 JFTL = {{{

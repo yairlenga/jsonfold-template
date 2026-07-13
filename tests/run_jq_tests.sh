@@ -103,7 +103,7 @@ for id in "${id_list[@]}" ; do
 	jq_filter=${data["$id.JQ"]-}
 	input=${data["$id.INPUT"]-}
 	jftl=${data["$id.JFTL"]-}
-	gold=${data["$id.EXPECTED"]-}
+	gold=${data["$id.GOLD"]-}
 	input_file=$base.input
 	jq_file=$base.jq
 	gold_file=$base.gold
@@ -159,7 +159,7 @@ for id in "${id_list[@]}" ; do
 		esac
 		echo "=== jf_template:" >> $err_file
 		JQ_MODE="."
-		[[ "${data["$id.TRANSFORM"]-}" = "stream" ]] && JQ_MODE=".[]"
+		[[ "${data["$id.OUT_MODE"]-}" = "stream" ]] && JQ_MODE=".[]"
 		echo  "Debug: " ../../python/run.sh -v $opt $jf_file $input_file >> $err_file
 		if ! ../../python/run.sh $opt $jf_file $input_file 2>> $err_file | jq "$JQ_MODE" > "$jf_out" 2>> "$err_file" ; then
 			error+=${error:+, }"JF fail"

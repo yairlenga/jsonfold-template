@@ -18,7 +18,7 @@ path(.foo[0,1])
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["foo", 0]
 ["foo", 1]
 }}}
@@ -31,7 +31,7 @@ path(.[] | select(.>3))
 INPUT = {{{
 [1,5,3]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1]
 }}}
 SKIP=same as 197.
@@ -43,7 +43,7 @@ path(.)
 INPUT = {{{
 42
 }}}
-EXPECTED = {{{
+GOLD = {{{
 []
 }}}
 SKIP=same as 197.
@@ -55,7 +55,7 @@ try path(.a | map(select(.b == 0))) catch .
 INPUT = {{{
 {"a":[{"b":0}]}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "Invalid path expression with result [{\"b\":0}]"
 }}}
 SKIP=needs path() and try/catch, neither implemented.
@@ -67,7 +67,7 @@ try path(.a | map(select(.b == 0)) | .[0]) catch .
 INPUT = {{{
 {"a":[{"b":0}]}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "Invalid path expression near attempt to access element 0 of [{\"b\":0}]"
 }}}
 SKIP=same as 200.
@@ -79,7 +79,7 @@ try path(.a | map(select(.b == 0)) | .c) catch .
 INPUT = {{{
 {"a":[{"b":0}]}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "Invalid path expression near attempt to access element \"c\" of [{\"b\":0}]"
 }}}
 SKIP=same as 200.
@@ -91,7 +91,7 @@ try path(.a | map(select(.b == 0)) | .[]) catch .
 INPUT = {{{
 {"a":[{"b":0}]}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "Invalid path expression near attempt to iterate through [{\"b\":0}]"
 }}}
 SKIP=same as 200.
@@ -103,7 +103,7 @@ path(.a[path(.b)[0]])
 INPUT = {{{
 {"a":{"b":0}}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["a","b"]
 }}}
 SKIP=nested path(), same limitation as 197.
@@ -115,7 +115,7 @@ JQ = {{{
 INPUT = {{{
 [1,[[],{"a":2}]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[0],[1],[1,0],[1,1],[1,1,"a"]]
 }}}
 SKIP=paths/0 walks every path in the structure recursively; needs both path() and recursive descent, neither available.
@@ -128,7 +128,7 @@ JQ = {{{
 INPUT = {{{
 {"bar": 42, "foo": ["a", "b", "c", "d"]}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "b"
 {"bar": 42, "foo": ["a", 20, "c", "d"]}
 {"bar": 42, "foo": ["a", "c", "d"]}
@@ -136,7 +136,7 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": ["$.foo[1]", "$py={**_, 'foo': _['foo'][:1] + [20] + _['foo'][2:]}", "$py={**_, 'foo': _['foo'][:1] + _['foo'][2:]}"]}
 }}}
-TRANSFORM=stream
+OUT_MODE=stream
 COMMENT=Path ["foo",1] is a fixed literal for this test, so getpath became plain navigation and setpath/delpaths became hand-built dict-spread rebuilds — not a general getpath/setpath/delpaths. Streaming 3 outputs collected into one array.
 
 [207-paths]
@@ -147,7 +147,7 @@ map(getpath([2])), map(setpath([2]; 42)), map(delpaths([[2]]))
 INPUT = {{{
 [[0], [0,1], [0,1,2]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [null, null, 2]
 [[0,null,42], [0,1,42], [0,1,42]]
 [[0], [0,1], [0,1]]
@@ -165,7 +165,7 @@ map(delpaths([[0,"foo"]]))
 INPUT = {{{
 [[{"foo":2, "x":1}], [{"bar":2}]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[{"x":1}], [{"bar":2}]]
 }}}
 JFTL = {{{
@@ -182,7 +182,7 @@ JQ = {{{
 INPUT = {{{
 {"bar":false}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 null
 {"bar":false, "foo": [null, 20]}
 {"bar":false}
@@ -200,7 +200,7 @@ delpaths([[-200]])
 INPUT = {{{
 [1,2,3]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,3]
 }}}
 JFTL = {{{
@@ -215,7 +215,7 @@ try delpaths(0) catch .
 INPUT = {{{
 {}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "Paths must be specified as an array"
 }}}
 SKIP=needs try/catch.
@@ -227,7 +227,7 @@ del(.), del(empty), del((.foo,.bar,.baz) | .[2,3,0]), del(.foo[0], .bar[0], .foo
 INPUT = {{{
 {"foo": [0,1,2,3,4], "bar": [0,1]}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 null
 {"foo": [0,1,2,3,4], "bar": [0,1]}
 {"foo": [1,4], "bar": [1]}
@@ -243,7 +243,7 @@ del(.[1], .[-6], .[2], .[-3:9])
 INPUT = {{{
 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0, 3, 5, 6, 9]
 }}}
 JFTL = {{{
@@ -260,7 +260,7 @@ del(.[nan])
 INPUT = {{{
 [1,2,3]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,3]
 }}}
 JFTL = {{{
@@ -277,7 +277,7 @@ del(.[nan,nan])
 INPUT = {{{
 [1,2,3]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,3]
 }}}
 JFTL = {{{
@@ -293,7 +293,7 @@ setpath([-1]; 1)
 INPUT = {{{
 [0]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1]
 }}}
 JFTL = {{{
@@ -308,7 +308,7 @@ pick(.a.b.c)
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"a":{"b":{"c":null}}}
 }}}
 JFTL = {{{
@@ -324,7 +324,7 @@ pick(first)
 INPUT = {{{
 [1,2]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1]
 }}}
 JFTL = {{{
@@ -340,7 +340,7 @@ pick(first|first)
 INPUT = {{{
 [[10,20],30]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[10]]
 }}}
 JFTL = {{{
@@ -355,7 +355,7 @@ try pick(last) catch .
 INPUT = {{{
 [1,2]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "Out of bounds negative array index"
 }}}
 SKIP=needs try/catch.
@@ -368,7 +368,7 @@ JQ = {{{
 INPUT = {{{
 {"message": "hello"}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"message": "goodbye"}
 }}}
 JFTL = {{{
@@ -384,7 +384,7 @@ JQ = {{{
 INPUT = {{{
 {"bar":42}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"foo":42, "bar":42}
 }}}
 JFTL = {{{
@@ -399,7 +399,7 @@ JQ = {{{
 INPUT = {{{
 {"foo": 42}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"foo": 43}
 }}}
 JFTL = {{{
@@ -414,7 +414,7 @@ JQ = {{{
 INPUT = {{{
 [1,3,5]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [3,5,7]
 [2,6,10]
 [-1,1,3]
@@ -424,7 +424,7 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": ["$py=[v + 2 for v in _]", "$py=[v * 2 for v in _]", "$py=[v - 2 for v in _]", "$py=[v / 2 for v in _]", "$py=[v % 2 for v in _]"]}
 }}}
-TRANSFORM=stream
+OUT_MODE=stream
 COMMENT=Streaming 5 outputs collected into one array.
 
 [225-paths]
@@ -435,7 +435,7 @@ JQ = {{{
 INPUT = {{{
 [-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,0]
 }}}
 JFTL = {{{
@@ -451,7 +451,7 @@ JQ = {{{
 INPUT = {{{
 {"foo":2}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"foo":4}
 }}}
 JFTL = {{{
@@ -466,7 +466,7 @@ JQ = {{{
 INPUT = {{{
 [{"a":1,"b":2}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [{"a":{"old":1, "new":2},"b":2}]
 }}}
 JFTL = {{{
@@ -480,7 +480,7 @@ def inc(x): x |= .+1; inc(.[].a)
 INPUT = {{{
 [{"a":1,"b":2},{"a":2,"b":4},{"a":7,"b":8}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [{"a":2,"b":2},{"a":3,"b":4},{"a":8,"b":8}]
 }}}
 SKIP=no def construct.
@@ -493,7 +493,7 @@ JQ = {{{
 INPUT = {{{
 [null,{"b":0},{"a":0},{"a":null},{"a":[0,1]},{"a":{"b":1}},{"a":[{}]},{"a":[{"c":3}]}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"a":[{"b":5}]}
 {"b":0,"a":[{"b":5}]}
 "Cannot index number with number (0)"
@@ -514,7 +514,7 @@ JQ = {{{
 INPUT = {{{
 [1,5,3,0,7]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,0]
 }}}
 JFTL = {{{
@@ -529,7 +529,7 @@ JQ = {{{
 INPUT = {{{
 [0,1,2,3,4,5]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0,2,4]
 }}}
 JFTL = {{{
@@ -544,7 +544,7 @@ JQ = {{{
 INPUT = {{{
 {"foo":[0,1,2,3,4,5]}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"foo":[0,5]}
 }}}
 JFTL = {{{
@@ -559,7 +559,7 @@ JQ = {{{
 INPUT = {{{
 [4]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [4, null, [null, null, null, 1]]
 }}}
 JFTL = {{{
@@ -575,7 +575,7 @@ JQ = {{{
 INPUT = {{{
 {"foo":[11], "bar":42}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"foo":[11,null,{"bar":1}], "bar":42}
 }}}
 JFTL = {{{
@@ -590,7 +590,7 @@ try ((map(select(.a == 1))[].b) = 10) catch .
 INPUT = {{{
 [{"a":0},{"a":1}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "Invalid path expression near attempt to iterate through [{\"a\":1}]"
 }}}
 SKIP=needs try/catch and path-expression validity errors.
@@ -602,7 +602,7 @@ try ((map(select(.a == 1))[].a) |= .+1) catch .
 INPUT = {{{
 [{"a":0},{"a":1}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "Invalid path expression near attempt to iterate through [{\"a\":1}]"
 }}}
 SKIP=same as 235.
@@ -614,7 +614,7 @@ def x: .[1,2]; x=10
 INPUT = {{{
 [0,1,2]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0,10,10]
 }}}
 SKIP=no def construct.
@@ -626,7 +626,7 @@ try (def x: reverse; x=10) catch .
 INPUT = {{{
 [0,1,2]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "Invalid path expression with result [2,1,0]"
 }}}
 SKIP=needs def and try/catch.
@@ -639,7 +639,7 @@ JQ = {{{
 INPUT = {{{
 [1,null,Infinity,-Infinity,NaN,-NaN]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,1,1,1,1,1]
 }}}
 JFTL = {{{

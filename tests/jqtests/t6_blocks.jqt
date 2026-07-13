@@ -34,7 +34,7 @@ sort
 INPUT = {{{
 [42,[2,5,3,11],10,{"a":42,"b":2},{"a":42},true,2,[2,6],"hello",null,[2,5,6],{"a":[],"b":1},"abc","ab",[3,10],{},false,"abcd",null]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [null,null,false,true,2,10,42,"ab","abc","abcd","hello",[2,5,3,11],[2,5,6],[2,6],[3,10],{},{"a":42},{"a":42,"b":2},{"a":[],"b":1}]
 }}}
 SKIP=jq's sort has a total order across every JSON type (null<false<true<number<string<array<object); Python can't compare dicts with "<" at all, and reproducing jq's full cross-type order without a lambda/def-based comparator is a lot of fragile inline logic for one test.
@@ -46,7 +46,7 @@ JQ = {{{
 INPUT = {{{
 [{"a": 1, "b": 4, "c": 14}, {"a": 4, "b": 1, "c": 3}, {"a": 1, "b": 4, "c": 3}, {"a": 0, "b": 2, "c": 43}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [{"a": 0, "b": 2, "c": 43}, {"a": 1, "b": 4, "c": 14}, {"a": 1, "b": 4, "c": 3}, {"a": 4, "b": 1, "c": 3}]
 [{"a": 0, "b": 2, "c": 43}, {"a": 1, "b": 4, "c": 14}, {"a": 1, "b": 4, "c": 3}, {"a": 4, "b": 1, "c": 3}]
 [{"a": 4, "b": 1, "c": 3}, {"a": 0, "b": 2, "c": 43}, {"a": 1, "b": 4, "c": 3}, {"a": 1, "b": 4, "c": 14}]
@@ -63,7 +63,7 @@ unique
 INPUT = {{{
 [1,2,5,3,5,3,1,3]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,3,5]
 }}}
 JFTL = {{{
@@ -79,7 +79,7 @@ unique
 INPUT = {{{
 []
 }}}
-EXPECTED = {{{
+GOLD = {{{
 []
 }}}
 JFTL = {{{
@@ -94,7 +94,7 @@ JQ = {{{
 INPUT = {{{
 [[4,2,"a"],[3,1,"a"],[2,4,"a"],[1,3,"a"]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[1,3,"a"],[4,2,"a"],[3,1,"a"],[2,4,"a"],[4,2,"a"],[1,3,"a"]]
 }}}
 JFTL = {{{
@@ -110,7 +110,7 @@ JQ = {{{
 INPUT = {{{
 []
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [null,null,null,null]
 }}}
 JFTL = {{{
@@ -126,7 +126,7 @@ JQ = {{{
 INPUT = {{{
 {"foo":{"bar":4},"baz":"bar"}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 4
 }}}
 JFTL = {{{
@@ -142,7 +142,7 @@ JQ = {{{
 INPUT = {{{
 [{"error":true}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"error": "no, it's OK"}
 }}}
 JFTL = {{{
@@ -157,7 +157,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"a": 999}
 }}}
 JFTL = {{{
@@ -173,7 +173,7 @@ to_entries
 INPUT = {{{
 {"a": 1, "b": 2}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [{"key":"a", "value":1}, {"key":"b", "value":2}]
 }}}
 JFTL = {{{
@@ -189,7 +189,7 @@ from_entries
 INPUT = {{{
 [{"key":"a", "value":1}, {"Key":"b", "Value":2}, {"name":"c", "value":3}, {"Name":"d", "Value":4}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"a": 1, "b": 2, "c": 3, "d": 4}
 }}}
 JFTL = {{{
@@ -205,13 +205,13 @@ with_entries(.key |= "KEY_" + .)
 INPUT = {{{
 {"a": 1, "b": 2}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"KEY_a": 1, "KEY_b": 2}
 }}}
 JFTL = {{{
 {"main": "$py={('KEY_' + k): _[k] for k in _}"}
 }}}
-COMMENT=with_entries here needs to rename keys, which JFTL's foreach transform:"OBJECT" can't do (it always keys the result by the loop's own key, not whatever the body computes) — did it as a plain dict comprehension over "for k in _" (dict iteration yields keys) instead of going through foreach at all.
+COMMENT=with_entries here needs to rename keys, which JFTL's foreach OUT_MODE:"OBJECT" can't do (it always keys the result by the loop's own key, not whatever the body computes) — did it as a plain dict comprehension over "for k in _" (dict iteration yields keys) instead of going through foreach at all.
 
 [336-blocks]
 LEVEL=py
@@ -221,7 +221,7 @@ map(has("foo"))
 INPUT = {{{
 [{"foo": 42}, {}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true, false]
 }}}
 JFTL = {{{
@@ -236,7 +236,7 @@ map(has(2))
 INPUT = {{{
 [[0,1], ["a","b","c"]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [false, true]
 }}}
 JFTL = {{{
@@ -252,7 +252,7 @@ has(nan)
 INPUT = {{{
 [0,1,2]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 false
 }}}
 JFTL = {{{
@@ -268,7 +268,7 @@ keys
 INPUT = {{{
 [42,3,35]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0,1,2]
 }}}
 JFTL = {{{
@@ -283,7 +283,7 @@ JQ = {{{
 INPUT = {{{
 1000000000000000000
 }}}
-EXPECTED = {{{
+GOLD = {{{
 null
 }}}
 JFTL = {{{
@@ -299,7 +299,7 @@ map([1,2][0:.])
 INPUT = {{{
 [-1, 1, 2, 3, 1000000000000000000]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[1], [1], [1,2], [1,2], [1,2]]
 }}}
 JFTL = {{{
@@ -316,7 +316,7 @@ JQ = {{{
 INPUT = {{{
 {"k": {"a": 0,"c": 3}}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"k": {"a": 0, "b": 2, "c": 3}}
 }}}
 JFTL = {{{
@@ -331,7 +331,7 @@ JQ = {{{
 INPUT = {{{
 {"k": {"a": 0,"c": 3}, "hello": 1}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"k": {"a": 0, "b": 2, "c": 3}, "hello": 1}
 }}}
 SKIP=needs the general "merge if both sides are objects, else RHS wins" rule (per-key type dispatch via isinstance), which without def/lambda means a lot of repeated inline conditionals for diminishing value per test.
@@ -343,7 +343,7 @@ JQ = {{{
 INPUT = {{{
 {"k": {"a": 0,"c": 3}, "hello": {"x": 1}}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"k": {"a": 0, "b": 2, "c": 3}, "hello": {"x": 1}}
 }}}
 SKIP=same as 343.
@@ -355,7 +355,7 @@ JQ = {{{
 INPUT = {{{
 {"a": {"b": 2}, "c": {"d": 3, "f": 9}}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"a": {"b": 2}, "c": {"d": 3, "f": 9}, "e": 5}
 }}}
 SKIP=same as 343 (three keys deep-merging here, even more hand-unrolling for one test).
@@ -368,7 +368,7 @@ JQ = {{{
 INPUT = {{{
 [1,2,"foo",[],[3,[]],{},true,false,null]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[],[3,[]]]
 }}}
 JFTL = {{{
@@ -384,7 +384,7 @@ JQ = {{{
 INPUT = {{{
 [1,2,"foo",[],[3,[]],{},true,false,null]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [{}]
 }}}
 JFTL = {{{
@@ -399,7 +399,7 @@ JQ = {{{
 INPUT = {{{
 [1,2,"foo",[],[3,[]],{},true,false,null]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[],[3,[]],{}]
 }}}
 JFTL = {{{
@@ -414,7 +414,7 @@ JQ = {{{
 INPUT = {{{
 [1,2,"foo",[],[3,[]],{},true,false,null]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,"foo",true,false,null]
 }}}
 JFTL = {{{
@@ -429,7 +429,7 @@ JQ = {{{
 INPUT = {{{
 [1,2,"foo",[],[3,[]],{},true,false,null]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,"foo",[],[3,[]],{},true,false]
 }}}
 JFTL = {{{
@@ -445,7 +445,7 @@ JQ = {{{
 INPUT = {{{
 [1,2,"foo",[],[3,[]],{},true,false,null]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true,false]
 }}}
 JFTL = {{{
@@ -460,7 +460,7 @@ JQ = {{{
 INPUT = {{{
 [1,2,"foo",[],[3,[]],{},true,false,null]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [null]
 }}}
 JFTL = {{{
@@ -476,7 +476,7 @@ flatten(0)
 INPUT = {{{
 [0, [1], [[2]], [[[3]]]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0, [1], [[2]], [[[3]]]]
 }}}
 JFTL = {{{
@@ -492,7 +492,7 @@ flatten(2)
 INPUT = {{{
 [0, [1], [[2]], [[[3]]]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0, 1, 2, [3]]
 }}}
 JFTL = {{{
@@ -508,7 +508,7 @@ flatten(2)
 INPUT = {{{
 [0, [1, [2]], [1, [[3], 2]]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0, 1, 2, 1, [3], 2]
 }}}
 JFTL = {{{
@@ -522,7 +522,7 @@ try flatten(-1) catch .
 INPUT = {{{
 [0, [1], [[2]], [[[3]]]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "flatten depth must not be negative"
 }}}
 SKIP=needs try/catch.
@@ -535,7 +535,7 @@ flatten
 INPUT = {{{
 [0, [1], [[2]], [[[3]]]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0, 1, 2, 3]
 }}}
 JFTL = {{{
@@ -551,7 +551,7 @@ transpose
 INPUT = {{{
 [[1], [2,3]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[1,2],[null,3]]
 }}}
 JFTL = {{{
@@ -567,7 +567,7 @@ transpose
 INPUT = {{{
 []
 }}}
-EXPECTED = {{{
+GOLD = {{{
 []
 }}}
 JFTL = {{{
@@ -582,7 +582,7 @@ ascii_upcase
 INPUT = {{{
 "useful but not for é"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "USEFUL BUT NOT FOR é"
 }}}
 JFTL = {{{

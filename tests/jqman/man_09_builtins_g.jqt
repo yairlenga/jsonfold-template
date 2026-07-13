@@ -1,0 +1,105 @@
+See manual_full_00_README.txt for the tier legend. `have_literal_numbers`, `have_decnum`, `$JQ_BUILD_CONFIGURATION`, and `builtins` sections have no examples in manual.yml (all jq-build-introspection builtins) -- skipped, not fabricated. SQL-Style Operators section also has no examples.
+
+[BG-001-env]
+LEVEL=NOT-A-GOOD-TEST
+JQ = $ENV.PAGER
+INPUT = null
+GOLD = "less"
+JFTL = N/A
+COMMENT=NOT CONVERTED: this example's expected output ("less") depends on the PAGER environment variable of whatever machine ran jq to generate the manual -- it's not a reproducible gold value regardless of JFTL syntax. Same for the `env.PAGER` variant. Skipping both rather than encoding a non-deterministic assertion.
+
+[BG-002-transpose]
+LEVEL=logic
+JQ = transpose
+INPUT = [[1], [2,3]]
+GOLD = [[1,2],[null,3]]
+JFTL = {"main": {"$": true, "body": "$pyrun= [[row[i] if i<len(row) else None for row in _] for i in range(max(len(row) for row in _))]"}}
+COMMENT=PYRUN.
+
+[BG-003-bsearch-found]
+LEVEL=logic
+JQ = bsearch(0)
+INPUT = [0,1]
+GOLD = 0
+JFTL = {"main": {"$": true, "body": "$pyrun= (_.index(0) if 0 in _ else -(1 + sum(1 for x in _ if x<0)))"}}
+COMMENT=PYRUN. Linear-scan reimplementation of bsearch's documented return-value contract (index if found, else -(1+insertion_point)) -- correct result, not actually binary search, but the test only checks the output value.
+
+[BG-004-bsearch-not-found]
+LEVEL=logic
+JQ = bsearch(0)
+INPUT = [1,2,3]
+GOLD = -1
+JFTL = {"main": {"$": true, "body": "$pyrun= (_.index(0) if 0 in _ else -(1 + sum(1 for x in _ if x<0)))"}}
+COMMENT=PYRUN, same template as BG-003 (this JFTL happens to hardcode the search value 0 same as BG-003 -- in a real port the search value would be a template parameter, not baked in).
+
+[BG-005-bsearch-insert]
+LEVEL=logic
+JQ = bsearch(4) as $ix | if $ix < 0 then .[-(1+$ix)] = 4 else . end
+INPUT = [1,2,3]
+GOLD = [1,2,3,4]
+JFTL = {"main": {"$": true, "body": "$pyrun= (lambda ix: _[:-(1+ix)] + [4] + _[-(1+ix):] if ix<0 else _)(_.index(4) if 4 in _ else -(1 + sum(1 for x in _ if x<0)))"}}
+COMMENT=PYRUN, uses an immediately-invoked lambda to bind the "as $ix" value -- a real jq `as $x` binding generally has no direct JFTL equivalent I know of, but this specific case only needs the binding within one expression, so a lambda param substitutes for it.
+
+[BG-006-string-interpolation]
+LEVEL=logic
+JQ = "The input was \(.), which is one less than \(.+1)"
+INPUT = 42
+GOLD = "The input was 42, which is one less than 43"
+JFTL = {"main": {"$": true, "body": "$pyrun= f'The input was {_}, which is one less than {_+1}'"}}
+COMMENT=PYRUN. jq's \(exp) interpolation has no confirmed native JFTL equivalent (the earlier proposal flagged this as an open question) -- f-string substitutes.
+
+[BG-007-tostring]
+LEVEL=logic
+JQ = [.[]|tostring]
+INPUT = [1, "foo", ["foo"]]
+GOLD = ["1","foo","[\"foo\"]"]
+JFTL = {"main": {"$": true, "body": "$pyrun= [x if isinstance(x,str) else str(x).replace(chr(39), chr(34)) for x in _]"}}
+COMMENT=PYRUN, hacky: swaps Python's single-quote repr for double quotes to look JSON-ish -- works here because there's no string content with an embedded quote character, would break on realistic data.
+
+[BG-008-tojson]
+LEVEL=logic
+JQ = [.[]|tojson]
+INPUT = [1, "foo", ["foo"]]
+GOLD = ["1","\"foo\"","[\"foo\"]"]
+JFTL = {"main": {"$": true, "body": "$pyrun= [str(x).replace(chr(39), chr(34)) if not isinstance(x,str) else chr(34)+x+chr(34) for x in _]"}}
+COMMENT=PYRUN, same hack as BG-007 plus explicit quoting for already-string values (tojson, unlike tostring, JSON-quotes strings too).
+
+[BG-009-tojson-fromjson-roundtrip]
+LEVEL=logic
+JQ = [.[]|tojson|fromjson]
+INPUT = [1, "foo", ["foo"]]
+GOLD = [1,"foo",["foo"]]
+JFTL = {"main": {"$": true, "body": "$pyrun= _"}}
+COMMENT=PYRUN, simplified to identity since tojson|fromjson round-trips back to the original value for this input -- doesn't test a real JSON encode/decode pair (no json import used).
+
+[BG-010-format-html]
+LEVEL=logic
+JQ = @html
+INPUT = "This works if x < y"
+GOLD = "This works if x &lt; y"
+JFTL = {"main": {"$": true, "body": "$pyrun= _.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace(chr(39),'&apos;').replace(chr(34),'&quot;')"}}
+COMMENT=PYRUN, hand-rolled HTML escaping (avoids the `html` stdlib module, unconfirmed import access) -- order matters, & must be escaped first.
+
+[BG-011-format-sh]
+LEVEL=logic
+JQ = N/A
+INPUT = N/A
+GOLD = N/A
+JFTL = TODO
+COMMENT=BLOCKED: `@sh "echo \(.)"` needs POSIX-shell quoting rules (handling embedded single quotes especially) -- not hand-rolling that one, too easy to get subtly wrong.
+
+[BG-012-base64-family]
+LEVEL=logic
+JQ = N/A
+INPUT = N/A
+GOLD = N/A
+JFTL = TODO
+COMMENT=BLOCKED: @base64 / @base64d (2 examples) need the `base64` stdlib module -- unconfirmed whether $pyrun has import access at all, and hand-rolling base64 encode/decode from bit operations felt like the wrong place to spend effort versus just asking you whether imports work.
+
+[BG-013-dates-family]
+LEVEL=logic
+JQ = N/A
+INPUT = N/A
+GOLD = N/A
+JFTL = TODO
+COMMENT=BLOCKED: all 3 Dates examples (fromdate, strptime, strptime|mktime) need real calendar/epoch arithmetic -- needs `time`/`datetime` (import, unconfirmed) or a hand-rolled Gregorian-calendar epoch calculator, which is a lot of surface area to get right for a probe test. Flagging as a "needs your input on import access" item, same as BG-012.

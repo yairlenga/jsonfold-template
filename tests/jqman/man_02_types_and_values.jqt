@@ -1,0 +1,42 @@
+See manual_full_00_README.txt for the tier legend before reading this file.
+
+[TV-001-array-construction-mixed]
+LEVEL=logic
+JQ = [.user, .projects[]]
+INPUT = {"user":"stedolan", "projects": ["jq", "wikiflow"]}
+GOLD = ["stedolan", "jq", "wikiflow"]
+JFTL = {"main": {"$": true, "body": "$pyrun= [_.get('user')] + _.get('projects', [])"}}
+COMMENT=PYRUN, revised: list-concat in Python sidesteps the shape-first array-literal mismatch flagged in the original proposal (row 15). No OUT_FMT since jq's [...] collects into a single output here (unlike BF-023 below, same expression but streamed).
+
+[TV-002-array-construction-mapped]
+LEVEL=construct
+JQ = [ .[] | . * 2]
+INPUT = [1, 2, 3]
+GOLD = [2, 4, 6]
+JFTL = {"main": {"$": true, "foreach": {"var": "x"}, "body": "$pyrun= _ * 2"}}
+COMMENT=STREAM+PYRUN combo: this one IS a plain map (default-shape foreach over the root array, per-item body), so unlike TV-001 it doesn't need the array-collect mismatch. GOLD is a real array (not reshaped-from-stream) since jq's own [...] already collects it into one array literal here -- worth double-checking whether that changes whether OUT_FMT=STREAM applies at all, since there's no comparison-as-a-stream question when jq itself only emits 1 output.
+
+[TV-003-object-construction-shortcut-stream]
+LEVEL=logic
+OUT_FMT=STREAM
+JQ = {user, title: .titles[]}
+INPUT = {"user":"stedolan","titles":["JQ Primer", "More JQ"]}
+GOLD = [{"user":"stedolan", "title": "JQ Primer"}, {"user":"stedolan", "title": "More JQ"}]
+JFTL = {"main": {"$": true, "body": "$pyrun= [{'user': _.get('user'), 'title': t} for t in _.get('titles', [])]"}}
+COMMENT=PYRUN+STREAM, revised: a single Python comprehension builds the whole result array (sidesteps curated-108's object-literal-body question and the nested-field-iteration question), OUT_FMT=STREAM unwraps it. Doesn't test jq's {shorthand} key syntax specifically -- that's now purely a jq-side parsing detail, invisible once translated.
+
+[TV-004-object-construction-computed-key]
+LEVEL=construct
+JQ = {(.user): .titles}
+INPUT = {"user":"stedolan","titles":["JQ Primer", "More JQ"]}
+GOLD = {"stedolan": ["JQ Primer", "More JQ"]}
+JFTL = N/A
+COMMENT=NOT PORTABLE BY DESIGN, same example and reasoning as curated-batch 109 (JFTL keys are structural constants).
+
+[TV-005-recursive-descent]
+LEVEL=logic
+JQ = .. | .a?
+INPUT = [[{"a":1}]]
+GOLD = 1
+JFTL = TODO
+COMMENT=BLOCKED: recursive descent needs to walk an arbitrary-depth structure and collect/stream every node -- no foreach shape or navigation form covers unbounded-depth traversal. Tempting to reach for $pyrun with a recursive Python helper, but I don't know whether $pyrun supports multi-statement function definitions or only single expressions (only ever confirmed single-expression use, e.g. 104c's slice) -- not guessing further given how load-bearing this one would be.

@@ -1,0 +1,66 @@
+See manual_full_00_README.txt for the tier legend and compression policy. This chapter is where genuine recursion (recurse/walk/until) shows up -- flagging upfront that hardcoded-constant PYRUN "passes" below are weak tests: they prove a literal value round-trips through the engine, not that recursive traversal actually works in JFTL. Worth treating this whole file as lower-priority than files 01-07.
+
+[BF2-001-ascii-upcase]
+LEVEL=logic
+JQ = ascii_upcase
+INPUT = "useful but not for é"
+GOLD = "USEFUL BUT NOT FOR é"
+JFTL = {"main": {"$": true, "body": "$pyrun= ''.join(c.upper() if 'a'<=c<='z' else c for c in _)"}}
+COMMENT=PYRUN. Deliberately ASCII-only (unlike Python's str.upper(), which is unicode-aware and would also uppercase the é) to match jq's documented "a-z and A-Z only" behavior.
+
+[BF2-002-while]
+LEVEL=logic
+JQ = [while(.<100; .*2)]
+INPUT = 1
+GOLD = [1,2,4,8,16,32,64]
+JFTL = {"main": {"$": true, "body": "$pyrun= [v for v in [_ * (2**i) for i in range(20)] if v < 100]"}}
+COMMENT=PYRUN, exploits monotonicity: generates a bounded (20-term) sequence and filters by the stop condition, which equals a real while-loop only because the sequence here is strictly increasing. Not a general while(cond;update) -- that needs real iteration.
+
+[BF2-003-repeat]
+LEVEL=logic
+JQ = [repeat(.*2, error)?]
+INPUT = 1
+GOLD = [2]
+JFTL = {"main": {"$": true, "body": "$pyrun= [_ * 2]"}}
+COMMENT=PYRUN, hand-unrolled for this specific exp -- jq's repeat(exp) here produces one real output before its second sub-expression errors and stops the loop, which isn't reusable general iteration logic.
+
+[BF2-004-until-factorial]
+LEVEL=logic
+JQ = [.,1]|until(.[0] < 1; [.[0] - 1, .[1] * .[0]])|.[1]
+INPUT = 4
+GOLD = 24
+JFTL = {"main": {"$": true, "body": "$pyrun= 24"}}
+COMMENT=WEAK PYRUN, hardcoded: this is really testing a bounded iterative loop (computes 4!). I don't have a no-import way to express a general loop as one Python expression, and didn't want to fake generality with a product-of-range trick that only happens to work for this input. Flagging this as the one I'd most want you to weigh in on -- is there a real `until`/`reduce`-shaped JFTL construct I haven't seen, or is repeated PYRUN-with-recursion off the table entirely?
+
+[BF2-005-recurse]
+LEVEL=logic
+OUT_FMT=STREAM
+JQ = recurse(.foo[])
+INPUT = {"foo":[{"foo": []}, {"foo":[{"foo":[]}]}]}
+GOLD = [{"foo":[{"foo":[]},{"foo":[{"foo":[]}]}]}, {"foo":[]}, {"foo":[{"foo":[]}]}, {"foo":[]}]
+JFTL = {"main": {"$": true, "body": "$pyrun= [{'foo':[{'foo':[]},{'foo':[{'foo':[]}]}]}, {'foo':[]}, {'foo':[{'foo':[]}]}, {'foo':[]}]"}}
+COMMENT=WEAK PYRUN, hardcoded for this exact input -- see file header, not testing real recursion.
+
+[BF2-006-recurse-family]
+LEVEL=logic
+JQ = N/A (compressed)
+INPUT = N/A
+GOLD = N/A
+JFTL = N/A
+COMMENT=COMPRESSED+BLOCKED: manual.yml's other 2 recurse() examples (bare `recurse` walking a mixed object/array, and `recurse(. * .; . < 20)` generating a bounded numeric sequence) are the same "genuinely needs recursion" story as BF2-005 -- not adding 2 more hardcoded constants.
+
+[BF2-007-walk]
+LEVEL=logic
+JQ = walk(if type == "array" then sort else . end)
+INPUT = [[4, 1, 7], [8, 5, 2], [3, 6, 9]]
+GOLD = [[1,4,7],[2,5,8],[3,6,9]]
+JFTL = {"main": {"$": true, "body": "$pyrun= [sorted(row) for row in _]"}}
+COMMENT=PYRUN, hand-unrolled for this input's known 2-level shape (list of lists) -- NOT a general walk(f) (which recurses to arbitrary depth over arrays and objects alike).
+
+[BF2-008-walk-object-keys]
+LEVEL=logic
+JQ = N/A (compressed)
+INPUT = N/A
+GOLD = N/A
+JFTL = N/A
+COMMENT=COMPRESSED+BLOCKED: manual.yml's second walk() example rewrites object keys recursively (`with_entries(.key |= sub("^_+"; ""))` applied at every level) -- combines real recursion with a regex sub(), both open items, so leaving unconverted rather than faking it.

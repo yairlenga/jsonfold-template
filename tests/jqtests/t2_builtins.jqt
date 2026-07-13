@@ -6,7 +6,7 @@
 # jftl_reference_tests_v3.txt.
 #
 # New this chunk: %%FAIL entries get their own tag, [NNN-fail], with JQ (the
-# invalid program) and EXPECTED (jq's verbatim error text) — no INPUT (none
+# invalid program) and GOLD (jq's verbatim error text) — no INPUT (none
 # in source), no JFTL/LEVEL. None found in this particular line range, but
 # the convention is here for when they show up later.
 #
@@ -22,7 +22,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 2
 }}}
 JFTL = {{{
@@ -37,7 +37,7 @@ JQ = {{{
 INPUT = {{{
 "wtasdf"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 2.0
 }}}
 JFTL = {{{
@@ -53,7 +53,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 1
 }}}
 JFTL = {{{
@@ -68,7 +68,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 3
 }}}
 JFTL = {{{
@@ -83,7 +83,7 @@ JQ = {{{
 INPUT = {{{
 "I wonder what this will be?"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 20e-1
 }}}
 JFTL = {{{
@@ -98,7 +98,7 @@ JQ = {{{
 INPUT = {{{
 15
 }}}
-EXPECTED = {{{
+GOLD = {{{
 19.0
 }}}
 JFTL = {{{
@@ -113,7 +113,7 @@ JQ = {{{
 INPUT = {{{
 {"a":42}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"a":42}
 }}}
 JFTL = {{{
@@ -129,7 +129,7 @@ null+.
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 null
 }}}
 JFTL = {{{
@@ -146,7 +146,7 @@ JQ = {{{
 INPUT = {{{
 {"a":42}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 42
 }}}
 JFTL = {{{
@@ -162,7 +162,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,3,null]
 }}}
 JFTL = {{{
@@ -179,7 +179,7 @@ JQ = {{{
 INPUT = {{{
 "asdfasdf"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"a":1, "b":2, "c":3}
 }}}
 JFTL = {{{
@@ -195,7 +195,7 @@ JQ = {{{
 INPUT = {{{
 "some string"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "asdfjkl;some stringsome stringsome string"
 }}}
 JFTL = {{{
@@ -210,7 +210,7 @@ JQ = {{{
 INPUT = {{{
 "   "
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "      "
 }}}
 JFTL = {{{
@@ -225,7 +225,7 @@ JQ = {{{
 INPUT = {{{
 11
 }}}
-EXPECTED = {{{
+GOLD = {{{
 31
 }}}
 JFTL = {{{
@@ -240,7 +240,7 @@ JQ = {{{
 INPUT = {{{
 1
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [2,4]
 }}}
 JFTL = {{{
@@ -256,7 +256,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,-1]
 }}}
 JFTL = {{{
@@ -271,7 +271,7 @@ JQ = {{{
 INPUT = {{{
 4
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [200, 5]
 }}}
 JFTL = {{{
@@ -286,7 +286,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 10
 }}}
 JFTL = {{{
@@ -301,7 +301,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [2, 8, 10, 14]
 }}}
 JFTL = {{{
@@ -316,7 +316,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 1.05e-19
 }}}
 JFTL = {{{
@@ -331,7 +331,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 1e+17
 }}}
 JFTL = {{{
@@ -345,7 +345,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 9E+999999999
 9.999999999E+999999999
 1E-999999999
@@ -360,7 +360,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 true
 }}}
@@ -374,7 +374,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 true
 true
@@ -390,7 +390,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 4
 }}}
 JFTL = {{{
@@ -405,7 +405,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 172
 }}}
 JFTL = {{{
@@ -419,7 +419,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0,0,0,0,0,-1]
 }}}
 SKIP=jq's infinite literal and its modulo-with-infinity edge cases aren't something Python's arithmetic reproduces the same way (Python has no infinite-int modulo equivalent to jq's here) — not confident enough to assert equivalence.
@@ -432,7 +432,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true,true]
 }}}
 JFTL = {{{
@@ -448,7 +448,7 @@ JQ = {{{
 INPUT = {{{
 4
 }}}
-EXPECTED = {{{
+GOLD = {{{
 15
 }}}
 JFTL = {{{
@@ -463,7 +463,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "string (\"123\\u0000456\") cannot be parsed as a number"
 }}}
 SKIP=needs try/catch.
@@ -476,7 +476,7 @@ map(toboolean)
 INPUT = {{{
 ["false","true",false,true]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [false,true,false,true]
 }}}
 JFTL = {{{
@@ -491,7 +491,7 @@ JQ = {{{
 INPUT = {{{
 [null,0,"tru","truee","fals","falsee",[],{}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "null (null) cannot be parsed as a boolean"
 "number (0) cannot be parsed as a boolean"
 "string (\"tru\") cannot be parsed as a boolean"
@@ -510,7 +510,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "string (\"true\\u0000x\") cannot be parsed as a boolean"
 "string (\"false\\u0000\") cannot be parsed as a boolean"
 }}}
@@ -523,7 +523,7 @@ JQ = {{{
 INPUT = {{{
 {"object": {"a":42}, "num":10.0}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true,  true,  false, false, false, false, false, false, false]
 [true,  true,  false, false, false, false, false, false, false]
 [false, false, true,  true,  false, false, false, false, false]
@@ -544,7 +544,7 @@ JQ = {{{
 INPUT = {{{
 [[], {}, [1,2], {"a":42}, "asdf", "μ"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0, 0, 2, 1, 4, 1]
 }}}
 JFTL = {{{
@@ -560,7 +560,7 @@ utf8bytelength
 INPUT = {{{
 "asdfμ"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 6
 }}}
 JFTL = {{{
@@ -575,7 +575,7 @@ JQ = {{{
 INPUT = {{{
 [[], {}, [1,2], 55, true, false]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["array ([]) only strings have UTF-8 byte length","object ({}) only strings have UTF-8 byte length","array ([1,2]) only strings have UTF-8 byte length","number (55) only strings have UTF-8 byte length","boolean (true) only strings have UTF-8 byte length","boolean (false) only strings have UTF-8 byte length"]
 }}}
 SKIP=needs try/catch and per-type error message formatting.
@@ -588,7 +588,7 @@ map(keys)
 INPUT = {{{
 [{}, {"abcd":1,"abc":2,"abcde":3}, {"x":1, "z": 3, "y":2}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[], ["abc","abcd","abcde"], ["x","y","z"]]
 }}}
 JFTL = {{{
@@ -604,7 +604,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,3,4]
 }}}
 JFTL = {{{
@@ -621,7 +621,7 @@ map(add)
 INPUT = {{{
 [[], [1,2,3], ["a","b","c"], [[3],[4,5],[6]], [{"a":1}, {"b":2}, {"a":3}]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [null, 6, "abc", [3,4,5,6], {"a":3, "b": 2}]
 }}}
 JFTL = {{{
@@ -637,7 +637,7 @@ map_values(.+1)
 INPUT = {{{
 [0,1,2]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,3]
 }}}
 JFTL = {{{
@@ -652,7 +652,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [null,120,null,55]
 }}}
 JFTL = {{{
@@ -668,7 +668,7 @@ JQ = {{{
 INPUT = {{{
 {"arr":[]}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"arr":[],"sum":null}
 }}}
 JFTL = {{{
@@ -683,7 +683,7 @@ add({(.[]):1}) | keys
 INPUT = {{{
 ["a","a","b","a","d","b","d","a","d"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["a","b","d"]
 }}}
 SKIP=needs computed/dynamic object keys ({(.[]) : 1}), same limitation as case 020.
@@ -697,7 +697,7 @@ def a: 0; . | a
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 0
 }}}
 JFTL = {{{
@@ -714,7 +714,7 @@ def f: . + 1; def g: def g: . + 100; f | g | f; (f | g), g
 INPUT = {{{
 3.0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 106.0
 105.0
 }}}
@@ -727,7 +727,7 @@ def f: (1000,2000); f
 INPUT = {{{
 123412345
 }}}
-EXPECTED = {{{
+GOLD = {{{
 1000
 2000
 }}}
@@ -740,7 +740,7 @@ def f(a;b;c;d;e;f): [a+1,b,c,d,e,f]; f(.[0];.[1];.[0];.[0];.[0];.[0])
 INPUT = {{{
 [1,2]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [2,2,1,1,1,1]
 }}}
 SKIP=no def/user-defined-function construct.
@@ -752,7 +752,7 @@ def f: 1; def g: f, def f: 2; def g: 3; f, def f: g; f, g; def f: 4; [f, def f: 
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [4,1,2,3,3,5,4,1,2,3,3]
 }}}
 SKIP=no def/closure/shadowing construct — this test exists specifically to torture-test jq's own function scoping rules.
@@ -765,7 +765,7 @@ def f(a;b;c;d;e;f;g;h;i;j): [j,i,h,g,f,e,d,c,b,a]; f(.[0];.[1];.[2];.[3];.[4];.[
 INPUT = {{{
 [0,1,2,3,4,5,6,7,8,9]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [9,8,7,6,5,4,3,2,1,0]
 }}}
 SKIP=no def construct.
@@ -778,7 +778,7 @@ JQ = {{{
 INPUT = {{{
 [1,2,3]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,4,5]
 }}}
 JFTL = {{{
@@ -793,7 +793,7 @@ true
 INPUT = {{{
 [1]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 }}}
 JFTL = {{{
@@ -808,7 +808,7 @@ null,1,null
 INPUT = {{{
 "hello"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 null
 1
 null
@@ -825,7 +825,7 @@ JQ = {{{
 INPUT = {{{
 [5,6]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,3]
 }}}
 JFTL = {{{
@@ -840,7 +840,7 @@ JQ = {{{
 INPUT = {{{
 [-1.1,1.1,1.9]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [-2, 1, 1]
 }}}
 JFTL = {{{
@@ -856,7 +856,7 @@ JQ = {{{
 INPUT = {{{
 [4,9]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [2,3]
 }}}
 JFTL = {{{
@@ -872,7 +872,7 @@ JQ = {{{
 INPUT = {{{
 [2,4,4,4,5,5,7,9]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 2
 }}}
 JFTL = {{{
@@ -894,7 +894,7 @@ atan * 4 * 1000000|floor / 1000000
 INPUT = {{{
 1
 }}}
-EXPECTED = {{{
+GOLD = {{{
 3.141592
 }}}
 SKIP=math.atan needs eval-tier __import__ plus floor; doable but low value on its own — folded into 180/181 below instead.
@@ -907,7 +907,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,0.996917,0.987688,0.972369,0.951056,0.923879,0.891006,0.85264,0.809017,0.760406,0.707106,0.649448,0.587785,0.522498,0.45399,0.382683,0.309017,0.233445,0.156434,0.078459]
 }}}
 JFTL = {{{
@@ -922,7 +922,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0,0.078459,0.156434,0.233445,0.309016,0.382683,0.45399,0.522498,0.587785,0.649447,0.707106,0.760405,0.809016,0.85264,0.891006,0.923879,0.951056,0.972369,0.987688,0.996917]
 }}}
 JFTL = {{{
@@ -936,7 +936,7 @@ def f(x): x | x; f([.], . + [42])
 INPUT = {{{
 [1,2,3]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[[1,2,3]]]
 [[1,2,3],42]
 [[1,2,3,42]]
@@ -952,7 +952,7 @@ def f: .+1; def g: f; def f: .+100; def f(a):a+.+11; [(g|f(20)), f]
 INPUT = {{{
 1
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [33,101]
 }}}
 SKIP=no def construct.
@@ -965,7 +965,7 @@ def id(x):x; 2000 as $x | def f(x):1 as $x | id([$x, x, x]); def g(x): 100 as $x
 INPUT = {{{
 "more testing"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,100,2100.0,100,2100.0]
 }}}
 SKIP=no def/closure construct.
@@ -978,7 +978,7 @@ def x(a;b): a as $a | b as $b | $a + $b; def y($a;$b): $a + $b; def check(a;b): 
 INPUT = {{{
 [1,2,3]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 }}}
 SKIP=no def construct.
@@ -994,7 +994,7 @@ JQ = {{{
 INPUT = {{{
 999999999
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[110.0, 130.0], [210.0, 130.0], [110.0, 230.0], [210.0, 230.0], [120.0, 160.0], [220.0, 160.0], [120.0, 260.0], [220.0, 260.0]]
 }}}
 SKIP=no def/backtracking-generator construct; this is deliberately the hardest test in jq's own suite for this feature.
@@ -1007,7 +1007,7 @@ def fac: if . == 1 then 1 else . * (. - 1 | fac) end; [.[] | fac]
 INPUT = {{{
 [1,2,3,4]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,6,24]
 }}}
 SKIP=no def/recursion construct (this one specifically *could* become a "run" tier test via a real Python loop computing factorial per item, without needing def — worth revisiting if factorial-style recursion shows up often enough to matter).
@@ -1020,7 +1020,7 @@ reduce .[] as $x (0; . + $x)
 INPUT = {{{
 [1,2,4]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 7
 }}}
 JFTL = {{{
@@ -1036,7 +1036,7 @@ reduce .[] as [$i, {j:$j}] (0; . + $i - $j)
 INPUT = {{{
 [[2,{"j":1}], [5,{"j":3}], [6,{"j":4}]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 5
 }}}
 JFTL = {{{
@@ -1052,7 +1052,7 @@ reduce [[1,2,10], [3,4,10]][] as [$i,$j] (0; . + $i * $j)
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 14
 }}}
 JFTL = {{{
@@ -1067,7 +1067,7 @@ JQ = {{{
 INPUT = {{{
 [1,2,3]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [6]
 }}}
 JFTL = {{{
@@ -1083,7 +1083,7 @@ JQ = {{{
 INPUT = {{{
 [1,2]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [4.5]
 }}}
 JFTL = {{{
@@ -1099,7 +1099,7 @@ reduce .[] as $x (0; . + $x) as $x | $x
 INPUT = {{{
 [1,2,3]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 6
 }}}
 JFTL = {{{
@@ -1115,7 +1115,7 @@ reduce . as $n (.; .)
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 null
 }}}
 JFTL = {{{
@@ -1131,7 +1131,7 @@ JQ = {{{
 INPUT = {{{
 {"a":1, "b":[2,{"d":3}]}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,3]
 }}}
 JFTL = {{{
@@ -1147,7 +1147,7 @@ JQ = {{{
 INPUT = {{{
 {"a":1, "b":[2,{"d":3}]}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,[2,{"d":3}],2,{"d":3}]
 }}}
 JFTL = {{{

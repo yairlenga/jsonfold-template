@@ -1,0 +1,76 @@
+See manual_full_00_README.txt for the tier legend. Every example in jq's Regular Expressions chapter (17 total, across test/match/capture/scan/split(regex)/splits/sub/gsub) needs pattern matching that Python's `re` module would provide -- and $pyrun's import access is unconfirmed (never tried an `import` or module-qualified call in anything you've confirmed so far). Rather than write 17 near-identical "BLOCKED: needs re" rows, one representative example per function below, all genuinely blocked on the same single open question: does $pyrun= have import access, and if so to what.
+
+[RX-001-test]
+LEVEL=logic
+JQ = test("foo")
+INPUT = "foo"
+GOLD = true
+JFTL = TODO
+COMMENT=BLOCKED: needs `re.search`/`re.match` (or Python's `in`/`==` for this literal-substring-only case, which actually WOULD work here without import -- "$pyrun= 'foo' in _" -- but that's cheating the regex engine, not testing test() as a regex facility, so not claiming it as a real port).
+
+[RX-002-match]
+LEVEL=logic
+OUT_FMT=STREAM
+JQ = match("(abc)+"; "g")
+INPUT = "abc abc"
+GOLD = [{"offset": 0, "length": 3, "string": "abc", "captures": [{"offset": 0, "length": 3, "string": "abc", "name": null}]}, {"offset": 4, "length": 3, "string": "abc", "captures": [{"offset": 4, "length": 3, "string": "abc", "name": null}]}]
+JFTL = TODO
+COMMENT=BLOCKED: needs `re.finditer` plus reconstructing jq's match-object shape (offset/length/string/captures) from Python match objects -- needs import.
+
+[RX-003-capture]
+LEVEL=logic
+JQ = capture("(?<a>[a-z]+)-(?<n>[0-9]+)")
+INPUT = "xyzzy-14"
+GOLD = { "a": "xyzzy", "n": "14" }
+JFTL = TODO
+COMMENT=BLOCKED: needs named-group regex support -- import.
+
+[RX-004-scan]
+LEVEL=logic
+OUT_FMT=STREAM
+JQ = scan("c")
+INPUT = "abcdefabc"
+GOLD = ["c", "c"]
+JFTL = TODO
+COMMENT=BLOCKED: import.
+
+[RX-005-split-regex]
+LEVEL=logic
+JQ = split(", *"; null)
+INPUT = "ab,cd, ef"
+GOLD = ["ab","cd","ef"]
+JFTL = TODO
+COMMENT=BLOCKED: import (this is the 2-arg regex-split form, distinct from BE-024's plain-string split which already works via PYRUN).
+
+[RX-006-splits]
+LEVEL=logic
+OUT_FMT=STREAM
+JQ = splits(", *")
+INPUT = "ab,cd,   ef, gh"
+GOLD = ["ab","cd","ef","gh"]
+JFTL = TODO
+COMMENT=BLOCKED: import.
+
+[RX-007-sub]
+LEVEL=logic
+JQ = sub("[^a-z]*(?<x>[a-z]+)"; "Z\(.x)"; "g")
+INPUT = "123abc456def"
+GOLD = "ZabcZdef"
+JFTL = TODO
+COMMENT=BLOCKED: import, plus this one also needs string-interpolation-with-named-captures (\(.x) referencing the capture group), compounding BG-006's open interpolation question.
+
+[RX-008-gsub]
+LEVEL=logic
+JQ = gsub("(?<x>.)[^a]*"; "+\(.x)-")
+INPUT = "Abcabc"
+GOLD = "+A-+a-"
+JFTL = TODO
+COMMENT=BLOCKED: same combo as RX-007.
+
+[RX-009-remaining-family]
+LEVEL=logic
+JQ = N/A (compressed)
+INPUT = N/A
+GOLD = N/A
+JFTL = N/A
+COMMENT=COMPRESSED: manual.yml's other 9 regex examples (test w/ flags, 4 more match variants including named-group non-match and a length-count case, splits w/ flags, a second sub, a second gsub with multi-value replacement) all reduce to the same single blocker as RX-001 through RX-008 -- re-module import access. Not writing 9 more identical-reasoning rows.

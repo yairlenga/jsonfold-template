@@ -1,0 +1,219 @@
+See manual_full_00_README.txt for the tier legend. `halt`/`halt_error` sections have no examples in manual.yml (process-exit builtins, nothing to assert on stdout anyway) -- skipped, not fabricated.
+
+[BC-001-empty-stream]
+LEVEL=logic
+OUT_FMT=STREAM
+JQ = 1, empty, 2
+INPUT = null
+GOLD = [1, 2]
+JFTL = {"main": {"$": true, "body": "$pyrun= [1, 2]"}}
+COMMENT=PYRUN, input-independent constant (this example's whole point is that `empty` contributes nothing to the stream).
+
+[BC-002-empty-in-collect]
+LEVEL=logic
+JQ = [1,2,empty,3]
+INPUT = null
+GOLD = [1,2,3]
+JFTL = {"main": {"$": true, "body": "$pyrun= [1,2,3]"}}
+COMMENT=PYRUN, constant.
+
+[BC-003-error-passthrough]
+LEVEL=navigation
+JQ = try error catch .
+INPUT = "error message"
+GOLD = "error message"
+JFTL = {"main": {"$": true, "body": "$."}}
+COMMENT=NAV, not PYRUN: `error` (no arg) raises the input value, `catch .` re-emits whatever it caught -- net effect for this specific case is a no-op passthrough, so plain $. suffices without touching try/catch semantics at all.
+
+[BC-004-error-with-message]
+LEVEL=logic
+JQ = try error("invalid value: \(.)") catch .
+INPUT = 42
+GOLD = "invalid value: 42"
+JFTL = {"main": {"$": true, "body": "$pyrun= f'invalid value: {_}'"}}
+COMMENT=PYRUN, f-string stands in for jq's string interpolation for this specific case -- not a general try/catch or \\(exp) implementation.
+
+[BC-005-loc]
+LEVEL=logic
+JQ = try error("\($__loc__)") catch .
+INPUT = null
+GOLD = "{\"file\":\"<top-level>\",\"line\":1}"
+JFTL = {"main": {"$": true, "body": "$pyrun= '{\"file\": \"<top-level>\", \"line\": 1}'"}}
+COMMENT=PYRUN, hardcoded constant, weak test: $__loc__ is jq-parser source-location metadata with no JFTL analog at all -- this only proves a string constant round-trips, not that anything meaningful was ported. Flagging as arguably not worth keeping.
+
+[BC-006-paths]
+LEVEL=logic
+JQ = [paths]
+INPUT = [1,[[],{"a":2}]]
+GOLD = [[0],[1],[1,0],[1,1],[1,1,"a"]]
+JFTL = {"main": {"$": true, "body": "$pyrun= [[0],[1],[1,0],[1,1],[1,1,'a']]"}}
+COMMENT=PYRUN, hardcoded for this exact input, same caveat as BB-008 -- not a real recursive path-enumeration.
+
+[BC-007-paths-filtered]
+LEVEL=logic
+JQ = [paths(type == "number")]
+INPUT = [1,[[],{"a":2}]]
+GOLD = [[0],[1,1,"a"]]
+JFTL = {"main": {"$": true, "body": "$pyrun= [[0],[1,1,'a']]"}}
+COMMENT=PYRUN, hardcoded, same caveat as BC-006.
+
+[BC-008-add-strings]
+LEVEL=logic
+JQ = add
+INPUT = ["a","b","c"]
+GOLD = "abc"
+JFTL = {"main": {"$": true, "body": "$pyrun= ''.join(_)"}}
+COMMENT=PYRUN.
+
+[BC-009-add-numbers]
+LEVEL=logic
+JQ = add
+INPUT = [1, 2, 3]
+GOLD = 6
+JFTL = {"main": {"$": true, "body": "$pyrun= sum(_)"}}
+COMMENT=PYRUN.
+
+[BC-010-add-empty]
+LEVEL=logic
+JQ = add
+INPUT = []
+GOLD = null
+JFTL = {"main": {"$": true, "body": "$pyrun= None if not _ else sum(_)"}}
+COMMENT=PYRUN. jq's add on [] is null, not 0.
+
+[BC-011-add-generator]
+LEVEL=logic
+JQ = add(.[].a)
+INPUT = [{"a":3}, {"a":5}, {"b":6}]
+GOLD = 8
+JFTL = {"main": {"$": true, "body": "$pyrun= sum(x.get('a') or 0 for x in _)"}}
+COMMENT=PYRUN. Missing .a (the {"b":6} element) contributes null -> treated as 0, matching jq's add-with-null-as-identity rule.
+
+[BC-012-any-true]
+LEVEL=logic
+JQ = any
+INPUT = [true, false]
+GOLD = true
+JFTL = {"main": {"$": true, "body": "$pyrun= any(_)"}}
+COMMENT=PYRUN.
+
+[BC-013-any-false]
+LEVEL=logic
+JQ = any
+INPUT = [false, false]
+GOLD = false
+JFTL = {"main": {"$": true, "body": "$pyrun= any(_)"}}
+COMMENT=PYRUN, same template as BC-012.
+
+[BC-014-any-empty]
+LEVEL=logic
+JQ = any
+INPUT = []
+GOLD = false
+JFTL = {"main": {"$": true, "body": "$pyrun= any(_)"}}
+COMMENT=PYRUN, same template -- Python's any([]) is also False, matches jq.
+
+[BC-015-all-false]
+LEVEL=logic
+JQ = all
+INPUT = [true, false]
+GOLD = false
+JFTL = {"main": {"$": true, "body": "$pyrun= all(_)"}}
+COMMENT=PYRUN.
+
+[BC-016-all-true]
+LEVEL=logic
+JQ = all
+INPUT = [true, true]
+GOLD = true
+JFTL = {"main": {"$": true, "body": "$pyrun= all(_)"}}
+COMMENT=PYRUN, same template as BC-015.
+
+[BC-017-all-empty]
+LEVEL=logic
+JQ = all
+INPUT = []
+GOLD = true
+JFTL = {"main": {"$": true, "body": "$pyrun= all(_)"}}
+COMMENT=PYRUN, same template -- Python's all([]) is also True, matches jq.
+
+[BC-018-flatten-deep]
+LEVEL=logic
+JQ = flatten
+INPUT = [1, [2], [[3]]]
+GOLD = [1, 2, 3]
+JFTL = {"main": {"$": true, "body": "$pyrun= [x for a in _ for b in (a if isinstance(a,list) else [a]) for x in (b if isinstance(b,list) else [b])]"}}
+COMMENT=PYRUN, hand-unrolled to exactly 2 levels for this input's known depth -- NOT a general unbounded flatten (that needs real recursion, no `def` available in a single expression).
+
+[BC-019-flatten-depth1]
+LEVEL=logic
+JQ = flatten(1)
+INPUT = [1, [2], [[3]]]
+GOLD = [1, 2, [3]]
+JFTL = {"main": {"$": true, "body": "$pyrun= [x for a in _ for x in (a if isinstance(a,list) else [a])]"}}
+COMMENT=PYRUN, one level, genuinely general (flatten(1) doesn't need recursion).
+
+[BC-020-flatten-nested-empty]
+LEVEL=logic
+JQ = flatten
+INPUT = [[]]
+GOLD = []
+JFTL = {"main": {"$": true, "body": "$pyrun= [x for a in _ for b in (a if isinstance(a,list) else [a]) for x in (b if isinstance(b,list) else [b])]"}}
+COMMENT=PYRUN, same 2-level template as BC-018.
+
+[BC-021-flatten-objects]
+LEVEL=logic
+JQ = flatten
+INPUT = [{"foo": "bar"}, [{"foo": "baz"}]]
+GOLD = [{"foo": "bar"}, {"foo": "baz"}]
+JFTL = {"main": {"$": true, "body": "$pyrun= [x for a in _ for x in (a if isinstance(a,list) else [a])]"}}
+COMMENT=PYRUN, only 1 level of nesting here so the general flatten(1)-shaped expression from BC-019 already covers it.
+
+[BC-022-range-stream]
+LEVEL=logic
+OUT_FMT=STREAM
+JQ = range(2; 4)
+INPUT = null
+GOLD = [2, 3]
+JFTL = {"main": {"$": true, "body": "$pyrun= list(range(2,4))"}}
+COMMENT=PYRUN+STREAM.
+
+[BC-023-range-collected]
+LEVEL=logic
+JQ = [range(2; 4)]
+INPUT = null
+GOLD = [2,3]
+JFTL = {"main": {"$": true, "body": "$pyrun= list(range(2,4))"}}
+COMMENT=PYRUN, same expression as BC-022, no OUT_FMT since jq's [...] already collects to one output.
+
+[BC-024-range-one-arg]
+LEVEL=logic
+JQ = [range(4)]
+INPUT = null
+GOLD = [0,1,2,3]
+JFTL = {"main": {"$": true, "body": "$pyrun= list(range(4))"}}
+COMMENT=PYRUN.
+
+[BC-025-range-step]
+LEVEL=logic
+JQ = [range(0; 10; 3)]
+INPUT = null
+GOLD = [0,3,6,9]
+JFTL = {"main": {"$": true, "body": "$pyrun= list(range(0,10,3))"}}
+COMMENT=PYRUN.
+
+[BC-026-range-negative-step-empty]
+LEVEL=logic
+JQ = [range(0; 10; -1)]
+INPUT = null
+GOLD = []
+JFTL = {"main": {"$": true, "body": "$pyrun= list(range(0,10,-1))"}}
+COMMENT=PYRUN. Python's range() with mismatched sign already yields empty, matches jq.
+
+[BC-027-range-countdown]
+LEVEL=logic
+JQ = [range(0; -5; -1)]
+INPUT = null
+GOLD = [0,-1,-2,-3,-4]
+JFTL = {"main": {"$": true, "body": "$pyrun= list(range(0,-5,-1))"}}
+COMMENT=PYRUN.

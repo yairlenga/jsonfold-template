@@ -1,0 +1,212 @@
+See manual_full_00_README.txt for the tier legend and the compression policy (applied a few times below for near-duplicate examples).
+
+[BE-001-reverse]
+LEVEL=logic
+JQ = reverse
+INPUT = [1,2,3,4]
+GOLD = [4,3,2,1]
+JFTL = {"main": {"$": true, "body": "$pyrun= _[::-1]"}}
+COMMENT=PYRUN.
+
+[BE-002-contains-string]
+LEVEL=logic
+JQ = contains("bar")
+INPUT = "foobar"
+GOLD = true
+JFTL = {"main": {"$": true, "body": "$pyrun= 'bar' in _"}}
+COMMENT=PYRUN.
+
+[BE-003-contains-array-true]
+LEVEL=logic
+JQ = contains(["baz", "bar"])
+INPUT = ["foobar", "foobaz", "blarp"]
+GOLD = true
+JFTL = {"main": {"$": true, "body": "$pyrun= all(any(e in x for x in _) for e in ['baz','bar'])"}}
+COMMENT=PYRUN. jq's array-contains: every element of the argument array must be a substring of *some* element of the input array.
+
+[BE-004-contains-array-false]
+LEVEL=logic
+JQ = contains(["bazzzzz", "bar"])
+INPUT = ["foobar", "foobaz", "blarp"]
+GOLD = false
+JFTL = {"main": {"$": true, "body": "$pyrun= all(any(e in x for x in _) for e in ['bazzzzz','bar'])"}}
+COMMENT=PYRUN, same template as BE-003.
+
+[BE-005-contains-object-family]
+LEVEL=logic
+JQ = N/A (compressed)
+INPUT = N/A
+GOLD = N/A
+JFTL = TODO
+COMMENT=COMPRESSED+BLOCKED: manual.yml's remaining 2 contains() examples test *object* containment (recursive key-by-key comparison, e.g. `contains({foo: 12, bar: [{barp: 12}]})`). That's genuinely recursive over arbitrary depth/shape, same limitation as flatten/recursive-descent -- not hand-unrolling this one since the whole point is it should generalize.
+
+[BE-006-indices-string]
+LEVEL=logic
+JQ = indices(", ")
+INPUT = "a,b, cd, efg, hijk"
+GOLD = [3,7,12]
+JFTL = {"main": {"$": true, "body": "$pyrun= [i for i in range(len(_)-1) if _[i:i+2]==', ']"}}
+COMMENT=PYRUN, hardcodes the separator length (2) from this example's literal argument.
+
+[BE-007-indices-number]
+LEVEL=logic
+JQ = indices(1)
+INPUT = [0,1,2,1,3,1,4]
+GOLD = [1,3,5]
+JFTL = {"main": {"$": true, "body": "$pyrun= [i for i,v in enumerate(_) if v==1]"}}
+COMMENT=PYRUN.
+
+[BE-008-indices-subarray]
+LEVEL=logic
+JQ = indices([1,2])
+INPUT = [0,1,2,3,1,4,2,5,1,2,6,7]
+GOLD = [1,8]
+JFTL = {"main": {"$": true, "body": "$pyrun= [i for i in range(len(_)-1) if _[i:i+2]==[1,2]]"}}
+COMMENT=PYRUN.
+
+[BE-009-index-string]
+LEVEL=logic
+JQ = index(", ")
+INPUT = "a,b, cd, efg, hijk"
+GOLD = 3
+JFTL = {"main": {"$": true, "body": "$pyrun= _.find(', ')"}}
+COMMENT=PYRUN. str.find returns -1 on no-match vs jq's null -- untested since this example always matches.
+
+[BE-010-rindex-string]
+LEVEL=logic
+JQ = rindex(", ")
+INPUT = "a,b, cd, efg, hijk"
+GOLD = 12
+JFTL = {"main": {"$": true, "body": "$pyrun= _.rfind(', ')"}}
+COMMENT=PYRUN.
+
+[BE-011-index-rindex-family]
+LEVEL=logic
+JQ = N/A (compressed)
+INPUT = N/A
+GOLD = N/A
+JFTL = N/A
+COMMENT=COMPRESSED: manual.yml's remaining 4 index/rindex examples (number and subarray variants) follow BE-007/BE-008's find-position pattern with .index()/reversed lookup swapped in -- same PYRUN shape, not worth 4 near-identical blocks.
+
+[BE-012-inside]
+LEVEL=logic
+JQ = inside("foobar")
+INPUT = "bar"
+GOLD = true
+JFTL = {"main": {"$": true, "body": "$pyrun= _ in 'foobar'"}}
+COMMENT=PYRUN. inside(b) is contains() with operands swapped.
+
+[BE-013-inside-family]
+LEVEL=logic
+JQ = N/A (compressed)
+INPUT = N/A
+GOLD = N/A
+JFTL = N/A
+COMMENT=COMPRESSED: manual.yml's remaining 4 inside() examples are BE-003/BE-004/BE-005's array/object cases with operands swapped -- same PYRUN shape (array case) or same BLOCKED reasoning (object case) as those.
+
+[BE-014-startswith]
+LEVEL=logic
+JQ = [.[]|startswith("foo")]
+INPUT = ["fo", "foo", "barfoo", "foobar", "barfoob"]
+GOLD = [false, true, false, true, false]
+JFTL = {"main": {"$": true, "body": "$pyrun= [x.startswith('foo') for x in _]"}}
+COMMENT=PYRUN.
+
+[BE-015-endswith]
+LEVEL=logic
+JQ = [.[]|endswith("foo")]
+INPUT = ["foobar", "barfoo"]
+GOLD = [false, true]
+JFTL = {"main": {"$": true, "body": "$pyrun= [x.endswith('foo') for x in _]"}}
+COMMENT=PYRUN.
+
+[BE-016-combinations]
+LEVEL=logic
+OUT_FMT=STREAM
+JQ = combinations
+INPUT = [[1,2], [3, 4]]
+GOLD = [[1, 3], [1, 4], [2, 3], [2, 4]]
+JFTL = {"main": {"$": true, "body": "$pyrun= [[a,b] for a in _[0] for b in _[1]]"}}
+COMMENT=PYRUN+STREAM, hand-unrolled for exactly 2 sublists (itertools.product would be the general answer but needs an import).
+
+[BE-017-combinations-n]
+LEVEL=logic
+OUT_FMT=STREAM
+JQ = combinations(2)
+INPUT = [0, 1]
+GOLD = [[0, 0], [0, 1], [1, 0], [1, 1]]
+JFTL = {"main": {"$": true, "body": "$pyrun= [[a,b] for a in _ for b in _]"}}
+COMMENT=PYRUN+STREAM, hand-unrolled for n=2.
+
+[BE-018-ltrimstr]
+LEVEL=logic
+JQ = [.[]|ltrimstr("foo")]
+INPUT = ["fo", "foo", "barfoo", "foobar", "afoo"]
+GOLD = ["fo","","barfoo","bar","afoo"]
+JFTL = {"main": {"$": true, "body": "$pyrun= [x.removeprefix('foo') for x in _]"}}
+COMMENT=PYRUN. Assumes Python 3.9+ (str.removeprefix) is available in the sandbox -- unconfirmed but a safe bet for a modern engine.
+
+[BE-019-rtrimstr]
+LEVEL=logic
+JQ = [.[]|rtrimstr("foo")]
+INPUT = ["fo", "foo", "barfoo", "foobar", "foob"]
+GOLD = ["fo","","bar","foobar","foob"]
+JFTL = {"main": {"$": true, "body": "$pyrun= [x.removesuffix('foo') for x in _]"}}
+COMMENT=PYRUN, same Python-version assumption as BE-018.
+
+[BE-020-trimstr]
+LEVEL=logic
+JQ = [.[]|trimstr("foo")]
+INPUT = ["fo", "foo", "barfoo", "foobarfoo", "foob"]
+GOLD = ["fo","","bar","bar","b"]
+JFTL = {"main": {"$": true, "body": "$pyrun= [x.removeprefix('foo').removesuffix('foo') for x in _]"}}
+COMMENT=PYRUN, same Python-version assumption.
+
+[BE-021-trim-family]
+LEVEL=logic
+OUT_FMT=STREAM
+JQ = trim, ltrim, rtrim
+INPUT = " abc "
+GOLD = ["abc", "abc ", " abc"]
+JFTL = {"main": {"$": true, "body": "$pyrun= [_.strip(), _.lstrip(), _.rstrip()]"}}
+COMMENT=PYRUN+STREAM. Python's whitespace-strip set is close to but not verified identical to jq's documented Unicode-whitespace-property set.
+
+[BE-022-explode]
+LEVEL=logic
+JQ = explode
+INPUT = "foobar"
+GOLD = [102,111,111,98,97,114]
+JFTL = {"main": {"$": true, "body": "$pyrun= [ord(c) for c in _]"}}
+COMMENT=PYRUN.
+
+[BE-023-implode]
+LEVEL=logic
+JQ = implode
+INPUT = [65, 66, 67]
+GOLD = "ABC"
+JFTL = {"main": {"$": true, "body": "$pyrun= ''.join(chr(c) for c in _)"}}
+COMMENT=PYRUN.
+
+[BE-024-split-str]
+LEVEL=logic
+JQ = split(", ")
+INPUT = "a, b,c,d, e, "
+GOLD = ["a","b,c,d","e",""]
+JFTL = {"main": {"$": true, "body": "$pyrun= _.split(', ')"}}
+COMMENT=PYRUN.
+
+[BE-025-join]
+LEVEL=logic
+JQ = join(", ")
+INPUT = ["a","b,c,d","e"]
+GOLD = "a, b,c,d, e"
+JFTL = {"main": {"$": true, "body": "$pyrun= ', '.join(_)"}}
+COMMENT=PYRUN.
+
+[BE-026-join-mixed-types]
+LEVEL=logic
+JQ = join(" ")
+INPUT = ["a",1,2.3,true,null,false]
+GOLD = "a 1 2.3 true  false"
+JFTL = {"main": {"$": true, "body": "$pyrun= ' '.join('' if x is None else ('true' if x is True else 'false' if x is False else str(x)) for x in _)"}}
+COMMENT=PYRUN. jq's join stringifies numbers/booleans and treats null as empty string -- hand-mapped since Python's str(True)/str(None) don't match jq's lowercase-true/empty-string conventions.

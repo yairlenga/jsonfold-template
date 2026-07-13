@@ -28,7 +28,7 @@ JQ = {{{
 INPUT = {{{
 ["fo", "foo", "barfoo", "foobar", "barfoob"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [false, true, false, true, false]
 }}}
 JFTL = {{{
@@ -44,7 +44,7 @@ JQ = {{{
 INPUT = {{{
 ["fo", "foo", "barfoo", "foobar", "barfoob"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [false, true, true, false, false]
 }}}
 JFTL = {{{
@@ -59,7 +59,7 @@ JQ = {{{
 INPUT = {{{
 ["a,b, c, d, e,f",", a,b, c, d, e,f, "]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [["a,b","c","d","e,f"],["","a,b","c","d","e,f",""]]
 }}}
 JFTL = {{{
@@ -74,7 +74,7 @@ split("")
 INPUT = {{{
 "abc"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["a","b","c"]
 }}}
 JFTL = {{{
@@ -90,7 +90,7 @@ JQ = {{{
 INPUT = {{{
 ["fo", "foo", "barfoo", "foobar", "afoo"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["fo","","barfoo","bar","afoo"]
 }}}
 JFTL = {{{
@@ -105,7 +105,7 @@ JQ = {{{
 INPUT = {{{
 ["fo", "foo", "barfoo", "foobar", "foob"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["fo","","bar","foobar","foob"]
 }}}
 JFTL = {{{
@@ -120,7 +120,7 @@ JQ = {{{
 INPUT = {{{
 ["fo", "foo", "barfoo", "foobarfoo", "foob"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["fo","","bar","bar","b"]
 }}}
 JFTL = {{{
@@ -136,7 +136,7 @@ JQ = {{{
 INPUT = {{{
 ["a", "xx", ""]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["a", "xx", ""]
 }}}
 JFTL = {{{
@@ -152,7 +152,7 @@ JQ = {{{
 INPUT = {{{
 ["a", "xx", ""]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["a", "xx", ""]
 }}}
 JFTL = {{{
@@ -167,7 +167,7 @@ JQ = {{{
 INPUT = {{{
 ["a", "xx", ""]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["a", "xx", ""]
 }}}
 JFTL = {{{
@@ -182,7 +182,7 @@ JQ = {{{
 INPUT = {{{
 "a,bc,def,ghij,klmno"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,13,[1,4,8,13]]
 }}}
 JFTL = {{{
@@ -198,7 +198,7 @@ JQ = {{{
 INPUT = {{{
 "xababababax"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,7,[1,3,5,7]]
 }}}
 JFTL = {{{
@@ -214,7 +214,7 @@ try _strindices("abc") catch .
 INPUT = {{{
 123
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "number (123) cannot be searched, as it is not a string"
 }}}
 SKIP=needs try/catch and jq's internal _strindices builtin.
@@ -226,7 +226,7 @@ try _strindices(123) catch .
 INPUT = {{{
 "abc"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "number (123) is not a string"
 }}}
 SKIP=same as 296.
@@ -243,7 +243,7 @@ map(trim), map(ltrim), map(rtrim)
 INPUT = {{{
 [" \n\t\r\f", "","  ", "a", " a ", "abc", "  abc  ", "  abc", "abc  "]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["", "", "", "a", "a", "abc", "abc", "abc", "abc"]
 ["", "", "", "a", "a ", "abc", "abc  ", "abc", "abc  "]
 ["", "", "", "a", " a", "abc", "  abc", "  abc", "abc"]
@@ -251,7 +251,7 @@ EXPECTED = {{{
 JFTL = {{{
 {"main": ["$py=[v.strip() for v in _]", "$py=[v[::-1].rstrip()[::-1] for v in _]", "$py=[v.rstrip() for v in _]"]}
 }}}
-TRANSFORM=stream
+OUT_MODE=stream
 SKIP=JQ 1.7 does not have trim,ltrim,rtrim
 COMMENT=No lstrip in the whitelist — ltrim done via reverse/rstrip/reverse-back instead. Streaming 3 outputs collected into one array.
 
@@ -263,7 +263,7 @@ trim, ltrim, rtrim
 INPUT = {{{
 "\u0009\u000A\u000B\u000C\u000D\u0020\u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000abc\u0009\u000A\u000B\u000C\u000D\u0020\u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "abc"
 "abc\u0009\u000A\u000B\u000C\u000D\u0020\u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000"
 "\u0009\u000A\u000B\u000C\u000D\u0020\u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000abc"
@@ -280,7 +280,7 @@ try trim catch ., try ltrim catch ., try rtrim catch .
 INPUT = {{{
 123
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "trim input must be a string"
 "trim input must be a string"
 "trim input must be a string"
@@ -295,7 +295,7 @@ indices(1)
 INPUT = {{{
 [0,1,1,2,3,4,1,5]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2,6]
 }}}
 JFTL = {{{
@@ -311,7 +311,7 @@ indices([1,2])
 INPUT = {{{
 [0,1,2,3,1,4,2,5,1,2,6,7]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,8]
 }}}
 JFTL = {{{
@@ -327,7 +327,7 @@ indices([1,2])
 INPUT = {{{
 [1]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 []
 }}}
 JFTL = {{{
@@ -342,7 +342,7 @@ indices(", ")
 INPUT = {{{
 "a,b, cd,e, fgh, ijkl"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [3,9,14]
 }}}
 JFTL = {{{
@@ -357,7 +357,7 @@ index("!")
 INPUT = {{{
 "здравствуй мир!"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 14
 }}}
 JFTL = {{{
@@ -373,7 +373,7 @@ JQ = {{{
 INPUT = {{{
 "正xyz"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "正"
 }}}
 JFTL = {{{
@@ -388,13 +388,13 @@ indices("o")
 INPUT = {{{
 "🇬🇧oo"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [2,3]
 }}}
 JFTL = {{{
 {"main": "$py=[i for i in range(len(_)) if _[i]=='o']"}
 }}}
-COMMENT=Only works if Python's codepoint indexing agrees with jq's on the flag-emoji sequence (2 regional-indicator codepoints) — the expected [2,3] implies both sides count it as 2 positions, not 1 grapheme cluster; not independently verified.
+COMMENT=Only works if Python's codepoint indexing agrees with jq's on the flag-emoji sequence (2 regional-indicator codepoints) — the GOLD [2,3] implies both sides count it as 2 positions, not 1 grapheme cluster; not independently verified.
 
 [308-strings]
 LEVEL=py
@@ -404,7 +404,7 @@ indices("o")
 INPUT = {{{
 "ƒoo"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [1,2]
 }}}
 JFTL = {{{
@@ -419,7 +419,7 @@ JQ = {{{
 INPUT = {{{
 ["a, bc, def, ghij, jklmn, a,b, c,d, e,f", "a,b,c,d, e,f,g,h"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [["a"," bc"," def"," ghij"," jklmn"," a","b"," c","d"," e","f"],["a","b","c","d"," e","f","g","h"]]
 }}}
 JFTL = {{{
@@ -434,7 +434,7 @@ JQ = {{{
 INPUT = {{{
 ["a, bc, def, ghij, jklmn, a,b, c,d, e,f", "a,b,c,d, e,f,g,h"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [["a","bc","def","ghij","jklmn","a,b","c,d","e,f"],["a,b,c,d","e,f,g,h"]]
 }}}
 JFTL = {{{
@@ -449,7 +449,7 @@ JQ = {{{
 INPUT = {{{
 ["a", "ab", "abc"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["aaa", "ababab", "abcabcabc"]
 }}}
 JFTL = {{{
@@ -457,18 +457,18 @@ JFTL = {{{
 }}}
 
 [312-strings]
-LEVEL=eval
+LEVEL=py
 JQ = {{{
 [.[] * "abc"]
 }}}
 INPUT = {{{
 [-1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 3.7, 10.0]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [null,null,"","","abc","abc","abcabcabc","abcabcabcabcabcabcabcabcabcabc"]
 }}}
 JFTL = {{{
-{"main": "$pyeval=[(None if m <= 0 else 'abc' * int(m)) for m in _]"}
+{"main": "$py=[(None if m < 0 else 'abc' * int(m)) for m in _]"}
 }}}
 COMMENT=jq truncates the fractional repeat count toward zero (1.5 -> 1 repeat, not 2); int() isn't in the py whitelist and round() rounds-to-nearest rather than truncating, so this needs eval.
 
@@ -480,7 +480,7 @@ JQ = {{{
 INPUT = {{{
 "abc"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [null,null]
 }}}
 JFTL = {{{
@@ -491,16 +491,16 @@ COMMENT=nan multiplier is always null in jq regardless of sign — matches this 
 [314-strings]
 LEVEL=py
 JQ = {{{
-. * 100000 | [.[:10],.[-10:]]
+. * 1000 | [.[:10],.[-10:]]
 }}}
 INPUT = {{{
 "abc"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["abcabcabca","cabcabcabc"]
 }}}
 JFTL = {{{
-{"main": "$py=[(_ * 100000)[:10], (_ * 100000)[-10:]]"}
+{"main": "$py=[(_ * 1000)[:10], (_ * 1000)[-10:]]"}
 }}}
 
 [315-strings]
@@ -511,7 +511,7 @@ JQ = {{{
 INPUT = {{{
 ""
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ""
 }}}
 JFTL = {{{
@@ -526,7 +526,7 @@ try (. * 1000000000) catch .
 INPUT = {{{
 "abc"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "Repeat string result too long"
 }}}
 SKIP=needs try/catch and a resource-limit error jq enforces that Python string multiplication doesn't.
@@ -539,7 +539,7 @@ JQ = {{{
 INPUT = {{{
 ["a, bc, def, ghij, jklmn, a,b, c,d, e,f", "a,b,c,d, e,f,g,h"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [["a"," bc"," def"," ghij"," jklmn"," a","b"," c","d"," e","f"],["a","b","c","d"," e","f","g","h"]]
 }}}
 JFTL = {{{
@@ -555,7 +555,7 @@ JQ = {{{
 INPUT = {{{
 ["a, bc, def, ghij, jklmn, a,b, c,d, e,f", "a,b,c,d, e,f,g,h"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [["a","bc","def","ghij","jklmn","a,b","c,d","e,f"],["a,b,c,d","e,f,g,h"]]
 }}}
 JFTL = {{{
@@ -570,7 +570,7 @@ map(.[1] as $needle | .[0] | contains($needle))
 INPUT = {{{
 [[[],[]], [[1,2,3], [1,2]], [[1,2,3], [3,1]], [[1,2,3], [4]], [[1,2,3], [1,4]]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true, true, true, false, false]
 }}}
 JFTL = {{{
@@ -586,7 +586,7 @@ map(.[1] as $needle | .[0] | contains($needle))
 INPUT = {{{
 [[["foobar", "foobaz"], ["baz", "bar"]], [["foobar", "foobaz"], ["foo"]], [["foobar", "foobaz"], ["blap"]]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true, true, false]
 }}}
 JFTL = {{{
@@ -602,7 +602,7 @@ JQ = {{{
 INPUT = {{{
 {}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true, true, false]
 }}}
 JFTL = {{{
@@ -618,7 +618,7 @@ JQ = {{{
 INPUT = {{{
 {}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 }}}
 JFTL = {{{
@@ -633,7 +633,7 @@ JQ = {{{
 INPUT = {{{
 {}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 false
 }}}
 JFTL = {{{

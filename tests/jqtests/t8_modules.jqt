@@ -26,7 +26,7 @@ import "a" as foo; import "b" as bar; def fooa: foo::a; [fooa, bar::a, bar::b, f
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["a","b","c","a"]
 }}}
 SKIP=module system (import/include, namespaced calls) has no JFTL equivalent.
@@ -38,7 +38,7 @@ import "c" as foo; [foo::a, foo::c]
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0,"acmehbah"]
 }}}
 SKIP=module system has no JFTL equivalent.
@@ -50,7 +50,7 @@ include "c"; [a, c]
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [0,"acmehbah"]
 }}}
 SKIP=module system has no JFTL equivalent.
@@ -62,7 +62,7 @@ import "data" as $e; import "data" as $d; [$d[].this,$e[].that,$d::d[].this,$e::
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "is a test;is too;is a test;is too"
 }}}
 SKIP=module system (data imports, namespaced variables) has no JFTL equivalent.
@@ -75,7 +75,7 @@ import "data" as $a; import "data" as $b; def f: {$a, $b}; f
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"a":[{"this":"is a test","that":"is too"}],"b":[{"this":"is a test","that":"is too"}]}
 }}}
 SKIP=module system has no JFTL equivalent.
@@ -87,7 +87,7 @@ include "shadow1"; e
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 2
 }}}
 SKIP=module system has no JFTL equivalent.
@@ -99,7 +99,7 @@ include "shadow1"; include "shadow2"; e
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 3
 }}}
 SKIP=module system has no JFTL equivalent.
@@ -111,7 +111,7 @@ import "shadow1" as f; import "shadow2" as f; import "shadow1" as e; [e::e, f::e
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [2,3]
 }}}
 SKIP=module system has no JFTL equivalent.
@@ -120,7 +120,7 @@ SKIP=module system has no JFTL equivalent.
 JQ = {{{
 module (.+1); 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 jq: error: Module metadata must be constant at <top-level>, line 1, column 8:
     module (.+1); 0
            ^^^^^
@@ -131,7 +131,7 @@ SKIP=%%FAIL parse-error case for jq's module-metadata syntax; JFTL has no module
 JQ = {{{
 module []; 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 jq: error: Module metadata must be an object at <top-level>, line 1, column 8:
     module []; 0
            ^^
@@ -142,7 +142,7 @@ SKIP=%%FAIL parse-error case; no module system.
 JQ = {{{
 include "a" (.+1); 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 jq: error: Module metadata must be constant at <top-level>, line 1, column 13:
     include "a" (.+1); 0
                 ^^^^^
@@ -153,7 +153,7 @@ SKIP=%%FAIL parse-error case; no module system.
 JQ = {{{
 include "a" []; 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 jq: error: Module metadata must be an object at <top-level>, line 1, column 13:
     include "a" []; 0
                 ^^
@@ -164,7 +164,7 @@ SKIP=%%FAIL parse-error case; no module system.
 JQ = {{{
 include "\ "; 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 jq: error: Invalid escape at line 1, column 4 (while parsing '"\ "') at <top-level>, line 1, column 10:
     include "\ "; 0
              ^^
@@ -175,7 +175,7 @@ SKIP=%%FAIL parse-error case; no module system.
 JQ = {{{
 include "\(a)"; 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 jq: error: Import path must be constant at <top-level>, line 1, column 9:
     include "\(a)"; 0
             ^^^^^^
@@ -189,7 +189,7 @@ modulemeta
 INPUT = {{{
 "c"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"whatever":null,"deps":[{"as":"foo","is_data":false,"relpath":"a"},{"search":"./","as":"d","is_data":false,"relpath":"d"},{"search":"./","as":"d2","is_data":false,"relpath":"d"},{"search":"./../lib/jq","as":"e","is_data":false,"relpath":"e"},{"search":"./../lib/jq","as":"f","is_data":false,"relpath":"f"},{"as":"d","is_data":true,"relpath":"data"}],"defs":["a/0","c/0"]}
 }}}
 SKIP=modulemeta introspects jq's module loader; no equivalent concept in JFTL.
@@ -201,7 +201,7 @@ modulemeta | .deps | length
 INPUT = {{{
 "c"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 6
 }}}
 SKIP=modulemeta has no JFTL equivalent.
@@ -213,7 +213,7 @@ modulemeta | .defs | length
 INPUT = {{{
 "c"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 2
 }}}
 SKIP=modulemeta has no JFTL equivalent.
@@ -222,8 +222,8 @@ SKIP=modulemeta has no JFTL equivalent.
 JQ = {{{
 import "syntaxerror" as e; .
 }}}
-EXPECTED = {{{
-jq: error: syntax error, unexpected ';', expecting end of file at tests/modules/syntaxerror/syntaxerror.jq, line 1, column 4:
+GOLD = {{{
+jq: error: syntax error, unGOLD ';', expecting end of file at tests/modules/syntaxerror/syntaxerror.jq, line 1, column 4:
     wat;
        ^
 }}}
@@ -233,8 +233,8 @@ SKIP=%%FAIL (IGNORE MSG) case; module system has no JFTL equivalent.
 JQ = {{{
 %::wat
 }}}
-EXPECTED = {{{
-jq: error: syntax error, unexpected '%', expecting end of file at <top-level>, line 1, column 1:
+GOLD = {{{
+jq: error: syntax error, unGOLD '%', expecting end of file at <top-level>, line 1, column 1:
     %::wat
     ^
 }}}
@@ -247,7 +247,7 @@ import "test_bind_order" as check; check::check
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 }}}
 SKIP=module system has no JFTL equivalent.
@@ -259,7 +259,7 @@ try -. catch .
 INPUT = {{{
 "very-long-long-long-long-string"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "string (\"very-long-long-long-long...\") cannot be negated"
 }}}
 SKIP=needs try/catch (unimplemented in the engine).
@@ -271,7 +271,7 @@ try (.-.) catch .
 INPUT = {{{
 "very-long-long-long-long-string"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "string (\"very-long-long-long-long...\") and string (\"very-long-long-long-long...\") cannot be subtracted"
 }}}
 SKIP=needs try/catch.
@@ -283,7 +283,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "string (\"☆☆☆☆☆☆☆☆\") cannot be negated"
 "string (\"xx☆☆☆☆☆☆☆☆\") cannot be negated"
 "string (\"xxxx☆☆☆☆☆☆...\") cannot be negated"
@@ -300,7 +300,7 @@ try (. + "x") catch . == if have_decnum then "number (12345678901234567890123456
 INPUT = {{{
 123456789012345678901234567890
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 }}}
 SKIP=needs try/catch and jq's have_decnum arbitrary-precision-number flag, neither available.
@@ -313,7 +313,7 @@ join(",")
 INPUT = {{{
 ["1",2,true,false,3.4]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "1,2,true,false,3.4"
 }}}
 JFTL = {{{
@@ -329,7 +329,7 @@ JQ = {{{
 INPUT = {{{
 [[], [null], [null,null], [null,null,null]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ""
 ""
 ","
@@ -348,14 +348,14 @@ JQ = {{{
 INPUT = {{{
 [["a",null], [null,"a"]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "a,"
 ",a"
 }}}
 JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$."}, "body": "$py=','.join('' if v == None else v for v in _)"}}
 }}}
-TRANSFORM=stream
+OUT_MODE=stream
 COMMENT=Same pattern as 401. Streaming  2 outputs collected into one array.
 
 [403-modules]
@@ -365,7 +365,7 @@ try join(",") catch .
 INPUT = {{{
 ["1","2",{"a":{"b":{"c":33}}}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "string (\"1,2,\") and object ({\"a\":{\"b\":{\"c\":33}}}) cannot be added"
 }}}
 SKIP=needs try/catch to surface join's type error on an object element.
@@ -377,7 +377,7 @@ try join(",") catch .
 INPUT = {{{
 ["1","2",[3,4,5]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "string (\"1,2,\") and array ([3,4,5]) cannot be added"
 }}}
 SKIP=needs try/catch.
@@ -390,7 +390,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"if":0,"and":1,"or":2,"then":3,"else":4,"elif":5,"end":6,"as":7,"def":8,"reduce":9,"foreach":10,"try":11,"catch":12,"label":13,"import":14,"include":15,"module":16}
 }}}
 JFTL = {{{
@@ -405,7 +405,7 @@ try (1/.) catch .
 INPUT = {{{
 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "number (1) and number (0) cannot be divided because the divisor is zero"
 }}}
 SKIP=needs try/catch.
@@ -417,7 +417,7 @@ try (1/0) catch .
 INPUT = {{{
 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "number (1) and number (0) cannot be divided because the divisor is zero"
 }}}
 SKIP=needs try/catch.
@@ -429,7 +429,7 @@ try (0/0) catch .
 INPUT = {{{
 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "number (0) and number (0) cannot be divided because the divisor is zero"
 }}}
 SKIP=needs try/catch.
@@ -441,7 +441,7 @@ try (1%.) catch .
 INPUT = {{{
 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "number (1) and number (0) cannot be divided (remainder) because the divisor is zero"
 }}}
 SKIP=needs try/catch.
@@ -453,7 +453,7 @@ try (1%0) catch .
 INPUT = {{{
 0
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "number (1) and number (0) cannot be divided (remainder) because the divisor is zero"
 }}}
 SKIP=needs try/catch.
@@ -467,7 +467,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 }}}
 JFTL = {{{
@@ -482,7 +482,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 }}}
 SKIP=this test asserts NO output at all (select filters every diff below threshold) — JFTL always renders exactly one JSON value, so "produces zero outputs" isn't representable; a genuine streaming/select-emptiness gap, not a missing builtin.
 
@@ -490,8 +490,8 @@ SKIP=this test asserts NO output at all (select filters every diff below thresho
 JQ = {{{
 {
 }}}
-EXPECTED = {{{
-jq: error: syntax error, unexpected end of file at <top-level>, line 1, column 1:
+GOLD = {{{
+jq: error: syntax error, unGOLD end of file at <top-level>, line 1, column 1:
     {
     ^
 }}}
@@ -501,8 +501,8 @@ SKIP=%%FAIL — bare parse-error case (unterminated object), nothing to convert.
 JQ = {{{
 }
 }}}
-EXPECTED = {{{
-jq: error: syntax error, unexpected INVALID_CHARACTER, expecting end of file at <top-level>, line 1, column 1:
+GOLD = {{{
+jq: error: syntax error, unGOLD INVALID_CHARACTER, expecting end of file at <top-level>, line 1, column 1:
     }
     ^
 }}}
@@ -515,7 +515,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 }}}
 SKIP=trailing "?" suppresses the "object key must be string" error into zero output — the recurring "?" error-suppression gap (JFTL has no notion of an item silently dropping out of the result).
 
@@ -527,7 +527,7 @@ INDEX(range(5)|[., "foo\(.)"]; .[0])
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"0":[0,"foo0"],"1":[1,"foo1"],"2":[2,"foo2"],"3":[3,"foo3"],"4":[4,"foo4"]}
 }}}
 JFTL = {{{
@@ -543,7 +543,7 @@ JOIN({"0":[0,"abc"],"1":[1,"bcd"],"2":[2,"def"],"3":[3,"efg"],"4":[4,"fgh"]}; .[
 INPUT = {{{
 [[5,"foo"],[3,"bar"],[1,"foobar"]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[[5,"foo"],null],[[3,"bar"],[3,"efg"]],[[1,"foobar"],[1,"bcd"]]]
 }}}
 JFTL = {{{
@@ -559,7 +559,7 @@ range(5;10)|IN(range(10))
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 true
 true
@@ -569,7 +569,7 @@ true
 JFTL = {{{
 {"main": "$pyeval=[x in range(10) for x in range(5,10)]"}
 }}}
-TRANSFORM=stream
+OUT_MODE=stream
 COMMENT=Streaming jq's 5 outputs collected into one array.
 
 [419-modules]
@@ -580,7 +580,7 @@ range(5;13)|IN(range(0;10;3))
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 false
 true
 false
@@ -593,7 +593,7 @@ false
 JFTL = {{{
 {"main": "$pyeval=[x in range(0,10,3) for x in range(5,13)]"}
 }}}
-TRANSFORM=stream
+OUT_MODE=stream
 COMMENT=Streaming jq's 8 outputs collected into one array.
 
 [420-modules]
@@ -604,14 +604,14 @@ range(10;12)|IN(range(10))
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 false
 false
 }}}
 JFTL = {{{
 {"main": "$pyeval=[x in range(10) for x in range(10,12)]"}
 }}}
-TRANSFORM=stream
+OUT_MODE=stream
 COMMENT=Streaming jq's 2 outputs collected into one array.
 
 [421-modules]
@@ -622,7 +622,7 @@ IN(range(10;20); range(10))
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 false
 }}}
 JFTL = {{{
@@ -638,7 +638,7 @@ IN(range(5;20); range(10))
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 }}}
 JFTL = {{{
@@ -655,7 +655,7 @@ JQ = {{{
 INPUT = {{{
 {"a":null,"b":null}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"a":null,"b":"b"}
 }}}
 JFTL = {{{
@@ -671,7 +671,7 @@ JQ = {{{
 INPUT = {{{
 {"a": {"b": [1, {"b": 3}]}}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"a": {"b": 1}}
 }}}
 SKIP=needs ".." recursive descent, which JFTL's navigation grammar doesn't support.
@@ -683,7 +683,7 @@ isempty(empty)
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 }}}
 SKIP=isempty operates on jq's generator/stream model ("empty" as a zero-output generator); JFTL has no generator concept to test emptiness of.
@@ -695,7 +695,7 @@ isempty(range(3))
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 false
 }}}
 SKIP=same generator-model mismatch as 425.
@@ -707,7 +707,7 @@ isempty(1,error("foo"))
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 false
 }}}
 SKIP=needs both the generator model and try/catch-style short-circuiting on error.
@@ -721,7 +721,7 @@ index("")
 INPUT = {{{
 ""
 }}}
-EXPECTED = {{{
+GOLD = {{{
 null
 }}}
 JFTL = {{{
@@ -737,7 +737,7 @@ builtins|length > 10
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 }}}
 SKIP=builtins introspects jq's own compiled builtin-function registry; JFTL has no equivalent registry to list.
@@ -749,7 +749,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 false
 }}}
 SKIP=depends on builtins; no equivalent.
@@ -761,7 +761,7 @@ all(builtins[] / "/"; .[1]|tonumber >= 0)
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 }}}
 SKIP=depends on builtins; no equivalent.
@@ -773,7 +773,7 @@ builtins|any(.[:1] == "_")
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 false
 }}}
 SKIP=depends on builtins; no equivalent.
@@ -787,7 +787,7 @@ map(. == 1)
 INPUT = {{{
 [1, 1.0, 1.000, 100e-2, 1e+0, 0.0001e4]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true, true, true, true, true, true]
 }}}
 JFTL = {{{
@@ -803,7 +803,7 @@ JQ = {{{
 INPUT = {{{
 [13911860366432393]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 true
 }}}
 SKIP=depends on jq's have_decnum arbitrary-precision-decimal flag and on whether JFTL's JSON loader preserves big-integer precision exactly or round-trips through float64 — can't verify either without running the actual engine, so not safe to guess a tier for.

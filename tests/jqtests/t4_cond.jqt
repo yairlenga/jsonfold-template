@@ -31,7 +31,7 @@ JQ = {{{
 INPUT = {{{
 [{"foo":0},{"foo":1},{"foo":[]},{"foo":true},{"foo":false},{"foo":null},{"foo":"foo"},{}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["yep","yep","yep","yep","nope","nope","yep","nope"]
 }}}
 JFTL = {{{
@@ -47,7 +47,7 @@ JQ = {{{
 INPUT = {{{
 [{"foo":0},{"foo":1},{"foo":[]},{"foo":true},{"foo":false},{"foo":null},{"foo":"foo"},{}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["yep","yep","yep","yep","nope","nope","yep","nope"]
 }}}
 JFTL = {{{
@@ -63,7 +63,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [3,4,3]
 }}}
 JFTL = {{{
@@ -79,7 +79,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 []
 }}}
 JFTL = {{{
@@ -95,7 +95,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [3,4]
 }}}
 JFTL = {{{
@@ -110,7 +110,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [5,6]
 }}}
 JFTL = {{{
@@ -125,7 +125,7 @@ JQ = {{{
 INPUT = {{{
 7
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [3]
 }}}
 JFTL = {{{
@@ -140,7 +140,7 @@ JQ = {{{
 INPUT = {{{
 7
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [7]
 }}}
 JFTL = {{{
@@ -156,7 +156,7 @@ JQ = {{{
 INPUT = {{{
 7
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [7]
 }}}
 JFTL = {{{
@@ -171,7 +171,7 @@ JQ = {{{
 INPUT = {{{
 7
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [7]
 }}}
 JFTL = {{{
@@ -186,7 +186,7 @@ JQ = {{{
 INPUT = {{{
 7
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [7]
 }}}
 JFTL = {{{
@@ -201,7 +201,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [-1]
 }}}
 JFTL = {{{
@@ -217,7 +217,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"x":1}
 }}}
 JFTL = {{{
@@ -231,7 +231,7 @@ if true then [.] else . end []
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 null
 }}}
 SKIP=ambiguous parse (trailing "[]" suffix after the if-expression) not worth chasing for one deterministic-null result.
@@ -244,7 +244,7 @@ JQ = {{{
 INPUT = {{{
 [{"foo":[1,2], "bar": 42}, {"foo":[1], "bar": null}, {"foo":[null,false,3], "bar": 18}, {"foo":[], "bar":42}, {"foo": [null,false,null], "bar": 41}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [[1,2], [1], [3], [42], [41]]
 }}}
 JFTL = {{{
@@ -260,7 +260,7 @@ JQ = {{{
 INPUT = {{{
 ["hello",true,false,[false],null]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["hello",true,"hello",[false],"hello"]
 }}}
 JFTL = {{{
@@ -275,7 +275,7 @@ JQ = {{{
 INPUT = {{{
 [[true,[]], [false,1], [42,null], [null,false]]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true,true]
 [false,true]
 [false,true]
@@ -294,7 +294,7 @@ JQ = {{{
 INPUT = {{{
 [1,0,false,null,true,"hello"]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [false,false,true,true,false,false]
 }}}
 JFTL = {{{
@@ -311,7 +311,7 @@ JQ = {{{
 INPUT = {{{
 {}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true,false,false,false,false,true]
 }}}
 JFTL = {{{
@@ -326,7 +326,7 @@ JQ = {{{
 INPUT = {{{
 {}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true,true,false,false,true,true]
 }}}
 JFTL = {{{
@@ -342,7 +342,7 @@ JQ = {{{
 INPUT = {{{
 {}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true,false,true,false]
 }}}
 JFTL = {{{
@@ -357,7 +357,7 @@ JQ = {{{
 INPUT = {{{
 {}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true,false,false,true]
 }}}
 JFTL = {{{
@@ -372,7 +372,7 @@ JQ = {{{
 INPUT = {{{
 {}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true,false,false,true]
 }}}
 JFTL = {{{
@@ -387,7 +387,7 @@ JQ = {{{
 INPUT = {{{
 {}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true,false,true,false]
 }}}
 JFTL = {{{
@@ -403,7 +403,7 @@ JQ = {{{
 INPUT = {{{
 {}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true,false]
 }}}
 JFTL = {{{
@@ -419,7 +419,7 @@ JQ = {{{
 INPUT = {{{
 {}
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true, true, false]
 }}}
 JFTL = {{{
@@ -436,7 +436,7 @@ JQ = {{{
 INPUT = {{{
 " "
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true, true]
 }}}
 JFTL = {{{
@@ -452,7 +452,7 @@ JQ = {{{
 INPUT = {{{
 "ab cd"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true, true, true, true, true]
 }}}
 JFTL = {{{
@@ -468,7 +468,7 @@ JQ = {{{
 INPUT = {{{
 "ab cd"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true, true, true]
 }}}
 JFTL = {{{
@@ -484,7 +484,7 @@ JQ = {{{
 INPUT = {{{
 "ab cd"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [true, true, true]
 }}}
 JFTL = {{{
@@ -500,7 +500,7 @@ JQ = {{{
 INPUT = {{{
 "ab cd"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [false, false, false]
 }}}
 JFTL = {{{
@@ -516,7 +516,7 @@ JQ = {{{
 INPUT = {{{
 [0,1,2,3]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 ["foo","Cannot index number with string (\"a\")",3]
 }}}
 SKIP=try/catch unimplemented, and this one genuinely needs it (real errors are thrown and caught, not just an unreachable/deterministic branch).
@@ -528,7 +528,7 @@ JQ = {{{
 INPUT = {{{
 [null,true,{"a":1}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [null,null,1,1]
 }}}
 SKIP="?" here suppresses errors from non-indexable items (true) entirely rather than emitting null — same output-suppression gap noted in chunk 1.
@@ -540,7 +540,7 @@ JQ = {{{
 INPUT = {{{
 [null,true,{"a":1}]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 []
 }}}
 SKIP=the whole outer array-comprehension errors out (on hitting "true") and "?" drops the entire result to empty — this all-or-nothing failure propagation isn't modeled.
@@ -552,7 +552,7 @@ JQ = {{{
 INPUT = {{{
 "foo"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 []
 }}}
 SKIP=needs error()/"?" suppression.
@@ -564,7 +564,7 @@ try error(0) // 1
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 1
 }}}
 SKIP=try/catch unimplemented.
@@ -576,7 +576,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 1
 3
 }}}
@@ -590,7 +590,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 7
 }}}
 JFTL = {{{
@@ -606,7 +606,7 @@ JQ = {{{
 INPUT = {{{
 1
 }}}
-EXPECTED = {{{
+GOLD = {{{
 [-1]
 }}}
 JFTL = {{{
@@ -621,7 +621,7 @@ try -.? catch .
 INPUT = {{{
 "foo"
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "string (\"foo\") cannot be negated"
 }}}
 SKIP=needs try/catch and jq's exact runtime error-message text.
@@ -634,7 +634,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"x":1,"y":2,"z":3}
 }}}
 JFTL = {{{
@@ -650,7 +650,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 {"x":3,"y":true,"z":3}
 }}}
 JFTL = {{{
@@ -666,7 +666,7 @@ JQ = {{{
 INPUT = {{{
 [1,null,2]
 }}}
-EXPECTED = {{{
+GOLD = {{{
 1
 null
 2
@@ -674,7 +674,7 @@ null
 JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$."}, "body": "$."}}
 }}}
-TRANSFORM=stream
+OUT_MODE=stream
 COMMENT=error with no message raises the current value itself as the payload, and catch immediately returns it — net effect is identity per item, so this degrades to the same no-var foreach + "$." pattern used throughout, needing no try/catch modeling at all. Streaming collected into one array instead of 3 outputs.
 
 [283-basic]
@@ -684,7 +684,7 @@ try error("\($__loc__)") catch .
 INPUT = {{{
 null
 }}}
-EXPECTED = {{{
+GOLD = {{{
 "{\"file\":\"<top-level>\",\"line\":1}"
 }}}
 SKIP=needs try/catch plus jq's $__loc__ source-location metadata, both jq-specific and not modeled.

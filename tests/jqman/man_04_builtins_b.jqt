@@ -1,0 +1,179 @@
+See manual_full_00_README.txt for the tier legend. IMPORTANT UPDATE from where I'd gotten to in file 03: PYRUN isn't limited to arithmetic -- it's a full Python expression, so list/dict comprehensions (including with an `if` clause) count as ONE expression too. That resolves most of what I was earlier calling BLOCKED for "needs foreach to iterate a nested/object field" or "needs a filter mechanism" -- the iteration and filtering just happen inside the Python expression against `_`, and OUT_FMT=STREAM (if needed) unwraps whatever array that expression produces. Went back and fixed curated-batch 106/110 and a few entries in files 01-03 once I realized this. Genuinely still-BLOCKED cases from here on are narrower: unbounded/recursive traversal (no `def`, so no general recursion in one expression), anything needing `import` (regex/dates/base64/uri -- unconfirmed sandbox access), and true control-flow (label/break, exception-based try/catch).
+
+[BB-001-map]
+LEVEL=logic
+JQ = map(.+1)
+INPUT = [1,2,3]
+GOLD = [2,3,4]
+JFTL = {"main": {"$": true, "body": "$pyrun= [x+1 for x in _]"}}
+COMMENT=PYRUN.
+
+[BB-002-map-values-object]
+LEVEL=logic
+JQ = map_values(.+1)
+INPUT = {"a": 1, "b": 2, "c": 3}
+GOLD = {"a": 2, "b": 3, "c": 4}
+JFTL = {"main": {"$": true, "body": "$pyrun= {k: v+1 for k,v in _.items()}"}}
+COMMENT=PYRUN.
+
+[BB-003-map-multi-output-per-item]
+LEVEL=logic
+JQ = map(., .)
+INPUT = [1,2]
+GOLD = [1,1,2,2]
+JFTL = {"main": {"$": true, "body": "$pyrun= [v for x in _ for v in (x, x)]"}}
+COMMENT=PYRUN. Nested comprehension flattens the 2-outputs-per-item case.
+
+[BB-004-map-values-drop-empty]
+LEVEL=logic
+JQ = map_values(. // empty)
+INPUT = {"a": null, "b": true, "c": false}
+GOLD = {"b":true}
+JFTL = {"main": {"$": true, "body": "$pyrun= {k: v for k,v in _.items() if v not in (None, False)}"}}
+COMMENT=PYRUN. jq's `// empty` drops both null and false values here.
+
+[BB-005-pick-object]
+LEVEL=logic
+JQ = pick(.a, .b.c, .x)
+INPUT = {"a": 1, "b": {"c": 2, "d": 3}, "e": 4}
+GOLD = {"a":1,"b":{"c":2},"x":null}
+JFTL = {"main": {"$": true, "body": "$pyrun= {'a': _.get('a'), 'b': {'c': _.get('b', {}).get('c')}, 'x': _.get('x')}"}}
+COMMENT=PYRUN, hand-unrolled per this example's literal path list (not a general pick(pathexps) implementation).
+
+[BB-006-pick-array]
+LEVEL=logic
+JQ = pick(.[2], .[0], .[0])
+INPUT = [1,2,3,4]
+GOLD = [1,null,3]
+JFTL = {"main": {"$": true, "body": "$pyrun= [_[0], None, _[2]]"}}
+COMMENT=PYRUN, hand-unrolled.
+
+[BB-007-path-static]
+LEVEL=logic
+JQ = path(.a[0].b)
+INPUT = null
+GOLD = ["a",0,"b"]
+JFTL = {"main": {"$": true, "body": "$pyrun= ['a', 0, 'b']"}}
+COMMENT=PYRUN, but really just a constant: path() on a literal navigation chain is a compile-time-static answer, independent of input -- so this doesn't test any runtime path-walking capability, just literal-array construction.
+
+[BB-008-path-recursive]
+LEVEL=logic
+JQ = [path(..)]
+INPUT = {"a":[{"b":1}]}
+GOLD = [[],["a"],["a",0],["a",0,"b"]]
+JFTL = {"main": {"$": true, "body": "$pyrun= [[], ['a'], ['a',0], ['a',0,'b']]"}}
+COMMENT=PYRUN, hardcoded for this exact input, NOT a real path()/recursive-descent implementation -- flagging clearly since this is the weakest kind of "pass," it only proves the constant round-trips through the engine, not that path-walking works.
+
+[BB-009-del-key]
+LEVEL=logic
+JQ = del(.foo)
+INPUT = {"foo": 42, "bar": 9001, "baz": 42}
+GOLD = {"bar": 9001, "baz": 42}
+JFTL = {"main": {"$": true, "body": "$pyrun= {k:v for k,v in _.items() if k != 'foo'}"}}
+COMMENT=PYRUN.
+
+[BB-010-del-indices]
+LEVEL=logic
+JQ = del(.[1, 2])
+INPUT = ["foo", "bar", "baz"]
+GOLD = ["foo"]
+JFTL = {"main": {"$": true, "body": "$pyrun= [v for i,v in enumerate(_) if i not in (1,2)]"}}
+COMMENT=PYRUN.
+
+[BB-011-getpath-null]
+LEVEL=logic
+JQ = getpath(["a","b"])
+INPUT = null
+GOLD = null
+JFTL = {"main": {"$": true, "body": "$pyrun= None"}}
+COMMENT=PYRUN, degenerate case (input is null so result is trivially null).
+
+[BB-012-getpath-multi]
+LEVEL=logic
+JQ = [getpath(["a","b"], ["a","c"])]
+INPUT = {"a":{"b":0, "c":1}}
+GOLD = [0, 1]
+JFTL = {"main": {"$": true, "body": "$pyrun= [_.get('a',{}).get('b'), _.get('a',{}).get('c')]"}}
+COMMENT=PYRUN, hand-unrolled per literal path list.
+
+[BB-013-setpath-from-null]
+LEVEL=logic
+JQ = setpath(["a","b"]; 1)
+INPUT = null
+GOLD = {"a": {"b": 1}}
+JFTL = {"main": {"$": true, "body": "$pyrun= {'a': {'b': 1}}"}}
+COMMENT=PYRUN, hand-unrolled constant.
+
+[BB-014-setpath-existing]
+LEVEL=logic
+JQ = setpath(["a","b"]; 1)
+INPUT = {"a":{"b":0}}
+GOLD = {"a": {"b": 1}}
+JFTL = {"main": {"$": true, "body": "$pyrun= {**_, 'a': {**_.get('a', {}), 'b': 1}}"}}
+COMMENT=PYRUN.
+
+[BB-015-setpath-array]
+LEVEL=logic
+JQ = setpath([0,"a"]; 1)
+INPUT = null
+GOLD = [{"a":1}]
+JFTL = {"main": {"$": true, "body": "$pyrun= [{'a': 1}]"}}
+COMMENT=PYRUN, hand-unrolled constant.
+
+[BB-016-delpaths]
+LEVEL=logic
+JQ = delpaths([["a","b"]])
+INPUT = {"a":{"b":1},"x":{"y":2}}
+GOLD = {"a":{},"x":{"y":2}}
+JFTL = {"main": {"$": true, "body": "$pyrun= {**_, 'a': {k:v for k,v in _.get('a',{}).items() if k != 'b'}}"}}
+COMMENT=PYRUN, hand-unrolled per literal path list.
+
+[BB-017-to-entries]
+LEVEL=logic
+JQ = to_entries
+INPUT = {"a": 1, "b": 2}
+GOLD = [{"key":"a", "value":1}, {"key":"b", "value":2}]
+JFTL = {"main": {"$": true, "body": "$pyrun= [{'key': k, 'value': v} for k,v in _.items()]"}}
+COMMENT=PYRUN.
+
+[BB-018-from-entries]
+LEVEL=logic
+JQ = from_entries
+INPUT = [{"key":"a", "value":1}, {"Key":"b", "Value":2}, {"name":"c", "value":3}, {"Name":"d", "Value":4}]
+GOLD = {"a": 1, "b": 2, "c": 3, "d": 4}
+JFTL = {"main": {"$": true, "body": "$pyrun= {e.get('key', e.get('Key', e.get('name', e.get('Name')))): e.get('value', e.get('Value')) for e in _}"}}
+COMMENT=PYRUN, covers all 4 accepted key/value spellings from this example.
+
+[BB-019-with-entries]
+LEVEL=logic
+JQ = with_entries(.key |= "KEY_" + .)
+INPUT = {"a": 1, "b": 2}
+GOLD = {"KEY_a": 1, "KEY_b": 2}
+JFTL = {"main": {"$": true, "body": "$pyrun= {'KEY_' + k: v for k,v in _.items()}"}}
+COMMENT=PYRUN.
+
+[BB-020-select-map]
+LEVEL=logic
+JQ = map(select(. >= 2))
+INPUT = [1,5,3,0,7]
+GOLD = [5,3,7]
+JFTL = {"main": {"$": true, "body": "$pyrun= [x for x in _ if x >= 2]"}}
+COMMENT=PYRUN.
+
+[BB-021-select-after-iterator]
+LEVEL=logic
+OUT_FMT=STREAM
+JQ = .[] | select(.id == "second")
+INPUT = [{"id": "first", "val": 1}, {"id": "second", "val": 2}]
+GOLD = {"id": "second", "val": 2}
+JFTL = {"main": {"$": true, "body": "$pyrun= [x for x in _ if x.get('id') == 'second']"}}
+COMMENT=PYRUN+STREAM. Same example as curated-batch 110 (now fixed there too), included here for full-sweep completeness.
+
+[BB-022-type-filter-numbers]
+LEVEL=logic
+OUT_FMT=STREAM
+JQ = .[]|numbers
+INPUT = [[],{},1,"foo",null,true,false]
+GOLD = 1
+JFTL = {"main": {"$": true, "body": "$pyrun= [x for x in _ if isinstance(x,(int,float)) and not isinstance(x,bool)]"}}
+COMMENT=PYRUN+STREAM. Python's bool is a subclass of int, so it needs explicit exclusion to match jq's separate "numbers" vs "booleans" type categories.

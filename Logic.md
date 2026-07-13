@@ -165,13 +165,18 @@ and `"range"`. Any other value is a compile-time error.
 walked (0, 1, 2, ... for a list/dict source; or the numeric range itself,
 for `shape: "range"`):
 
-- `start` (default `0`) — first position to include, inclusive.
-- `stop` — position to stop before, exclusive.
-- `limit` — a count of items to include, measured from `start`.
-- If both `stop` and `limit` are given, `stop` wins and `limit` is
-  ignored.
+- `start` (default `0`) — first position to include, inclusive. Negative values
+  can be used to specify position from the end.
+- `stop` — position to stop before, exclusive. Negative values can be used to
+  specify position the end.
+- `limit` — maximum number of items to include, measured from `start`.
+- If both `stop` and `limit` are provided the smaller values will override.
+  For example "start=5, stop=-3, limit=5 on the range "a" to "z" will produce
+  the array [ "f", "g", "h", "i", "j"]: The first 5 elements from the sequence
+  [ "f" ... "y" ].
 - All three are ordinary expressions evaluated once, before the loop
-  begins — not per-iteration.
+  begins — not per-iteration. They must resolve to integer expressions or None,
+  otherwise, an error is triggered.
 
 **Per-iteration bindings** — for each item that survives `start`/
 `stop`/`limit` filtering:
@@ -227,6 +232,9 @@ Evaluated (in the new frame) and used as the statement's result whenever:
   (nothing to iterate at all — not merely zero items surviving `if`
   filtering), or
 - (non-`foreach` case) the chosen body itself evaluates to MISSING.
+- The 'default' does NOT apply to individual value inside a `foreach`
+  loop. Those will be converted to null (when the output shape is
+  LIST).
 
 If `default` itself is absent in any of these situations, the statement's
 result is MISSING.
