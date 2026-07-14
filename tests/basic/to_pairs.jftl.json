@@ -1,0 +1,78 @@
+{
+  "main": {
+    "checks": {
+      "null input": {
+        "$": true,
+        "body": null,
+        "transform": "to_pairs"
+      },
+      "empty object": {
+        "$": true,
+        "body": {},
+        "transform": "to_pairs"
+      },
+      "single entry": {
+        "$": true,
+        "body": {
+          "a": 1
+        },
+        "transform": "to_pairs"
+      },
+      "multiple entries": {
+        "$": true,
+        "body": {
+          "a": 1,
+          "b": 2,
+          "c": 3
+        },
+        "transform": "to_pairs"
+      },
+      "null value": {
+        "$": true,
+        "body": {
+          "a": null,
+          "b": 2
+        },
+        "transform": "to_pairs"
+      },
+      "nested value": {
+        "$": true,
+        "body": {
+          "item": {
+            "a": 1,
+            "b": 2
+          }
+        },
+        "transform": "to_pairs"
+      },
+      "array value": {
+        "$": true,
+        "body": {
+          "items": [
+            1,
+            2,
+            3
+          ]
+        },
+        "transform": "to_pairs"
+      },
+      "mixed values": {
+        "$": true,
+        "body": {
+          "null": null,
+          "bool": false,
+          "number": 12,
+          "text": "abc",
+          "array": [
+            1,
+            2
+          ],
+          "object": {
+            "x": 3
+          }
+        },
+        "transform": "to_pairs"
+      }
+    }
+  }
+}

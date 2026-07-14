@@ -1,0 +1,611 @@
+{
+  "matrix": [
+    [
+      {
+        "left": "null",
+        "right": "null",
+        "result": []
+      },
+      {
+        "left": "null",
+        "right": "empty",
+        "result": []
+      },
+      {
+        "left": "null",
+        "right": "one",
+        "result": [
+          1
+        ]
+      },
+      {
+        "left": "null",
+        "right": "two",
+        "result": [
+          11,
+          12
+        ]
+      },
+      {
+        "left": "null",
+        "right": "object",
+        "result": [
+          23,
+          24,
+          {
+            "a": 25
+          }
+        ]
+      },
+      {
+        "left": "null",
+        "right": "nested",
+        "result": [
+          [
+            37,
+            38
+          ]
+        ]
+      },
+      {
+        "left": "null",
+        "right": "five",
+        "result": [
+          41,
+          42,
+          43,
+          44,
+          45
+        ]
+      }
+    ],
+    [
+      {
+        "left": "empty",
+        "right": "null",
+        "result": []
+      },
+      {
+        "left": "empty",
+        "right": "empty",
+        "result": []
+      },
+      {
+        "left": "empty",
+        "right": "one",
+        "result": [
+          1
+        ]
+      },
+      {
+        "left": "empty",
+        "right": "two",
+        "result": [
+          11,
+          12
+        ]
+      },
+      {
+        "left": "empty",
+        "right": "object",
+        "result": [
+          23,
+          24,
+          {
+            "a": 25
+          }
+        ]
+      },
+      {
+        "left": "empty",
+        "right": "nested",
+        "result": [
+          [
+            37,
+            38
+          ]
+        ]
+      },
+      {
+        "left": "empty",
+        "right": "five",
+        "result": [
+          41,
+          42,
+          43,
+          44,
+          45
+        ]
+      }
+    ],
+    [
+      {
+        "left": "one",
+        "right": "null",
+        "result": [
+          1
+        ]
+      },
+      {
+        "left": "one",
+        "right": "empty",
+        "result": [
+          1
+        ]
+      },
+      {
+        "left": "one",
+        "right": "one",
+        "result": [
+          1,
+          1
+        ]
+      },
+      {
+        "left": "one",
+        "right": "two",
+        "result": [
+          1,
+          11,
+          12
+        ]
+      },
+      {
+        "left": "one",
+        "right": "object",
+        "result": [
+          1,
+          23,
+          24,
+          {
+            "a": 25
+          }
+        ]
+      },
+      {
+        "left": "one",
+        "right": "nested",
+        "result": [
+          1,
+          [
+            37,
+            38
+          ]
+        ]
+      },
+      {
+        "left": "one",
+        "right": "five",
+        "result": [
+          1,
+          41,
+          42,
+          43,
+          44,
+          45
+        ]
+      }
+    ],
+    [
+      {
+        "left": "two",
+        "right": "null",
+        "result": [
+          11,
+          12
+        ]
+      },
+      {
+        "left": "two",
+        "right": "empty",
+        "result": [
+          11,
+          12
+        ]
+      },
+      {
+        "left": "two",
+        "right": "one",
+        "result": [
+          11,
+          12,
+          1
+        ]
+      },
+      {
+        "left": "two",
+        "right": "two",
+        "result": [
+          11,
+          12,
+          11,
+          12
+        ]
+      },
+      {
+        "left": "two",
+        "right": "object",
+        "result": [
+          11,
+          12,
+          23,
+          24,
+          {
+            "a": 25
+          }
+        ]
+      },
+      {
+        "left": "two",
+        "right": "nested",
+        "result": [
+          11,
+          12,
+          [
+            37,
+            38
+          ]
+        ]
+      },
+      {
+        "left": "two",
+        "right": "five",
+        "result": [
+          11,
+          12,
+          41,
+          42,
+          43,
+          44,
+          45
+        ]
+      }
+    ],
+    [
+      {
+        "left": "object",
+        "right": "null",
+        "result": [
+          23,
+          24,
+          {
+            "a": 25
+          }
+        ]
+      },
+      {
+        "left": "object",
+        "right": "empty",
+        "result": [
+          23,
+          24,
+          {
+            "a": 25
+          }
+        ]
+      },
+      {
+        "left": "object",
+        "right": "one",
+        "result": [
+          23,
+          24,
+          {
+            "a": 25
+          },
+          1
+        ]
+      },
+      {
+        "left": "object",
+        "right": "two",
+        "result": [
+          23,
+          24,
+          {
+            "a": 25
+          },
+          11,
+          12
+        ]
+      },
+      {
+        "left": "object",
+        "right": "object",
+        "result": [
+          23,
+          24,
+          {
+            "a": 25
+          },
+          23,
+          24,
+          {
+            "a": 25
+          }
+        ]
+      },
+      {
+        "left": "object",
+        "right": "nested",
+        "result": [
+          23,
+          24,
+          {
+            "a": 25
+          },
+          [
+            37,
+            38
+          ]
+        ]
+      },
+      {
+        "left": "object",
+        "right": "five",
+        "result": [
+          23,
+          24,
+          {
+            "a": 25
+          },
+          41,
+          42,
+          43,
+          44,
+          45
+        ]
+      }
+    ],
+    [
+      {
+        "left": "nested",
+        "right": "null",
+        "result": [
+          [
+            37,
+            38
+          ]
+        ]
+      },
+      {
+        "left": "nested",
+        "right": "empty",
+        "result": [
+          [
+            37,
+            38
+          ]
+        ]
+      },
+      {
+        "left": "nested",
+        "right": "one",
+        "result": [
+          [
+            37,
+            38
+          ],
+          1
+        ]
+      },
+      {
+        "left": "nested",
+        "right": "two",
+        "result": [
+          [
+            37,
+            38
+          ],
+          11,
+          12
+        ]
+      },
+      {
+        "left": "nested",
+        "right": "object",
+        "result": [
+          [
+            37,
+            38
+          ],
+          23,
+          24,
+          {
+            "a": 25
+          }
+        ]
+      },
+      {
+        "left": "nested",
+        "right": "nested",
+        "result": [
+          [
+            37,
+            38
+          ],
+          [
+            37,
+            38
+          ]
+        ]
+      },
+      {
+        "left": "nested",
+        "right": "five",
+        "result": [
+          [
+            37,
+            38
+          ],
+          41,
+          42,
+          43,
+          44,
+          45
+        ]
+      }
+    ],
+    [
+      {
+        "left": "five",
+        "right": "null",
+        "result": [
+          41,
+          42,
+          43,
+          44,
+          45
+        ]
+      },
+      {
+        "left": "five",
+        "right": "empty",
+        "result": [
+          41,
+          42,
+          43,
+          44,
+          45
+        ]
+      },
+      {
+        "left": "five",
+        "right": "one",
+        "result": [
+          41,
+          42,
+          43,
+          44,
+          45,
+          1
+        ]
+      },
+      {
+        "left": "five",
+        "right": "two",
+        "result": [
+          41,
+          42,
+          43,
+          44,
+          45,
+          11,
+          12
+        ]
+      },
+      {
+        "left": "five",
+        "right": "object",
+        "result": [
+          41,
+          42,
+          43,
+          44,
+          45,
+          23,
+          24,
+          {
+            "a": 25
+          }
+        ]
+      },
+      {
+        "left": "five",
+        "right": "nested",
+        "result": [
+          41,
+          42,
+          43,
+          44,
+          45,
+          [
+            37,
+            38
+          ]
+        ]
+      },
+      {
+        "left": "five",
+        "right": "five",
+        "result": [
+          41,
+          42,
+          43,
+          44,
+          45,
+          41,
+          42,
+          43,
+          44,
+          45
+        ]
+      }
+    ]
+  ],
+  "checks": {
+    "three empty": [],
+    "three singles": [
+      1,
+      2,
+      3
+    ],
+    "null and empty": [
+      1
+    ],
+    "empty middle": [
+      1,
+      2,
+      3,
+      4,
+      {
+        "a": 5
+      }
+    ],
+    "four arrays": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "alternating empty": [
+      1,
+      2,
+      3
+    ],
+    "nested arrays": [
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        5,
+        6
+      ]
+    ],
+    "object values": [
+      {
+        "a": 1
+      },
+      {
+        "b": 2
+      },
+      {
+        "c": 3
+      },
+      {
+        "d": 4
+      }
+    ]
+  }
+}

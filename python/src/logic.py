@@ -326,15 +326,6 @@ class LogicStatement(Statement):
                     message=f"The 'to_pairs' transformation input is array of objects, got non-list input",
                 )
 
-        for pos, item in input:
-            if item is None:
-                continue
-            if not isinstance(item, dict):
-                return Error(
-                    code="TO_PAIRS_ITEM", severity="ERROR",
-                    message=f"The 'to_pairs' Merge transformation input is array of objects, got non list items in position {pos}",
-                )
-
         return list(input.items())
 
     def _from_pairs_transform(self, frame: Frame, input: list[tuple[str, Any]]) -> dict | Error :
@@ -344,7 +335,7 @@ class LogicStatement(Statement):
                     message=f"The 'to_pairs' transformation input is array of objects, got non-list input",
                 )
 
-        for pos, item in input:
+        for pos, item in enumerate(input):
             if item is None:
                 continue
             if not isinstance(item, list) or len(item) != 2:
@@ -353,7 +344,7 @@ class LogicStatement(Statement):
                     message=f"The 'to_pairs' Merge transformation input is array of objects, got non list items in position {pos}",
                 )
 
-        return dict(input)
+        return dict(item for item in input if item is not None)
 
 
     def eval(self, prev_frame: Frame) -> Any | Error | Missing:
@@ -401,7 +392,7 @@ class LogicStatement(Statement):
         if self._transform is not None and result is not None and not isinstance(result, Error):
 
             # Check for transformation
-            match self._transform:
+            match transform := self._transform:
                 case "flatten":
                     result = self._flatten_transform(new_frame, result)
 
@@ -413,10 +404,18 @@ class LogicStatement(Statement):
 
                 case "from_pairs":
                     result = self._from_pairs_transform(new_frame, result)
+
+                case _:
+                    return Error(
+                        code="BAD_TRANSFORM", severity="ERROR",
+                        message=f"Unknown transformation {transform}",
+                    )
+        
              
         # Error handler
         if isinstance(result, Error):
-            return new_frame.eval_value(self._error_val)        
+            if self._error_val is not None:
+                return new_frame.eval_value(self._error_val)
 
         return result
     

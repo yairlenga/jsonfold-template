@@ -1,0 +1,86 @@
+{
+  "checks": {
+    "null input": null,
+    "empty object": null,
+    "single entry": [
+      [
+        "a",
+        1
+      ]
+    ],
+    "multiple entries": [
+      [
+        "a",
+        1
+      ],
+      [
+        "b",
+        2
+      ],
+      [
+        "c",
+        3
+      ]
+    ],
+    "null value": [
+      [
+        "a",
+        null
+      ],
+      [
+        "b",
+        2
+      ]
+    ],
+    "nested value": [
+      [
+        "item",
+        {
+          "a": 1,
+          "b": 2
+        }
+      ]
+    ],
+    "array value": [
+      [
+        "items",
+        [
+          1,
+          2,
+          3
+        ]
+      ]
+    ],
+    "mixed values": [
+      [
+        "null",
+        null
+      ],
+      [
+        "bool",
+        false
+      ],
+      [
+        "number",
+        12
+      ],
+      [
+        "text",
+        "abc"
+      ],
+      [
+        "array",
+        [
+          1,
+          2
+        ]
+      ],
+      [
+        "object",
+        {
+          "x": 3
+        }
+      ]
+    ]
+  }
+}

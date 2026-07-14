@@ -1,0 +1,653 @@
+{
+  "matrix": [
+    [
+      {
+        "left": "null",
+        "right": "null",
+        "result": {}
+      },
+      {
+        "left": "null",
+        "right": "empty",
+        "result": {}
+      },
+      {
+        "left": "null",
+        "right": "a1",
+        "result": {
+          "a": 1
+        }
+      },
+      {
+        "left": "null",
+        "right": "b2",
+        "result": {
+          "b": 2
+        }
+      },
+      {
+        "left": "null",
+        "right": "ab",
+        "result": {
+          "a": 10,
+          "b": 20
+        }
+      },
+      {
+        "left": "null",
+        "right": "bc",
+        "result": {
+          "b": 30,
+          "c": 40
+        }
+      },
+      {
+        "left": "null",
+        "right": "null-value",
+        "result": {
+          "a": null,
+          "d": 4
+        }
+      },
+      {
+        "left": "null",
+        "right": "nested",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "left": "empty",
+        "right": "null",
+        "result": {}
+      },
+      {
+        "left": "empty",
+        "right": "empty",
+        "result": {}
+      },
+      {
+        "left": "empty",
+        "right": "a1",
+        "result": {
+          "a": 1
+        }
+      },
+      {
+        "left": "empty",
+        "right": "b2",
+        "result": {
+          "b": 2
+        }
+      },
+      {
+        "left": "empty",
+        "right": "ab",
+        "result": {
+          "a": 10,
+          "b": 20
+        }
+      },
+      {
+        "left": "empty",
+        "right": "bc",
+        "result": {
+          "b": 30,
+          "c": 40
+        }
+      },
+      {
+        "left": "empty",
+        "right": "null-value",
+        "result": {
+          "a": null,
+          "d": 4
+        }
+      },
+      {
+        "left": "empty",
+        "right": "nested",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "left": "a1",
+        "right": "null",
+        "result": {
+          "a": 1
+        }
+      },
+      {
+        "left": "a1",
+        "right": "empty",
+        "result": {
+          "a": 1
+        }
+      },
+      {
+        "left": "a1",
+        "right": "a1",
+        "result": {
+          "a": 1
+        }
+      },
+      {
+        "left": "a1",
+        "right": "b2",
+        "result": {
+          "a": 1,
+          "b": 2
+        }
+      },
+      {
+        "left": "a1",
+        "right": "ab",
+        "result": {
+          "a": 10,
+          "b": 20
+        }
+      },
+      {
+        "left": "a1",
+        "right": "bc",
+        "result": {
+          "a": 1,
+          "b": 30,
+          "c": 40
+        }
+      },
+      {
+        "left": "a1",
+        "right": "null-value",
+        "result": {
+          "a": null,
+          "d": 4
+        }
+      },
+      {
+        "left": "a1",
+        "right": "nested",
+        "result": {
+          "a": 1,
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "left": "b2",
+        "right": "null",
+        "result": {
+          "b": 2
+        }
+      },
+      {
+        "left": "b2",
+        "right": "empty",
+        "result": {
+          "b": 2
+        }
+      },
+      {
+        "left": "b2",
+        "right": "a1",
+        "result": {
+          "b": 2,
+          "a": 1
+        }
+      },
+      {
+        "left": "b2",
+        "right": "b2",
+        "result": {
+          "b": 2
+        }
+      },
+      {
+        "left": "b2",
+        "right": "ab",
+        "result": {
+          "b": 20,
+          "a": 10
+        }
+      },
+      {
+        "left": "b2",
+        "right": "bc",
+        "result": {
+          "b": 30,
+          "c": 40
+        }
+      },
+      {
+        "left": "b2",
+        "right": "null-value",
+        "result": {
+          "b": 2,
+          "a": null,
+          "d": 4
+        }
+      },
+      {
+        "left": "b2",
+        "right": "nested",
+        "result": {
+          "b": 2,
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "left": "ab",
+        "right": "null",
+        "result": {
+          "a": 10,
+          "b": 20
+        }
+      },
+      {
+        "left": "ab",
+        "right": "empty",
+        "result": {
+          "a": 10,
+          "b": 20
+        }
+      },
+      {
+        "left": "ab",
+        "right": "a1",
+        "result": {
+          "a": 1,
+          "b": 20
+        }
+      },
+      {
+        "left": "ab",
+        "right": "b2",
+        "result": {
+          "a": 10,
+          "b": 2
+        }
+      },
+      {
+        "left": "ab",
+        "right": "ab",
+        "result": {
+          "a": 10,
+          "b": 20
+        }
+      },
+      {
+        "left": "ab",
+        "right": "bc",
+        "result": {
+          "a": 10,
+          "b": 30,
+          "c": 40
+        }
+      },
+      {
+        "left": "ab",
+        "right": "null-value",
+        "result": {
+          "a": null,
+          "b": 20,
+          "d": 4
+        }
+      },
+      {
+        "left": "ab",
+        "right": "nested",
+        "result": {
+          "a": 10,
+          "b": 20,
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "left": "bc",
+        "right": "null",
+        "result": {
+          "b": 30,
+          "c": 40
+        }
+      },
+      {
+        "left": "bc",
+        "right": "empty",
+        "result": {
+          "b": 30,
+          "c": 40
+        }
+      },
+      {
+        "left": "bc",
+        "right": "a1",
+        "result": {
+          "b": 30,
+          "c": 40,
+          "a": 1
+        }
+      },
+      {
+        "left": "bc",
+        "right": "b2",
+        "result": {
+          "b": 2,
+          "c": 40
+        }
+      },
+      {
+        "left": "bc",
+        "right": "ab",
+        "result": {
+          "b": 20,
+          "c": 40,
+          "a": 10
+        }
+      },
+      {
+        "left": "bc",
+        "right": "bc",
+        "result": {
+          "b": 30,
+          "c": 40
+        }
+      },
+      {
+        "left": "bc",
+        "right": "null-value",
+        "result": {
+          "b": 30,
+          "c": 40,
+          "a": null,
+          "d": 4
+        }
+      },
+      {
+        "left": "bc",
+        "right": "nested",
+        "result": {
+          "b": 30,
+          "c": 40,
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "left": "null-value",
+        "right": "null",
+        "result": {
+          "a": null,
+          "d": 4
+        }
+      },
+      {
+        "left": "null-value",
+        "right": "empty",
+        "result": {
+          "a": null,
+          "d": 4
+        }
+      },
+      {
+        "left": "null-value",
+        "right": "a1",
+        "result": {
+          "a": 1,
+          "d": 4
+        }
+      },
+      {
+        "left": "null-value",
+        "right": "b2",
+        "result": {
+          "a": null,
+          "d": 4,
+          "b": 2
+        }
+      },
+      {
+        "left": "null-value",
+        "right": "ab",
+        "result": {
+          "a": 10,
+          "d": 4,
+          "b": 20
+        }
+      },
+      {
+        "left": "null-value",
+        "right": "bc",
+        "result": {
+          "a": null,
+          "d": 4,
+          "b": 30,
+          "c": 40
+        }
+      },
+      {
+        "left": "null-value",
+        "right": "null-value",
+        "result": {
+          "a": null,
+          "d": 4
+        }
+      },
+      {
+        "left": "null-value",
+        "right": "nested",
+        "result": {
+          "a": null,
+          "d": 4,
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "left": "nested",
+        "right": "null",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "left": "nested",
+        "right": "empty",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "left": "nested",
+        "right": "a1",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ],
+          "a": 1
+        }
+      },
+      {
+        "left": "nested",
+        "right": "b2",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ],
+          "b": 2
+        }
+      },
+      {
+        "left": "nested",
+        "right": "ab",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ],
+          "a": 10,
+          "b": 20
+        }
+      },
+      {
+        "left": "nested",
+        "right": "bc",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ],
+          "b": 30,
+          "c": 40
+        }
+      },
+      {
+        "left": "nested",
+        "right": "null-value",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ],
+          "a": null,
+          "d": 4
+        }
+      },
+      {
+        "left": "nested",
+        "right": "nested",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "items": [
+            1,
+            2
+          ]
+        }
+      }
+    ]
+  ],
+  "checks": {
+    "three disjoint": {
+      "a": 1,
+      "b": 2,
+      "c": 3
+    },
+    "left wins three": {
+      "a": 3
+    },
+    "mixed overlap": {
+      "a": 100,
+      "b": 20,
+      "c": 30,
+      "d": 40
+    },
+    "null objects": {
+      "a": 1,
+      "b": 2
+    },
+    "empty objects": {
+      "a": 1,
+      "b": 2
+    },
+    "null value wins": {
+      "a": 2,
+      "b": 3
+    },
+    "nested is shallow": {
+      "item": {
+        "b": 2
+      },
+      "other": 3
+    },
+    "four priorities": {
+      "a": 4,
+      "b": 4,
+      "c": 4,
+      "d": 4
+    }
+  }
+}

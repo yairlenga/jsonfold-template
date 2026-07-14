@@ -1,0 +1,164 @@
+{
+  "main": {
+    "matrix": {
+      "$": true,
+      "set": {
+        "values": [
+          {"name": "null", "value": null},
+          {"name": "empty", "value": []},
+          {"name": "invalid", "value": "not-a-pair"},
+          {"name": "a1", "value": ["a", 1]},
+          {"name": "a-alt", "value": ["a", 100]},
+          {"name": "b2", "value": ["b", 2]},
+          {"name": "null-value", "value": ["a", null]},
+          {"name": "null-key", "value": [null, 1]},
+          {"name": "nested", "value": ["item", {"x": 1}]}
+        ]
+      },
+      "foreach": {
+        "var": "left",
+        "in": "$values"
+      },
+      "body": {
+        "$": true,
+        "foreach": {
+          "var": "right",
+          "in": "$values"
+        },
+        "body": {
+          "left": "$left.name",
+          "right": "$right.name",
+          "result": {
+            "$": true,
+            "body": [
+              "$left.value",
+              "$right.value"
+            ],
+            "transform": "from_pairs"
+          }
+        }
+      }
+    },
+    "checks": {
+      "empty list": {
+        "$": true,
+        "body": [],
+        "transform": "from_pairs"
+      },
+      "single pair": {
+        "$": true,
+        "body": [
+          ["only", 1]
+        ],
+        "transform": "from_pairs"
+      },
+      "three disjoint pairs": {
+        "$": true,
+        "body": [
+          ["a", 1],
+          ["b", 2],
+          ["c", 3]
+        ],
+        "transform": "from_pairs"
+      },
+      "right wins three": {
+        "$": true,
+        "body": [
+          ["a", 1],
+          ["a", 2],
+          ["a", 3]
+        ],
+        "transform": "from_pairs"
+      },
+      "duplicate key keeps first position": {
+        "$": true,
+        "body": [
+          ["a", 1],
+          ["b", 2],
+          ["a", 3]
+        ],
+        "transform": "from_pairs"
+      },
+      "order preserved for unique keys": {
+        "$": true,
+        "body": [
+          ["z", 1],
+          ["a", 2],
+          ["m", 3]
+        ],
+        "transform": "from_pairs"
+      },
+      "mixed overlap last wins": {
+        "$": true,
+        "body": [
+          ["a", 1],
+          ["b", 2],
+          ["b", 20],
+          ["c", 30],
+          ["a", 100],
+          ["d", 40]
+        ],
+        "transform": "from_pairs"
+      },
+      "null entries skipped": {
+        "$": true,
+        "body": [
+          null,
+          ["a", 1],
+          null,
+          ["b", 2]
+        ],
+        "transform": "from_pairs"
+      },
+      "empty pairs skipped": {
+        "$": true,
+        "body": [
+          [],
+          ["a", 1],
+          [],
+          ["b", 2]
+        ],
+        "transform": "from_pairs"
+      },
+      "null value preserved": {
+        "$": true,
+        "body": [
+          ["a", null],
+          ["b", 2]
+        ],
+        "transform": "from_pairs"
+      },
+      "null key handling": {
+        "$": true,
+        "body": [
+          [null, 1],
+          ["b", 2]
+        ],
+        "transform": "from_pairs"
+      },
+      "nested value is shallow": {
+        "$": true,
+        "body": [
+          ["item", {"a": 1}],
+          ["item", {"b": 2}]
+        ],
+        "transform": "from_pairs"
+      },
+      "four priorities last wins": {
+        "$": true,
+        "body": [
+          ["a", 1],
+          ["a", 2],
+          ["b", 2],
+          ["b", 3],
+          ["c", 3],
+          ["a", 4],
+          ["b", 4],
+          ["c", 4],
+          ["d", 4]
+        ],
+        "transform": "from_pairs"
+      }
+    }
+  }
+}

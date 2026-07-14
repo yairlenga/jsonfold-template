@@ -32,7 +32,7 @@ from typing import Any, Optional, TextIO
 # --- make ../src importable when run directly from a sibling tests/ dir ---
 sys.path.insert(0, str((Path(__file__).resolve().parent / ".." / "src").resolve()))
 
-from template import create_engine, Engine  # noqa: E402
+from template import Error, create_engine, Engine  # noqa: E402
 
 
 def _read_text(path: Optional[str]) -> tuple[str, str]:
@@ -185,7 +185,8 @@ def main() -> int:
             dest = out_handle if out_handle is not None else sys.stdout
             if comment:
                 print(comment, file=dest)
-            print(output_text, file=dest)
+            if output_text != "":
+                print(output_text, file=dest)
             if out_handle is not None:
                 out_handle.close()
 

@@ -59,9 +59,12 @@ class JFTLEngine(Engine, Compiler):
             body = template.main
             frame = Frame.top_frame(template, input)
             result, _ = self._render(body, frame)
-            status = Status(ok=True)
+            if isinstance(result, Error):
+                status = Status(False, result)
+            else:
+                status = Status(ok=True)
         except RenderError as re:
-            status = re.error
+            status = Status(False, re.error)
         finally:
             frame.reset()
         return status, result

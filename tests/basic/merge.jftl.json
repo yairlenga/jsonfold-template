@@ -1,0 +1,118 @@
+{
+  "main": {
+    "matrix": {
+      "$": true,
+      "set": {
+        "values": [
+          {"name": "null", "value": null},
+          {"name": "empty", "value": {}},
+          {"name": "a1", "value": {"a": 1}},
+          {"name": "b2", "value": {"b": 2}},
+          {"name": "ab", "value": {"a": 10, "b": 20}},
+          {"name": "bc", "value": {"b": 30, "c": 40}},
+          {"name": "null-value", "value": {"a": null, "d": 4}},
+          {"name": "nested", "value": {"nested": {"x": 1}, "items": [1, 2]}}
+        ]
+      },
+      "foreach": {
+        "var": "left",
+        "in": "$values"
+      },
+      "body": {
+        "$": true,
+        "foreach": {
+          "var": "right",
+          "in": "$values"
+        },
+        "body": {
+          "left": "$left.name",
+          "right": "$right.name",
+          "result": {
+            "$": true,
+            "body": [
+              "$left.value",
+              "$right.value"
+            ],
+            "transform": "merge"
+          }
+        }
+      }
+    },
+    "checks": {
+      "three disjoint": {
+        "$": true,
+        "body": [
+          {"a": 1},
+          {"b": 2},
+          {"c": 3}
+        ],
+        "transform": "merge"
+      },
+      "left wins three": {
+        "$": true,
+        "body": [
+          {"a": 1},
+          {"a": 2},
+          {"a": 3}
+        ],
+        "transform": "merge"
+      },
+      "mixed overlap": {
+        "$": true,
+        "body": [
+          {"a": 1, "b": 2},
+          {"b": 20, "c": 30},
+          {"a": 100, "d": 40}
+        ],
+        "transform": "merge"
+      },
+      "null objects": {
+        "$": true,
+        "body": [
+          null,
+          {"a": 1},
+          null,
+          {"b": 2}
+        ],
+        "transform": "merge"
+      },
+      "empty objects": {
+        "$": true,
+        "body": [
+          {},
+          {"a": 1},
+          {},
+          {"b": 2}
+        ],
+        "transform": "merge"
+      },
+      "null value wins": {
+        "$": true,
+        "body": [
+          {"a": null},
+          {"a": 2, "b": 3}
+        ],
+        "transform": "merge"
+      },
+      "nested is shallow": {
+        "$": true,
+        "body": [
+          {"item": {"a": 1}},
+          {"item": {"b": 2}, "other": 3}
+        ],
+        "transform": "merge"
+      },
+      "four priorities": {
+        "$": true,
+        "body": [
+          {"a": 1},
+          {"a": 2, "b": 2},
+          {"b": 3, "c": 3},
+          {"a": 4, "b": 4, "c": 4, "d": 4}
+        ],
+        "transform": "merge"
+      }
+    }
+  }
+}
+

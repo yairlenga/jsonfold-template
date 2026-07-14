@@ -1,0 +1,81 @@
+{
+  "main": {
+    "matrix": {
+      "$": true,
+      "set": {
+        "values": [
+          {"name": "null", "value": null},
+          {"name": "empty", "value": []},
+          {"name": "one", "value": [ 1 ]},
+          {"name": "two", "value": [ 11, 12]},
+          {"name": "object", "value": [23, 24, {"a": 25}]},
+          {"name": "nested", "value": [[37, 38]]},
+          {"name": "five", "value": [ 41, 42, 43, 44, 45]}
+        ]
+      },
+      "foreach": {
+        "var": "a",
+        "in": "$values"
+      },
+      "body": {
+        "$": true,
+        "foreach": {
+          "var": "b",
+          "in": "$values"
+        },
+        "body": {
+          "left": "$a.name",
+          "right": "$b.name",
+          "result": {
+            "$": true,
+            "body": ["$a.value", "$b.value"],
+            "transform": "flatten"
+          }
+        }
+      }
+    },
+    "checks": {
+      "three empty": {
+        "$": true,
+        "body": [[], [], []],
+        "transform": "flatten"
+      },
+      "three singles": {
+        "$": true,
+        "body": [[1], [2], [3]],
+        "transform": "flatten"
+      },
+      "null and empty": {
+        "$": true,
+        "body": [null, [1], []],
+        "transform": "flatten"
+      },
+      "empty middle": {
+        "$": true,
+        "body": [[1, 2], [], [3, 4, {"a": 5}]],
+        "transform": "flatten"
+      },
+      "four arrays": {
+        "$": true,
+        "body": [[1], [2, 3], [4, 5, 6], [7, 8, 9, 10]],
+        "transform": "flatten"
+      },
+      "alternating empty": {
+        "$": true,
+        "body": [[], [1], [], [2, 3]],
+        "transform": "flatten"
+      },
+      "nested arrays": {
+        "$": true,
+        "body": [[[1, 2]], [[3, 4]], [], [[5, 6]]],
+        "transform": "flatten"
+      },
+      "object values": {
+        "$": true,
+        "body": [[{"a": 1}], [{"b": 2}, {"c": 3}], [], [{"d": 4}]],
+        "transform": "flatten"
+      }
+    }
+  }
+}
+
