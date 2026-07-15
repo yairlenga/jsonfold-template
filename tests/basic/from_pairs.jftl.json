@@ -1,6 +1,11 @@
 {
   "main": {
-
+      "boolean_false": {
+        "$": true,
+        "transform": "from_pairs",
+        "body": false,
+        "error": "CATCHED: from_pairs input is boolean true, not null or a list"
+      },
     "matrix": {
       "$": true,
       "set": {

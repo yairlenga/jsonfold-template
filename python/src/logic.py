@@ -109,9 +109,9 @@ class LogicStatement(Statement):
             for case in cases
             ] if (cases := args.get("case", None)) else None
 
-        v_body, _ = compiler.statement(v, source) if ( v := args.get("body", None)) else (None, None)
-        v_default, _ = compiler.statement(v, source) if ( v := args.get("default", None)) else (None, None)
-        v_error, _ = compiler.statement(v, source) if ( v := args.get("error", None)) else (None, None)
+        v_body, _ = compiler.statement(v, source) if ( v := args.get("body", None)) is not None else (None, None)
+        v_default, _ = compiler.statement(v, source) if ( v := args.get("default", None)) is not None else (None, None)
+        v_error, _ = compiler.statement(v, source) if ( v := args.get("error", None)) is not None else (None, None)
         v_transform = args.get("transform", None) 
 
 

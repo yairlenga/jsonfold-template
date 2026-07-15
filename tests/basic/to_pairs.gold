@@ -1,7 +1,7 @@
 {
   "checks": {
     "null input": null,
-    "empty object": null,
+    "empty object": [],
     "single entry": [
       [
         "a",

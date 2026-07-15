@@ -21,3 +21,4 @@
 14. Simple recursive - potentially search/filter
 15. Reserve grammar for single argument function calls `foo:bar:baz` and `baz | bar | foo`
 16. Fix logic to distinguish between Missing and Null in from_pairs, if needed ?
+17. Fix handling of statements that evaluate to "null". They should return a reference to literal None. None will indicate no body.

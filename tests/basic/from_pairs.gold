@@ -1,577 +1,297 @@
 {
+  "boolean_false": "CATCHED: from_pairs input is boolean true, not null or a list",
   "matrix": [
     [
       {
-        "left": "null",
-        "right": "null",
+        "left": "a1",
+        "right": "a1",
+        "result": {
+          "a": 1
+        }
+      },
+      {
+        "left": "a1",
+        "right": "b2",
+        "result": {
+          "a": 1,
+          "b": 2
+        }
+      },
+      {
+        "left": "a1",
+        "right": "ax",
+        "result": {
+          "a": "x"
+        }
+      },
+      {
+        "left": "a1",
+        "right": "nested",
+        "result": {
+          "a": 1,
+          "nested": {
+            "x": 1
+          }
+        }
+      },
+      {
+        "left": "a1",
+        "right": "skip-null",
+        "result": {
+          "a": 1
+        }
+      },
+      {
+        "left": "a1",
+        "right": "skip-falsy",
+        "result": {
+          "a": 1
+        }
+      }
+    ],
+    [
+      {
+        "left": "b2",
+        "right": "a1",
+        "result": {
+          "b": 2,
+          "a": 1
+        }
+      },
+      {
+        "left": "b2",
+        "right": "b2",
+        "result": {
+          "b": 2
+        }
+      },
+      {
+        "left": "b2",
+        "right": "ax",
+        "result": {
+          "b": 2,
+          "a": "x"
+        }
+      },
+      {
+        "left": "b2",
+        "right": "nested",
+        "result": {
+          "b": 2,
+          "nested": {
+            "x": 1
+          }
+        }
+      },
+      {
+        "left": "b2",
+        "right": "skip-null",
+        "result": {
+          "b": 2
+        }
+      },
+      {
+        "left": "b2",
+        "right": "skip-falsy",
+        "result": {
+          "b": 2
+        }
+      }
+    ],
+    [
+      {
+        "left": "ax",
+        "right": "a1",
+        "result": {
+          "a": 1
+        }
+      },
+      {
+        "left": "ax",
+        "right": "b2",
+        "result": {
+          "a": "x",
+          "b": 2
+        }
+      },
+      {
+        "left": "ax",
+        "right": "ax",
+        "result": {
+          "a": "x"
+        }
+      },
+      {
+        "left": "ax",
+        "right": "nested",
+        "result": {
+          "a": "x",
+          "nested": {
+            "x": 1
+          }
+        }
+      },
+      {
+        "left": "ax",
+        "right": "skip-null",
+        "result": {
+          "a": "x"
+        }
+      },
+      {
+        "left": "ax",
+        "right": "skip-falsy",
+        "result": {
+          "a": "x"
+        }
+      }
+    ],
+    [
+      {
+        "left": "nested",
+        "right": "a1",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "a": 1
+        }
+      },
+      {
+        "left": "nested",
+        "right": "b2",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "b": 2
+        }
+      },
+      {
+        "left": "nested",
+        "right": "ax",
+        "result": {
+          "nested": {
+            "x": 1
+          },
+          "a": "x"
+        }
+      },
+      {
+        "left": "nested",
+        "right": "nested",
+        "result": {
+          "nested": {
+            "x": 1
+          }
+        }
+      },
+      {
+        "left": "nested",
+        "right": "skip-null",
+        "result": {
+          "nested": {
+            "x": 1
+          }
+        }
+      },
+      {
+        "left": "nested",
+        "right": "skip-falsy",
+        "result": {
+          "nested": {
+            "x": 1
+          }
+        }
+      }
+    ],
+    [
+      {
+        "left": "skip-null",
+        "right": "a1",
+        "result": {
+          "a": 1
+        }
+      },
+      {
+        "left": "skip-null",
+        "right": "b2",
+        "result": {
+          "b": 2
+        }
+      },
+      {
+        "left": "skip-null",
+        "right": "ax",
+        "result": {
+          "a": "x"
+        }
+      },
+      {
+        "left": "skip-null",
+        "right": "nested",
+        "result": {
+          "nested": {
+            "x": 1
+          }
+        }
+      },
+      {
+        "left": "skip-null",
+        "right": "skip-null",
         "result": {}
       },
       {
-        "left": "null",
-        "right": "empty",
-        "result": null
-      },
+        "left": "skip-null",
+        "right": "skip-falsy",
+        "result": {}
+      }
+    ],
+    [
       {
-        "left": "null",
-        "right": "invalid",
-        "result": null
-      },
-      {
-        "left": "null",
+        "left": "skip-falsy",
         "right": "a1",
         "result": {
           "a": 1
         }
       },
       {
-        "left": "null",
-        "right": "a-alt",
-        "result": {
-          "a": 100
-        }
-      },
-      {
-        "left": "null",
+        "left": "skip-falsy",
         "right": "b2",
         "result": {
           "b": 2
         }
       },
       {
-        "left": "null",
-        "right": "null-value",
+        "left": "skip-falsy",
+        "right": "ax",
         "result": {
-          "a": null
+          "a": "x"
         }
       },
       {
-        "left": "null",
-        "right": "null-key",
-        "result": {
-          "null": 1
-        }
-      },
-      {
-        "left": "null",
+        "left": "skip-falsy",
         "right": "nested",
         "result": {
-          "item": {
-            "x": 1
-          }
-        }
-      }
-    ],
-    [
-      {
-        "left": "empty",
-        "right": "null",
-        "result": null
-      },
-      {
-        "left": "empty",
-        "right": "empty",
-        "result": null
-      },
-      {
-        "left": "empty",
-        "right": "invalid",
-        "result": null
-      },
-      {
-        "left": "empty",
-        "right": "a1",
-        "result": null
-      },
-      {
-        "left": "empty",
-        "right": "a-alt",
-        "result": null
-      },
-      {
-        "left": "empty",
-        "right": "b2",
-        "result": null
-      },
-      {
-        "left": "empty",
-        "right": "null-value",
-        "result": null
-      },
-      {
-        "left": "empty",
-        "right": "null-key",
-        "result": null
-      },
-      {
-        "left": "empty",
-        "right": "nested",
-        "result": null
-      }
-    ],
-    [
-      {
-        "left": "invalid",
-        "right": "null",
-        "result": null
-      },
-      {
-        "left": "invalid",
-        "right": "empty",
-        "result": null
-      },
-      {
-        "left": "invalid",
-        "right": "invalid",
-        "result": null
-      },
-      {
-        "left": "invalid",
-        "right": "a1",
-        "result": null
-      },
-      {
-        "left": "invalid",
-        "right": "a-alt",
-        "result": null
-      },
-      {
-        "left": "invalid",
-        "right": "b2",
-        "result": null
-      },
-      {
-        "left": "invalid",
-        "right": "null-value",
-        "result": null
-      },
-      {
-        "left": "invalid",
-        "right": "null-key",
-        "result": null
-      },
-      {
-        "left": "invalid",
-        "right": "nested",
-        "result": null
-      }
-    ],
-    [
-      {
-        "left": "a1",
-        "right": "null",
-        "result": {
-          "a": 1
-        }
-      },
-      {
-        "left": "a1",
-        "right": "empty",
-        "result": null
-      },
-      {
-        "left": "a1",
-        "right": "invalid",
-        "result": null
-      },
-      {
-        "left": "a1",
-        "right": "a1",
-        "result": {
-          "a": 1
-        }
-      },
-      {
-        "left": "a1",
-        "right": "a-alt",
-        "result": {
-          "a": 100
-        }
-      },
-      {
-        "left": "a1",
-        "right": "b2",
-        "result": {
-          "a": 1,
-          "b": 2
-        }
-      },
-      {
-        "left": "a1",
-        "right": "null-value",
-        "result": {
-          "a": null
-        }
-      },
-      {
-        "left": "a1",
-        "right": "null-key",
-        "result": {
-          "a": 1,
-          "null": 1
-        }
-      },
-      {
-        "left": "a1",
-        "right": "nested",
-        "result": {
-          "a": 1,
-          "item": {
-            "x": 1
-          }
-        }
-      }
-    ],
-    [
-      {
-        "left": "a-alt",
-        "right": "null",
-        "result": {
-          "a": 100
-        }
-      },
-      {
-        "left": "a-alt",
-        "right": "empty",
-        "result": null
-      },
-      {
-        "left": "a-alt",
-        "right": "invalid",
-        "result": null
-      },
-      {
-        "left": "a-alt",
-        "right": "a1",
-        "result": {
-          "a": 1
-        }
-      },
-      {
-        "left": "a-alt",
-        "right": "a-alt",
-        "result": {
-          "a": 100
-        }
-      },
-      {
-        "left": "a-alt",
-        "right": "b2",
-        "result": {
-          "a": 100,
-          "b": 2
-        }
-      },
-      {
-        "left": "a-alt",
-        "right": "null-value",
-        "result": {
-          "a": null
-        }
-      },
-      {
-        "left": "a-alt",
-        "right": "null-key",
-        "result": {
-          "a": 100,
-          "null": 1
-        }
-      },
-      {
-        "left": "a-alt",
-        "right": "nested",
-        "result": {
-          "a": 100,
-          "item": {
-            "x": 1
-          }
-        }
-      }
-    ],
-    [
-      {
-        "left": "b2",
-        "right": "null",
-        "result": {
-          "b": 2
-        }
-      },
-      {
-        "left": "b2",
-        "right": "empty",
-        "result": null
-      },
-      {
-        "left": "b2",
-        "right": "invalid",
-        "result": null
-      },
-      {
-        "left": "b2",
-        "right": "a1",
-        "result": {
-          "b": 2,
-          "a": 1
-        }
-      },
-      {
-        "left": "b2",
-        "right": "a-alt",
-        "result": {
-          "b": 2,
-          "a": 100
-        }
-      },
-      {
-        "left": "b2",
-        "right": "b2",
-        "result": {
-          "b": 2
-        }
-      },
-      {
-        "left": "b2",
-        "right": "null-value",
-        "result": {
-          "b": 2,
-          "a": null
-        }
-      },
-      {
-        "left": "b2",
-        "right": "null-key",
-        "result": {
-          "b": 2,
-          "null": 1
-        }
-      },
-      {
-        "left": "b2",
-        "right": "nested",
-        "result": {
-          "b": 2,
-          "item": {
-            "x": 1
-          }
-        }
-      }
-    ],
-    [
-      {
-        "left": "null-value",
-        "right": "null",
-        "result": {
-          "a": null
-        }
-      },
-      {
-        "left": "null-value",
-        "right": "empty",
-        "result": null
-      },
-      {
-        "left": "null-value",
-        "right": "invalid",
-        "result": null
-      },
-      {
-        "left": "null-value",
-        "right": "a1",
-        "result": {
-          "a": 1
-        }
-      },
-      {
-        "left": "null-value",
-        "right": "a-alt",
-        "result": {
-          "a": 100
-        }
-      },
-      {
-        "left": "null-value",
-        "right": "b2",
-        "result": {
-          "a": null,
-          "b": 2
-        }
-      },
-      {
-        "left": "null-value",
-        "right": "null-value",
-        "result": {
-          "a": null
-        }
-      },
-      {
-        "left": "null-value",
-        "right": "null-key",
-        "result": {
-          "a": null,
-          "null": 1
-        }
-      },
-      {
-        "left": "null-value",
-        "right": "nested",
-        "result": {
-          "a": null,
-          "item": {
-            "x": 1
-          }
-        }
-      }
-    ],
-    [
-      {
-        "left": "null-key",
-        "right": "null",
-        "result": {
-          "null": 1
-        }
-      },
-      {
-        "left": "null-key",
-        "right": "empty",
-        "result": null
-      },
-      {
-        "left": "null-key",
-        "right": "invalid",
-        "result": null
-      },
-      {
-        "left": "null-key",
-        "right": "a1",
-        "result": {
-          "null": 1,
-          "a": 1
-        }
-      },
-      {
-        "left": "null-key",
-        "right": "a-alt",
-        "result": {
-          "null": 1,
-          "a": 100
-        }
-      },
-      {
-        "left": "null-key",
-        "right": "b2",
-        "result": {
-          "null": 1,
-          "b": 2
-        }
-      },
-      {
-        "left": "null-key",
-        "right": "null-value",
-        "result": {
-          "null": 1,
-          "a": null
-        }
-      },
-      {
-        "left": "null-key",
-        "right": "null-key",
-        "result": {
-          "null": 1
-        }
-      },
-      {
-        "left": "null-key",
-        "right": "nested",
-        "result": {
-          "null": 1,
-          "item": {
-            "x": 1
-          }
-        }
-      }
-    ],
-    [
-      {
-        "left": "nested",
-        "right": "null",
-        "result": {
-          "item": {
+          "nested": {
             "x": 1
           }
         }
       },
       {
-        "left": "nested",
-        "right": "empty",
-        "result": null
+        "left": "skip-falsy",
+        "right": "skip-null",
+        "result": {}
       },
       {
-        "left": "nested",
-        "right": "invalid",
-        "result": null
-      },
-      {
-        "left": "nested",
-        "right": "a1",
-        "result": {
-          "item": {
-            "x": 1
-          },
-          "a": 1
-        }
-      },
-      {
-        "left": "nested",
-        "right": "a-alt",
-        "result": {
-          "item": {
-            "x": 1
-          },
-          "a": 100
-        }
-      },
-      {
-        "left": "nested",
-        "right": "b2",
-        "result": {
-          "item": {
-            "x": 1
-          },
-          "b": 2
-        }
-      },
-      {
-        "left": "nested",
-        "right": "null-value",
-        "result": {
-          "item": {
-            "x": 1
-          },
-          "a": null
-        }
-      },
-      {
-        "left": "nested",
-        "right": "null-key",
-        "result": {
-          "item": {
-            "x": 1
-          },
-          "null": 1
-        }
-      },
-      {
-        "left": "nested",
-        "right": "nested",
-        "result": {
-          "item": {
-            "x": 1
-          }
-        }
+        "left": "skip-falsy",
+        "right": "skip-falsy",
+        "result": {}
       }
     ]
   ],
   "checks": {
-    "empty list": null,
+    "empty list": {},
     "single pair": {
       "only": 1
     },
@@ -598,19 +318,20 @@
       "c": 30,
       "d": 40
     },
-    "null entries skipped": {
+    "Missing Entries skipped": {
+      "empty": null,
       "a": 1,
       "b": 2
     },
-    "empty pairs skipped": null,
+    "empty pairs skipped": {
+      "a": 1,
+      "b": 2
+    },
     "null value preserved": {
       "a": null,
       "b": 2
     },
-    "null key handling": {
-      "null": 1,
-      "b": 2
-    },
+    "null key handling": "Null Key not allowed",
     "nested value is shallow": {
       "item": {
         "b": 2
@@ -622,5 +343,14 @@
       "c": 4,
       "d": 4
     }
+  },
+  "errors": {
+    "scalar_string": "CATCHED: from_pairs input is a scalar string, not null or a list",
+    "scalar_number": "CATCHED: from_pairs input is a scalar number, not null or a list",
+    "boolean_true": "CATCHED: from_pairs input is boolean true, not null or a list",
+    "boolean_false": "CATCHED: from_pairs input is boolean false, not null or a list",
+    "pair_one_element": "CATCHED: pair has 1 element, expected [key, value]",
+    "pair_three_elements": "CATCHED: pair has 3 elements, expected [key, value]",
+    "pair_non_string_key": "CATCHED: pair key is a number, not a string"
   }
 }
