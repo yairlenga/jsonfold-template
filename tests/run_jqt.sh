@@ -100,7 +100,6 @@ fail=0
 skip=0
 for id in "${id_list[@]}" ; do
 	base="$OUTDIR/$id"
-	rm -f $base.input $base.jq $base.jq.out $base.jq.err
 	skip_msg=${data["$id.SKIP"]-}
 	jq_filter=${data["$id.JQ"]-}
 	input=${data["$id.INPUT"]-}
@@ -109,13 +108,13 @@ for id in "${id_list[@]}" ; do
 	input_file=$base.input
 	jq_file=$base.jq
 	gold_file=$base.gold
-	jq_out=$base.jq.out
+	jq_out=$base.jqout
 	err_file=$base.err
 	jf_file=$base.jftl
 	jf_out=$base.jf.out
 	# Run from memory
 	error=
-	rm -f $OUTDIR/$id.{input,gold,jq.out,jf.out,err,diff}
+	rm -f $base.{input,gold,jq,jqout,jftl,out,err,ok}
 	rm -f $err_file
 
 	if [ "$skip_msg" ] ; then
@@ -193,7 +192,8 @@ for id in "${id_list[@]}" ; do
 	else
 		echo "OK $id"
         	pass=$((pass+1))
-		[ "$KEEP" ] || rm -f $OUTDIR/$id.{input,jq,jftl,gold,jq.out,err,jf.out,err,diff}
+		mv $err_file $base.ok
+		[ "$KEEP" ] || rm -f $OUTDIR/$id.{input,jq,jftl,gold,jqout,out,err}
 	fi
 done
  

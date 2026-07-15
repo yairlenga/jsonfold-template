@@ -1,6 +1,7 @@
 *.log
 *.out
 *.tmp
+*.err
 [0-9]
 out/
 tmp/

@@ -1,4 +1,10 @@
 #!/bin/bash -ue
+#----------------------------------------------------------------------
+# Execute JFTL tests.
+# Each tests include executing a JFTL template against list of input
+# files. The results are compared with a gold file.
+#----------------------------------------------------------------------
+## 
 
 root=$(readlink -m $0/../..)
 mode=
@@ -56,18 +62,22 @@ do
 	    label="$base ($mode)"
         fi
 
+	# Set nullglob to get empty file list if no test file exists
 	shopt -s nullglob
 	files=($base.*.inp.json)
 	shopt -u nullglob
-        $JSONFOLD $jftl "${files[@]}" > "$out"
+        if ! $JSONFOLD -q $jftl "${files[@]}" 2>&1 > $out ; then
+		echo "FAIL $label (template status=$?)" >&2
+		continue
+	fi
 
-        if diff -u "$gold" "$out"
+        if diff "$gold" "$out"
         then
             echo "OK $label"
             passed=$((passed+1))
         else
             failed=$((failed+1))
-            echo "FAIL $label" >&2
+	    echo "FAIL $label (diff)" >&2
         fi
     fi
 done

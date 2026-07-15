@@ -153,6 +153,7 @@ JFTL = {{{
 
 [008-basic]
 LEVEL=eval
+OUT_FMT=stream
 JQ = {{{
 {x:-1},{x:-.},{x:-.|abs}
 }}}
@@ -287,16 +288,16 @@ JFTL = {{{
 [016-basic]
 LEVEL=eval
 JQ = {{{
-@urid
+@uri
 }}}
 INPUT = {{{
 "%CE%BC"
 }}}
-GOLD{{
-"μ"
+GOLD = {{{
+"%25CE%25BC"
 }}}
 JFTL = {{{
-{"main": "$pyeval=__import__('urllib.parse', fromlist=['unquote']).unquote(_)"}
+{"main": "$pyeval=__import__('urllib.parse', fromlist=['quote']).quote(_)"}
 }}}
 
 [017-basic]
@@ -441,7 +442,7 @@ GOLD = {{{
 42
 }}}
 JFTL = {{{
-{"main": "$.[\"foo\"].bar"}
+{"main": "$[\"foo\"].bar"}
 }}}
 
 [027-basic]
@@ -462,6 +463,7 @@ COMMENT=Normalized to .foo.bar — a bare dot immediately before a quoted segmen
 
 [028-basic]
 LEVEL=py
+OUT_FMT=stream
 JQ = {{{
 .e0, .E1, .E-1, .E+1
 }}}
@@ -634,6 +636,7 @@ SKIP=needs try/catch and in-place path assignment.
 
 [041-basic]
 LEVEL=logic
+OUT_FMT=stream
 JQ = {{{
 .[]
 }}}
@@ -653,13 +656,14 @@ COMMENT=foreach with no "value" sets frame.current to each item, so "$." re-emit
 
 [042-basic]
 LEVEL=nav
+OUT_FMT=stream
 JQ = {{{
 1,1
 }}}
 INPUT = {{{
 []
 }}}
-GOLD{{
+GOLD = {{{
 1
 1
 }}}
@@ -669,6 +673,7 @@ JFTL = {{{
 OUT_MODE=stream
 
 [043-basic]
+OUT_FMT=stream
 LEVEL=nav
 JQ = {{{
 1,.
@@ -709,7 +714,7 @@ JQ = {{{
 INPUT = {{{
 [3]
 }}}
-GOLD{{
+GOLD = {{{
 [[2]]
 }}}
 JFTL = {{{
@@ -724,7 +729,7 @@ JQ = {{{
 INPUT = {{{
 [2]
 }}}
-GOLD{{
+GOLD = {{{
 [{}]
 }}}
 JFTL = {{{
@@ -779,6 +784,7 @@ JFTL = {{{
 
 [050-basic]
 LEVEL=nav
+OUT_FMT=stream
 JQ = {{{
 {x: (1,2)},{x:3} | .x
 }}}
@@ -819,11 +825,11 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-GOLD
+GOLD = {{{
 [0,1,2,3,4,5,6,7,8,9]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"shape": "range", "limit": 10}, "body": "$."}}
+{"main": {"$": true, "foreach": {"shape": "range", "stop": 10}, "body": "$."}}
 }}}
 COMMENT=shape:"range" with no "value" also sets frame.current to the numeric value each iteration.
 
@@ -835,7 +841,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-GOLD{{
+GOLD = {{{
 [0,1,2, 0,1,2,3, 1,2, 1,2,3]
 }}}
 JFTL = {{{
@@ -866,7 +872,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-GOLD{{
+GOLD ={{{
 []
 }}}
 JFTL = {{{
@@ -983,7 +989,7 @@ GOLD = {{{
 [0,1,2,3,4]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"shape": "range", "limit": 5}, "body": "$."}}
+{"main": {"$": true, "foreach": {"shape": "range", "stop": 5}, "body": "$."}}
 }}}
 COMMENT=This foreach's update just re-emits the item, so it degrades to plain range iteration — coincidence, not a general foreach/reduce translation.
 
@@ -1019,6 +1025,7 @@ JFTL = {{{
 }}}
 
 [066-basic]
+SKIP = JQ1.7 error
 LEVEL=py
 JQ = {{{
 [-foreach -.[] as $x (0; . + $x)]
@@ -1047,6 +1054,7 @@ GOLD = {{{
 SKIP=cartesian division-generator plus state threading; not confident in jq's exact iteration order to assert equivalence.
 
 [068-basic]
+SKIP = JQ1.7 error
 LEVEL=eval
 JQ = {{{
 [foreach .[] as $x (0; . + $x) as $x | $x]
@@ -1120,6 +1128,7 @@ GOLD = {{{
 SKIP=needs try/catch.
 
 [073-basic]
+SKIP = JQ1.7 does not ahve 2 parameters skip
 LEVEL=py
 JQ = {{{
 [skip(3; .[])]
@@ -1135,6 +1144,7 @@ JFTL = {{{
 }}}
 
 [074-basic]
+SKIP = JQ1.7 does not ahve 2 parameters skip
 LEVEL=py
 JQ = {{{
 [skip(0,2,3,4; .[])]
@@ -1150,6 +1160,7 @@ JFTL = {{{
 }}}
 
 [075-basic]
+SKIP = JQ1.7 does not ahve 2 parameters skip
 LEVEL=py
 JQ = {{{
 [skip(3; .[])]
@@ -1208,7 +1219,9 @@ JFTL = {{{
 }}}
 
 [079-basic]
+SKIP = JQ Failing
 LEVEL=py
+OUT_FMT=stream
 JQ = {{{
 [first(range(.)), last(range(.))]
 }}}
@@ -1287,7 +1300,7 @@ JQ = {{{
 INPUT = {{{
 null
 }}}
-GOLD{{
+GOLD = {{{
 [0,2,0,3,0,2,0,0,0,1,3,1,1,1,1,1,2,2,2,2]
 }}}
 JFTL = {{{
@@ -1327,6 +1340,7 @@ COMMENT=str.find/rfind and enumerate() aren't whitelisted at py tier.
 
 [087-basic]
 LEVEL=py
+OUT_FMT=stream
 JQ = {{{
 join(",","/")
 }}}
@@ -1420,6 +1434,7 @@ COMMENT=Avoided list()/set()/zip()/enumerate() (not whitelisted) via membership 
 
 [093-basic]
 LEVEL=py
+OUT_FMT=stream
 JQ = {{{
 .[2:4] = ([], ["a","b"], ["a","b","c"])
 }}}
@@ -1467,6 +1482,7 @@ COMMENT=Reading a named "set" variable always needs at least py tier — bare na
 
 [096-basic]
 LEVEL=py
+OUT_FMT=stream
 JQ = {{{
 [1,2,3][] as $x | [[4,5,6,7][$x]]
 }}}
@@ -1502,6 +1518,7 @@ COMMENT=Middle pipeline never affects the result in jq either (only $x is read a
 
 [098-basic]
 LEVEL=py
+SKIP = JQ Precendence - is + tighter then as
 JQ = {{{
 1 + 2 as $x | -$x
 }}}
@@ -1563,6 +1580,7 @@ JFTL = {{{
 
 [103-basic]
 LEVEL=py
+OUT_FMT=stream
 JQ = {{{
 .[] as [$a, $b] | [$b, $a]
 }}}
