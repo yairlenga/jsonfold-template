@@ -28,7 +28,7 @@
 #           anywhere.
 #   logic - uses {"$":true} (set/if/foreach/case/data/OUT_MODE/default) but
 #           never reads a named variable's value through an expression
-#           engine. Main trick: foreach with no "var" sets frame.current to
+#           engine. Main trick: foreach with no "value" sets frame.current to
 #           the item each iteration, so body "$." re-emits it for free.
 #   py    - needs $py= and stays inside the whitelist above.
 #   eval  - needs $pyeval= (something outside the whitelist, still one
@@ -649,7 +649,7 @@ JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$."}, "body": "$."}}
 }}}
 OUT_MODE=stream
-COMMENT=foreach with no "var" sets frame.current to each item, so "$." re-emits it with zero expression-engine use. Streaming collected into one array.
+COMMENT=foreach with no "value" sets frame.current to each item, so "$." re-emits it with zero expression-engine use. Streaming collected into one array.
 
 [042-basic]
 LEVEL=nav
@@ -825,7 +825,7 @@ GOLD
 JFTL = {{{
 {"main": {"$": true, "foreach": {"shape": "range", "limit": 10}, "body": "$."}}
 }}}
-COMMENT=shape:"range" with no "var" also sets frame.current to the numeric value each iteration.
+COMMENT=shape:"range" with no "value" also sets frame.current to the numeric value each iteration.
 
 [053-basic]
 LEVEL=py

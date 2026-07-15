@@ -15,13 +15,13 @@
         ]
       },
       "foreach": {
-        "var": "left",
+        "value": "left",
         "in": "$values"
       },
       "body": {
         "$": true,
         "foreach": {
-          "var": "right",
+          "value": "right",
           "in": "$values"
         },
         "body": {

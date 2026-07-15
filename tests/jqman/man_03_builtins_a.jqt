@@ -97,7 +97,7 @@ LEVEL=foreach
 JQ = map(abs)
 INPUT = [-10, -1.1, -1e-1]
 GOLD = [10,1.1,1e-1]
-JFTL = {"main": {"$": true, "foreach": {"var": "x"}, "body": "$pyrun= abs(_)"}}
+JFTL = {"main": {"$": true, "foreach": {"value": "x"}, "body": "$pyrun= abs(_)"}}
 COMMENT=PYRUN+STREAM-shape-but-not-STREAM-tagged: map(f) is jq's own array-collect (one output), so no OUT_FMT here even though the template still uses foreach -- see file header note.
 
 [BA-013-length-stream]
@@ -106,7 +106,7 @@ OUT_FMT=STREAM
 JQ = .[] | length
 INPUT = [[1,2], "string", {"a":2}, null, -5]
 GOLD = [2, 6, 1, 0, 5]
-JFTL = {"main": {"$": true, "foreach": {"var": "x"}, "body": "$pyrun= 0 if _ is None else (abs(_) if isinstance(_, (int, float)) else len(_))"}}
+JFTL = {"main": {"$": true, "foreach": {"value": "x"}, "body": "$pyrun= 0 if _ is None else (abs(_) if isinstance(_, (int, float)) else len(_))"}}
 COMMENT=PYRUN+STREAM. jq's length is type-polymorphic (string/array/object -> len, number -> abs value, null -> 0); this ternary chain covers exactly the 5 cases in this example, not every possible input type.
 
 [BA-014-utf8bytelength]
@@ -138,7 +138,7 @@ LEVEL=foreach
 JQ = map(has("foo"))
 INPUT = [{"foo": 42}, {}]
 GOLD = [true, false]
-JFTL = {"main": {"$": true, "foreach": {"var": "x"}, "body": "$pyrun= 'foo' in _"}}
+JFTL = {"main": {"$": true, "foreach": {"value": "x"}, "body": "$pyrun= 'foo' in _"}}
 COMMENT=PYRUN+map (no OUT_FMT, see file header).
 
 [BA-018-has-array]
@@ -146,7 +146,7 @@ LEVEL=foreach
 JQ = map(has(2))
 INPUT = [[0,1], ["a","b","c"]]
 GOLD = [false, true]
-JFTL = {"main": {"$": true, "foreach": {"var": "x"}, "body": "$pyrun= 2 < len(_)"}}
+JFTL = {"main": {"$": true, "foreach": {"value": "x"}, "body": "$pyrun= 2 < len(_)"}}
 COMMENT=PYRUN+map.
 
 [BA-019-in-object-stream]
@@ -155,7 +155,7 @@ OUT_FMT=STREAM
 JQ = .[] | in({"foo": 42})
 INPUT = ["foo", "bar"]
 GOLD = [true, false]
-JFTL = {"main": {"$": true, "foreach": {"var": "x"}, "body": "$pyrun= _ in {'foo': 42}"}}
+JFTL = {"main": {"$": true, "foreach": {"value": "x"}, "body": "$pyrun= _ in {'foo': 42}"}}
 COMMENT=PYRUN+STREAM.
 
 [BA-020-in-array]
@@ -163,5 +163,5 @@ LEVEL=foreach
 JQ = map(in([0,1]))
 INPUT = [2, 0]
 GOLD = [false, true]
-JFTL = {"main": {"$": true, "foreach": {"var": "x"}, "body": "$pyrun= 0 <= _ < 2"}}
+JFTL = {"main": {"$": true, "foreach": {"value": "x"}, "body": "$pyrun= 0 <= _ < 2"}}
 COMMENT=PYRUN+map. `in([0,1])` checks whether the current value is a valid *index* into a length-2 array, i.e. in range(0,2) -- hardcoded the length here since it's a literal in the jq program, not derived from input.

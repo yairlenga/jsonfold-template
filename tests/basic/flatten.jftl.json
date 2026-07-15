@@ -14,13 +14,13 @@
         ]
       },
       "foreach": {
-        "var": "a",
+        "value": "a",
         "in": "$values"
       },
       "body": {
         "$": true,
         "foreach": {
-          "var": "b",
+          "value": "b",
           "in": "$values"
         },
         "body": {

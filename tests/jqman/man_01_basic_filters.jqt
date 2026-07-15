@@ -177,7 +177,7 @@ OUT_FMT=stream
 JQ = .[]
 INPUT = []
 GOLD = NONE
-JFTL = {"main": {"$": true, "foreach": {"var": "x"}, "body": "$."}}
+JFTL = {"main": {"$": true, "foreach": {"value": "x"}, "body": "$."}}
 COMMENT=STREAM, same template as BF-017 -- zero-iteration edge case, good regression test once foreach is real.
 
 [BF-019-foo-iterator]

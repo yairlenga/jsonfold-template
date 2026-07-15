@@ -338,7 +338,7 @@ GOLD = {{{
 JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$.", "body": {"$pyeval": "','.join(('' if x is None else ('true' if x is True else ('false' if x is False else (x if isinstance(x,str) else __import__('json').dumps(x))))) for x in _)"}}}}
 }}}
-COMMENT=foreach with no "var" binds each inner array to frame.current ("_" inside the body expression); reuses test 400's join logic per item. Streaming jq's 4 outputs collected into one array.
+COMMENT=foreach with no "value" binds each inner array to frame.current ("_" inside the body expression); reuses test 400's join logic per item. Streaming jq's 4 outputs collected into one array.
 
 [402-modules]
 LEVEL=eval

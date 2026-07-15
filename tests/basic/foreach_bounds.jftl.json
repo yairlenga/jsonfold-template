@@ -9,19 +9,19 @@
         },
         "foreach": {
             "in": "$starts",
-            "var": "s"
+            "value": "s"
         },
         "body": {
             "$": true,
             "foreach": {
                 "in": "$stops",
-                "var": "e"
+                "value": "e"
             },
             "body": {
                 "$": true,
                 "foreach": {
                     "in": "$limits",
-                    "var": "l"
+                    "value": "l"
                 },
                 "body": {
                     "start": "$s",

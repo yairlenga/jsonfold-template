@@ -112,24 +112,24 @@ class TestForeach(unittest.TestCase):
 
     def test_full_foreach_block(self):
         stmt = compile_logic({
-            "foreach": {"key": "idx", "var": "item", "in": "$.items", "if": "$.item.active"}
+            "foreach": {"key": "idx", "value": "item", "in": "$.items", "if": "$.item.active"}
         })
         self.assertTrue(stmt._foreach)
         self.assertEqual(stmt._foreach.key, "idx")
-        self.assertEqual(stmt._foreach.var, "item")
+        self.assertEqual(stmt._foreach.value, "item")
         self.assertEqual(stmt._foreach.items, Tagged("expression", "$.items"))
         self.assertEqual(stmt._foreach.cond, Tagged("condition", "$.item.active"))
 
     def test_foreach_without_optional_if(self):
-        stmt = compile_logic({"foreach": {"key": "idx", "var": "item", "in": "$.items"}})
+        stmt = compile_logic({"foreach": {"key": "idx", "value": "item", "in": "$.items"}})
         self.assertTrue(stmt._foreach)
         self.assertIsNone(stmt._foreach.cond)
 
     def test_foreach_without_key(self):
-        stmt = compile_logic({"foreach": {"var": "item", "in": "$.items"}})
+        stmt = compile_logic({"foreach": {"value": "item", "in": "$.items"}})
         self.assertTrue(stmt._foreach)
         self.assertIsNone(stmt._foreach.key)
-        self.assertEqual(stmt._foreach.var, "item")
+        self.assertEqual(stmt._foreach.value, "item")
 
     def test_missing_foreach_is_false_and_all_subfields_none(self):
         stmt = compile_logic({})
@@ -215,7 +215,7 @@ class TestFullRealisticBlock(unittest.TestCase):
         args = {
             "set": {"total": "$.price"},
             "if": "$.enabled",
-            "foreach": {"key": "idx", "var": "row", "in": "$.rows"},
+            "foreach": {"key": "idx", "value": "row", "in": "$.rows"},
             "case": [{"when": "$.a", "then": "$.x"}],
             "body": "$.output",
             "transform": "MERGE",
@@ -228,7 +228,7 @@ class TestFullRealisticBlock(unittest.TestCase):
         self.assertEqual(stmt._if, Tagged("condition", "$.enabled"))
         self.assertTrue(stmt._foreach)
         self.assertEqual(stmt._foreach.key, "idx")
-        self.assertEqual(stmt._foreach.var, "row")
+        self.assertEqual(stmt._foreach.value, "row")
         self.assertEqual(stmt._foreach.items, Tagged("expression", "$.rows"))
         self.assertEqual(len(stmt._cases), 1)
         self.assertEqual(stmt._body, Tagged("statement", "$.output"))

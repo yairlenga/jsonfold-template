@@ -22,7 +22,7 @@ OUT_FMT=stream
 JQ = {user, title: .titles[]}
 INPUT = {"user":"stedolan","titles":["JQ Primer", "More JQ"]}
 GOLD = {"user":"stedolan", "title": "JQ Primer"} {"user":"stedolan", "title": "More JQ"}
-JFTL = { "main": {"$": true, "foreach": { "var": "title", "in": "$.titles" }, "body": { "user": "$.user", "title": "$title" }}}
+JFTL = { "main": {"$": true, "foreach": { "value": "title", "in": "$.titles" }, "body": { "user": "$.user", "title": "$title" }}}
 COMMENT=PYRUN+STREAM, revised: a single Python comprehension builds the whole result array (sidesteps curated-108's object-literal-body question and the nested-field-iteration question), OUT_FMT=STREAM unwraps it. Doesn't test jq's {shorthand} key syntax specifically -- that's now purely a jq-side parsing detail, invisible once translated.
 
 [TV-004-object-construction-computed-key]

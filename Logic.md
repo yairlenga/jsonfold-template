@@ -14,7 +14,7 @@ the only place a template makes a decision.
     "data": "EXPR",
     "foreach": {
         "key": "KEY-VAR",
-        "var": "ITEM-VAR",
+        "value": "ITEM-VAR",
         "index": "INDEX-VAR",
         "in": "EXPR",
         "if": "EXPR",
@@ -121,7 +121,7 @@ logic statement (with its own `case`) as the loop body.
 ```json
 "foreach": {
     "key": "KEY-VAR",
-    "var": "ITEM-VAR",
+    "value": "ITEM-VAR",
     "index": "INDEX-VAR",
     "in": "EXPR",
     "if": "EXPR",
@@ -155,8 +155,8 @@ is iterated instead.
 
 **`shape`** — when set to `"range"`, `in` is ignored entirely. The loop
 instead iterates a numeric range built from `start`/`stop`/`limit`
-(below), with `var` bound to the numeric value at each step and `index`
-bound to the same value as `var` (position and value coincide in range
+(below), with `value` bound to the numeric value at each step and `index`
+bound to the same value as `value` (position and value coincide in range
 mode). `shape` is case-sensitive; the only recognized values are
 `"array"` (the default — iterate `in`/current data as described above)
 and `"range"`. Any other value is a compile-time error.
@@ -181,8 +181,8 @@ for `shape: "range"`):
 **Per-iteration bindings** — for each item that survives `start`/
 `stop`/`limit` filtering:
 
-- `var`, if given, is bound to the item's value in the loop's frame.
-  If `var` is omitted, the frame's current data (`_`) is set to the item
+- `value`, if given, is bound to the item's value in the loop's frame.
+  If `value` is omitted, the frame's current data (`_`) is set to the item
   instead, for the duration of that iteration.
 - `key`, if given, is bound to the item's key (dict source) or position
   (list source, `shape: "array"`) or numeric value (`shape: "range"`).

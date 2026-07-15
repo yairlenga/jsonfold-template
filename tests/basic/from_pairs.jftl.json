@@ -1,28 +1,64 @@
 {
   "main": {
+
     "matrix": {
       "$": true,
       "set": {
         "values": [
-          {"name": "null", "value": null},
-          {"name": "empty", "value": []},
-          {"name": "invalid", "value": "not-a-pair"},
-          {"name": "a1", "value": ["a", 1]},
-          {"name": "a-alt", "value": ["a", 100]},
-          {"name": "b2", "value": ["b", 2]},
-          {"name": "null-value", "value": ["a", null]},
-          {"name": "null-key", "value": [null, 1]},
-          {"name": "nested", "value": ["item", {"x": 1}]}
+          {
+            "name": "a1",
+            "value": [
+              "a",
+              1
+            ]
+          },
+          {
+            "name": "b2",
+            "value": [
+              "b",
+              2
+            ]
+          },
+          {
+            "name": "ax",
+            "value": [
+              "a",
+              "x"
+            ]
+          },
+          {
+            "name": "nested",
+            "value": [
+              "nested",
+              {
+                "x": 1
+              }
+            ]
+          },
+          {
+            "name": "skip-null",
+            "value": [
+              null,
+              null
+            ]
+          },
+          {
+            "name": "skip-falsy",
+            "value": [
+              false,
+              null
+            ]
+          }
         ]
       },
       "foreach": {
-        "var": "left",
+        "value": "left",
         "in": "$values"
       },
       "body": {
         "$": true,
         "foreach": {
-          "var": "right",
+          "value": "right",
           "in": "$values"
         },
         "body": {
@@ -48,116 +84,302 @@
       "single pair": {
         "$": true,
         "body": [
-          ["only", 1]
+          [
+            "only",
+            1
+          ]
         ],
         "transform": "from_pairs"
       },
       "three disjoint pairs": {
         "$": true,
         "body": [
-          ["a", 1],
-          ["b", 2],
-          ["c", 3]
+          [
+            "a",
+            1
+          ],
+          [
+            "b",
+            2
+          ],
+          [
+            "c",
+            3
+          ]
         ],
         "transform": "from_pairs"
       },
       "right wins three": {
         "$": true,
         "body": [
-          ["a", 1],
-          ["a", 2],
-          ["a", 3]
+          [
+            "a",
+            1
+          ],
+          [
+            "a",
+            2
+          ],
+          [
+            "a",
+            3
+          ]
         ],
         "transform": "from_pairs"
       },
       "duplicate key keeps first position": {
         "$": true,
         "body": [
-          ["a", 1],
-          ["b", 2],
-          ["a", 3]
+          [
+            "a",
+            1
+          ],
+          [
+            "b",
+            2
+          ],
+          [
+            "a",
+            3
+          ]
         ],
         "transform": "from_pairs"
       },
       "order preserved for unique keys": {
         "$": true,
         "body": [
-          ["z", 1],
-          ["a", 2],
-          ["m", 3]
+          [
+            "z",
+            1
+          ],
+          [
+            "a",
+            2
+          ],
+          [
+            "m",
+            3
+          ]
         ],
         "transform": "from_pairs"
       },
       "mixed overlap last wins": {
         "$": true,
         "body": [
-          ["a", 1],
-          ["b", 2],
-          ["b", 20],
-          ["c", 30],
-          ["a", 100],
-          ["d", 40]
+          [
+            "a",
+            1
+          ],
+          [
+            "b",
+            2
+          ],
+          [
+            "b",
+            20
+          ],
+          [
+            "c",
+            30
+          ],
+          [
+            "a",
+            100
+          ],
+          [
+            "d",
+            40
+          ]
         ],
         "transform": "from_pairs"
       },
-      "null entries skipped": {
+      "Missing Entries skipped": {
         "$": true,
         "body": [
-          null,
-          ["a", 1],
-          null,
-          ["b", 2]
+          [
+            "empty",
+            "$.MISSING"
+          ],
+          [
+            "a",
+            1
+          ],
+          [
+            "b",
+            2
+          ]
         ],
         "transform": "from_pairs"
       },
       "empty pairs skipped": {
         "$": true,
         "body": [
-          [],
-          ["a", 1],
-          [],
-          ["b", 2]
+          [
+            "$.MISSING",
+            "$.MISSING"
+          ],
+          [
+            "a",
+            1
+          ],
+          [
+            null,
+            "$.MISSING"
+          ],
+          [
+            "b",
+            2
+          ]
         ],
         "transform": "from_pairs"
       },
       "null value preserved": {
         "$": true,
         "body": [
-          ["a", null],
-          ["b", 2]
+          [
+            "a",
+            null
+          ],
+          [
+            "b",
+            2
+          ]
         ],
         "transform": "from_pairs"
       },
       "null key handling": {
         "$": true,
         "body": [
-          [null, 1],
-          ["b", 2]
+          [
+            null,
+            1
+          ],
+          [
+            "b",
+            2
+          ]
         ],
-        "transform": "from_pairs"
+        "transform": "from_pairs",
+        "error": "Null Key not allowed"
       },
       "nested value is shallow": {
         "$": true,
         "body": [
-          ["item", {"a": 1}],
-          ["item", {"b": 2}]
+          [
+            "item",
+            {
+              "a": 1
+            }
+          ],
+          [
+            "item",
+            {
+              "b": 2
+            }
+          ]
         ],
         "transform": "from_pairs"
       },
       "four priorities last wins": {
         "$": true,
         "body": [
-          ["a", 1],
-          ["a", 2],
-          ["b", 2],
-          ["b", 3],
-          ["c", 3],
-          ["a", 4],
-          ["b", 4],
-          ["c", 4],
-          ["d", 4]
+          [
+            "a",
+            1
+          ],
+          [
+            "a",
+            2
+          ],
+          [
+            "b",
+            2
+          ],
+          [
+            "b",
+            3
+          ],
+          [
+            "c",
+            3
+          ],
+          [
+            "a",
+            4
+          ],
+          [
+            "b",
+            4
+          ],
+          [
+            "c",
+            4
+          ],
+          [
+            "d",
+            4
+          ]
         ],
         "transform": "from_pairs"
+      }
+    },
+    "errors": {
+      "scalar_string": {
+        "$": true,
+        "transform": "from_pairs",
+        "body": "not-a-list",
+        "error": "CATCHED: from_pairs input is a scalar string, not null or a list"
+      },
+      "scalar_number": {
+        "$": true,
+        "transform": "from_pairs",
+        "body": 42,
+        "error": "CATCHED: from_pairs input is a scalar number, not null or a list"
+      },
+      "boolean_true": {
+        "$": true,
+        "transform": "from_pairs",
+        "body": true,
+        "error": "CATCHED: from_pairs input is boolean true, not null or a list"
+      },
+      "boolean_false": {
+        "$": true,
+        "transform": "from_pairs",
+        "body": false,
+        "error": "CATCHED: from_pairs input is boolean false, not null or a list"
+      },
+      "pair_one_element": {
+        "$": true,
+        "transform": "from_pairs",
+        "body": [
+          [
+            "only-one"
+          ]
+        ],
+        "error": "CATCHED: pair has 1 element, expected [key, value]"
+      },
+      "pair_three_elements": {
+        "$": true,
+        "transform": "from_pairs",
+        "body": [
+          [
+            "a",
+            "b",
+            "c"
+          ]
+        ],
+        "error": "CATCHED: pair has 3 elements, expected [key, value]"
+      },
+      "pair_non_string_key": {
+        "$": true,
+        "transform": "from_pairs",
+        "body": [
+          [
+            123,
+            "value"
+          ]
+        ],
+        "error": "CATCHED: pair key is a number, not a string"
       }
     }
   }

@@ -1,3 +1,4 @@
+from types import NoneType
 from typing import Any, ItemsView, Iterator, Literal, Optional, cast
 from dataclasses import dataclass, replace
 
@@ -41,7 +42,7 @@ class DefineVar:
 @dataclass
 class ForeachStatement():
     key: Optional[str] = None
-    var: Optional[str] = None
+    value: Optional[str] = None
     index: Optional[str] = None
     items: Optional[Expression] = None
     cond: Optional[Condition] = None
@@ -82,7 +83,7 @@ class LogicStatement(Statement):
             v_foreach = isinstance(v_loop, dict)
             # Compile time constants
             v_foreach_key = v_loop.get("key", None)
-            v_foreach_var = v_loop.get("var", None)
+            v_foreach_value = v_loop.get("value", None)
             v_foreach_index = v_loop.get("index", None)
             v_foreach_shape = v_loop.get("shape", None)
             # Runtime expressions
@@ -93,7 +94,7 @@ class LogicStatement(Statement):
             v_foreach_limit, _ = compiler.expression(v, source) if ( v := v_loop.get("limit", None)) else (None, None)
             v_foreach = ForeachStatement(
                 key = v_foreach_key,
-                var = v_foreach_var,
+                value = v_foreach_value,
                 index = v_foreach_index,
                 items = v_foreach_in,
                 cond = v_foreach_cond,
@@ -210,7 +211,7 @@ class LogicStatement(Statement):
 
         new_vars = frame.vars
         # Process foreach loop
-        v_var = foreach.var
+        v_value = foreach.value
         v_key = foreach.key
         v_cond = foreach.cond
         v_index = foreach.index
@@ -245,8 +246,8 @@ class LogicStatement(Statement):
             if v_index:
                 new_vars[v_index] = pos
 
-            if v_var:
-                new_vars[v_var] = item
+            if v_value:
+                new_vars[v_value] = item
             else:
                 frame.current = item
 
@@ -332,19 +333,31 @@ class LogicStatement(Statement):
         if not isinstance(input, list):
             return Error(
                     code="FROM_PAIRS_INPUT", severity="ERROR",
-                    message=f"The 'to_pairs' transformation input is array of objects, got non-list input",
+                    message=f"The 'from_pairs' transformation input is array of objects, got non-list input",
                 )
 
         for pos, item in enumerate(input):
-            if item is None:
-                continue
             if not isinstance(item, list) or len(item) != 2:
                 return Error(
-                    code="FROM_PAIRS_ITEM", severity="ERROR",
-                    message=f"The 'to_pairs' Merge transformation input is array of objects, got non list items in position {pos}",
+                    code="FROM_PAIRS_DATA", severity="ERROR",
+                    message=f"The 'from_pairs' transformation input is array of pairs, got non pair in position {pos} {input}",
                 )
 
-        return dict(item for item in input if item is not None)
+            key = item[0]
+            value = item[1]
+
+            # Skiped entries: [ null, null], and [false, null]
+            if value in [None, False] and not key:
+                continue
+
+            # Validate key is string.
+            if not isinstance(key, str):
+                return Error(
+                    code="FROM_PAIRS_BAD_KEY", severity="ERROR",
+                    message=f"Invalid key type {type(item[0])} for missing item in 'from_pairs' pairs position {pos}, {input}",
+                )
+
+        return dict(item for item in input if item[0])
 
 
     def eval(self, prev_frame: Frame) -> Any | Error | Missing:
@@ -371,7 +384,7 @@ class LogicStatement(Statement):
         # Choose body to execute
         v_body = self._choose_body(new_frame)
 
-        if not v_body:
+        if v_body is None:
             return new_frame.eval_value(self._default_val)
 
         # Check if executing foreach loop
