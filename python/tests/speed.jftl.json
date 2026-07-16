@@ -1,0 +1,19 @@
+{
+    "main": {
+        "$": true,
+        "set": {
+            "v5": { "a": { "b": { "c": { "d": { "e": 1 }}}}},
+            "mm": {
+                "$": true,
+                "foreach": { "shape": "range", "value": "i", "stop": 1000 },
+                "body": {
+                    "$": true,
+                    "foreach": { "shape": "range", "value": "i", "stop": 1000 },
+                    "body": "$v5.a.b.c.d.e"
+                }
+            }
+        },
+        "data": "$mm",
+        "body": "$py=sum( (sum(row) for row in mm))"
+    }
+}

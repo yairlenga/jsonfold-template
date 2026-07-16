@@ -10,11 +10,24 @@
             "request": "launch",
             "program": "${workspaceFolder}/python/scripts/jf_template.py",
             "console": "integratedTerminal",
-            "args": [ "-v", "--all-plugins", "tests/pyrun/pyrun3.jftl.json", "tests/basic/py1.a.inp.json"],
+            "args": [ "-v", "--all-plugins", "python/z2.jftl"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
             }
         },
+        {
+            "name": "Python: CLI test",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/python/scripts/jf_template.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/tests/basic",
+            "args": [ "-v", "--all-plugins", "from_pairs.jftl.json" ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/python/src"
+            }
+        },
+
         {
             "name": "Python: test",
             "type": "debugpy",
