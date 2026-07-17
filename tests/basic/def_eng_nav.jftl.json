@@ -1,0 +1,9 @@
+{
+	"main": {
+		"=1": { "$": true, "data": { "a": 1 }, "body": "$=.a", "error": "Failed" },
+		"range(5,10)[2]": { "$": true, "data": "$py=[x for x in range(5, 10)]", "body": "$=[2]", "error": "failed" }
+	},
+	"config": {
+		"default_engine": "nav"
+	}
+}

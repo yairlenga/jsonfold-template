@@ -1,0 +1,11 @@
+{
+  "1+1": 2,
+  "len": "<method-wrapper '__len__' of str object at 0xaeb940>",
+  "range(5,10)": [
+    5,
+    6,
+    7,
+    8,
+    9
+  ]
+}
