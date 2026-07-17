@@ -1,9 +1,9 @@
 
 # runtime.py
 from dataclasses import dataclass
-from typing import Any, Literal, Union
+from typing import Any, Literal, Optional, Union
 
-from core import Expression, Frame, Statement, CompileError
+from core import Compiler, Condition, Expression, Frame, Statement, CompileError
 from template import Error, Missing
 
 @dataclass
@@ -30,7 +30,7 @@ _SEGMENT_RE = re.compile(r"""
   | \[\$(?P<var>\w+)\]
 """, re.VERBOSE)
 
-class NavigationExprNode(Statement, Expression):
+class NavigationStatement(Statement, Expression):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
     def __init__(self, path: str, where: str | None = None, start: Literal["_current", "_parent.current", "_input"] | str= "_current"):
@@ -123,3 +123,60 @@ class NavigationExprNode(Statement, Expression):
         if isinstance(result, (Error, Missing)):
             return result
         return result not in (False, None)
+
+
+NAV_RE_STR = r"""
+    (?P<head> | \^ | < | (?P<vars>\w+ ) )
+    (?P<segments> $ | \[.* | \..* )
+"""
+class NavigationPlugin(Compiler):
+
+    _NAV_RE = re.compile("^" + NAV_RE_STR + "$", re.VERBOSE)
+
+    def parse_nav(self, m: re.Match[str], where) -> NavigationStatement:
+
+        start = None
+        head = m.group("head")
+        segments = m.group("segments")
+        if head == "":
+            start = "_current"
+            # Special case '$.' implied start with current, NO segments
+            if segments == ".":
+                segments = "" 
+        elif head == "^":
+            start = "_input"
+        elif head == "<":
+            start = "_parent.current"
+        elif (vars := m.group("vars")) != "":
+            # Convert $foo.bar to .foo.bar, starting with implied "_.vars"
+            start = vars
+
+        if not start:
+            return None
+        
+        engine = NavigationStatement(segments, start=start, where=where)
+        return engine
+
+    def parse(self, source, where):
+
+        m = self._NAV_RE.match(source)
+        if not m:
+            raise CompileError(Error(severity="ERROR", code="BAD-NAV-SYNTAX", message=f"Unknown navigation: '${source}", where=where))
+        
+        node = self.parse_nav(m, where)
+        if not node:
+            raise CompileError(Error(severity="ERROR", code="BAD-NAV-EXPR", message=f"Unknown navigation: '${source}", where=where))      
+        
+        return node
+
+    def condition(self, source: str) -> tuple[Condition, Optional[list[Error]]]:
+        assert isinstance(source, str)
+        return self.parse(source, None), None
+    
+    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[Error]]]:
+        assert isinstance(source, str)
+        return self.parse(source, None), None
+
+    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[Error]]]:
+        assert isinstance(source, str)
+        return self.parse(source, None), None

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from types import NoneType
 from typing import Any, Literal, Optional, TextIO, cast
 from pathlib import Path
 from dataclasses import dataclass, field
@@ -7,7 +8,7 @@ import re
 from logic import LogicStatement
 from template import Template, Status, Error, Engine, Missing
 from core import SKIP_VALUE, CompileError, Condition, Environment, Evaluator, Expression, JFTLConfig, RenderError, Statement, Frame, Compiler, JFTLTemplate
-from navigation import NavigationExprNode
+from navigation import NAV_RE_STR, NavigationPlugin
 
 from typing import Any, Union
 
@@ -44,13 +45,9 @@ class JFTLCompiler(Compiler):
     config: JFTLConfig
     plugins: dict[str, Any] = field(default_factory=dict)
 
-    # Call to natigation: $anchor... or $ancho[...]
-    NAV_RE = re.compile(r"""
-        \$
-        (?P<head> | \^ | < | (?P<vars>\w+ ) )
-        (?P<segments> $ | \[.* | \..* )
-        $
-    """, re.VERBOSE)
+    # Call to natigation: 
+    _NAV_RE = re.compile('^ \\$' + NAV_RE_STR + "$", re.VERBOSE)
+    _nav_plugin : NavigationPlugin = field(default_factory=NavigationPlugin)
 
     # Call to expression engine: $prefix=expression
     EXPR_RE = re.compile(r"""
@@ -62,7 +59,7 @@ class JFTLCompiler(Compiler):
         $            
     """, re.VERBOSE)
 
-    def _compile(self, source: Any, where: str = "") -> Statement | Expression:
+    def _compile(self, source: Any, where: str = "") -> Statement | Expression | str | int | float | bool | NoneType :
 
         # Simple Literal returned here
         if isinstance(source, (int, float, bool, type(None))):
@@ -88,34 +85,17 @@ class JFTLCompiler(Compiler):
         # Scalar Cases - string
         if isinstance(source, str):
 
-            # Anything starting with '$$' is considered as a literal removing the first $.
+            # Anything NOT starting with '$' is literal
             if not source.startswith("$"):
                 return source
             
+            # Anything starting with '$$' is considered as a literal removing the first $.
             if source.startswith('$$'):
                 return source[1:]
 
-            m = self.NAV_RE.match(source) if source != "$" else None
+            m = self._NAV_RE.match(source) if source != "$" else None
             if m:
-                start = None
-                head = m.group("head")
-                segments = m.group("segments")
-                if head == "":
-                    start = "_current"
-                    # Special case '$.' implied start with current, NO segments
-                    if segments == ".":
-                        segments = "" 
-                elif head == "^":
-                    start = "_input"
-                elif head == "<":
-                    start = "_parent.current"
-                elif (vars := m.group("vars")) != "":
-                    # Convert $foo.bar to .foo.bar, starting with implied "_.vars"
-                    start = vars
-
-                if start:
-                    engine = NavigationExprNode(segments, where=where, start=start)
-                    return PathStatement(engine)
+                return self._nav_plugin.parse_nav(m, where)
 
             # Consider python expression engines (hardcoded for now)
 
@@ -164,7 +144,7 @@ class JFTLEngine(Engine):
 
     def compile(self, source: str | dict | list, where: str = "", *, main_only: bool = False) -> tuple[JFTLTemplate, list[Error]]:
         top = cast(dict, { "main": source } if main_only else source)
-        config = JFTLConfig(**top.get("setup", {}))
+        config = JFTLConfig(**top.get("config", {}))
         compiler = JFTLCompiler(config, self._plugins)
         compiled = compiler._compile(top["main"], where)
 
@@ -231,15 +211,6 @@ class LiteralStatement(Statement):
 
     def eval(self, frame: Frame) -> Any | Error | Missing:
         return self.value
-
-
-@dataclass
-class PathStatement(Statement):
-    engine: NavigationExprNode
-
-    def eval(self, frame: Frame) -> Any | Error | Missing:
-        return self.engine.eval(frame)
-
 
 @dataclass
 class ObjectStatement(Statement):

@@ -14,8 +14,8 @@ Assumes the bug fixes discussed:
 import unittest
 
 from core import Frame, Environment, CompileError
+from navigation import NavigationStatement
 from template import Error, Missing
-from navigation import NavigationExprNode
 
 
 def make_root(current):
@@ -30,8 +30,8 @@ def make_child(parent: Frame, current):
     return Frame(env=parent.env, current=current, parent=parent, level=parent.level + 1)
 
 
-def nav(text: str, where=None) -> NavigationExprNode:
-    return NavigationExprNode(text, where=where)
+def nav(text: str, where=None) -> NavigationStatement:
+    return NavigationStatement(text, where=where)
 
 
 class TestBasicNavigation(unittest.TestCase):

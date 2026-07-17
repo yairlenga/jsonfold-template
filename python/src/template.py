@@ -83,6 +83,9 @@ def create_engine(*, no_plugins: bool = False, all_plugins: bool = False ) -> En
         import py_expr
         engine.add_plugin("py", py_expr.SimpleEvalPlugin())
 
+        import navigation
+        engine.add_plugin("nav", navigation.NavigationPlugin())
+
         if all_plugins :
             import py_run
             engine.add_plugin("pyeval", py_run.PyEvalPlugin())
