@@ -60,7 +60,7 @@ class LogicStatement(Statement):
     _cases: Optional[list[Case]] = None
     _body: Optional[Statement] = None
     _foreach: Optional[ForeachStatement] = None
-    _transform: Literal[None, "merge", "flatten", "from_pairs", "to_pairs"] = None
+    _transform: Literal[None, "merge", "flatten", "from_pairs", "to_pairs", "drop_missing"] = None
     _default_val: Optional[Statement] = None
     _error_val: Optional[Statement] = None
 
@@ -327,6 +327,22 @@ class LogicStatement(Statement):
                 )
 
         return list(input.items())
+    
+    def _drop_missing_transform(self, frame: Frame, input: dict) -> dict | list | None | Error:
+        if input is None or isinstance(input, Missing):
+            return None
+        if isinstance(input, dict):
+            return { k:v for k, v in input.items() if not isinstance(v, Missing) }
+        elif isinstance(input, list):
+            return [x for x in input if not isinstance(x, Missing)]
+        else:
+            return Error(
+                    code="DROP_MISSING_INPUT", severity="ERROR",
+                    message=f"The 'drop_missing' transformation input ",
+                )
+
+        return list(input.items())
+
 
     def _from_pairs_transform(self, frame: Frame, input: list[tuple[str, Any]]) -> dict | Error :
         if not isinstance(input, list):
@@ -418,6 +434,9 @@ class LogicStatement(Statement):
 
                 case "from_pairs":
                     result = self._from_pairs_transform(new_frame, result)
+
+                case "drop_missing":
+                    result = self._drop_missing_transform(new_frame, result)
 
                 case _:
                     return Error(

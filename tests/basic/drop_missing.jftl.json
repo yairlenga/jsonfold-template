@@ -1,0 +1,28 @@
+{
+	"main": {
+		"$": true,
+		"data": {
+			"null": null,
+			"scalar": 42,
+			"true": true,
+			"false": false,
+			"normal-array": [ 1, 2, 3, null, true, false, [], {} ],
+			"missings-array": [ "$_missing", "$_missing", "$_missing" ],
+			"mixed-array(4)": [ 1, "$_missing", 2, "$_missing", 3, "$_missing", 4 ],
+			"empty-array": [ ],
+			"missings-array": [ "$_missing", "$_missing", "$_missing" ],
+			"mixed-array(3)": [ 1, "$_missing", 2, "$_missing", 3, "$_missing", 4 ],
+			"normal-obj": { "a": 1, "b": 2, "c": 3, "d": null, "e": true, "f": false, "g": [], "h": {} },
+			"missings-obj": { "a": "$_missing", "b": "$_missing", "c": "$_missing" },
+			"mixed-obj(4)": { "a": 1, "b": "$_missing", "c": 2, "d": "$_missing", "e": 3, "f": "$_missing", "g": 4 },
+			"empty-array": {}
+		},
+		"foreach": {},
+		"body": {
+			"$": true,
+			"body": "$.",
+			"transform": "drop_missing",
+			"error": "ERROR"
+		}
+	}
+}

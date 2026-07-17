@@ -1,0 +1,47 @@
+{
+  "null": null,
+  "scalar": "ERROR",
+  "true": "ERROR",
+  "false": "ERROR",
+  "normal-array": [
+    1,
+    2,
+    3,
+    null,
+    true,
+    false,
+    [],
+    {}
+  ],
+  "missings-array": [],
+  "mixed-array(4)": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "empty-array": {},
+  "mixed-array(3)": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "normal-obj": {
+    "a": 1,
+    "b": 2,
+    "c": 3,
+    "d": null,
+    "e": true,
+    "f": false,
+    "g": [],
+    "h": {}
+  },
+  "missings-obj": {},
+  "mixed-obj(4)": {
+    "a": 1,
+    "c": 2,
+    "e": 3,
+    "g": 4
+  }
+}
