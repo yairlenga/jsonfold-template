@@ -75,7 +75,9 @@
   "current": "Beta",
   "currentTag": "Beta-tag",
   "parent": "Alpha",
+  "parentTag": null,
   "root": "Alpha",
+  "rootTag": null,
   "nested": {
     "level": 2,
     "current": "Gamma",
@@ -83,6 +85,7 @@
     "parent": "Beta",
     "parentTag": "Beta-tag",
     "root": "Alpha",
+    "rootTag": null,
     "nested": {
       "level": 3,
       "current": "Delta",
@@ -90,13 +93,15 @@
       "parent": "Gamma",
       "parentTag": "Gamma-tag",
       "root": "Alpha",
+      "rootTag": null,
       "nested": {
         "level": 4,
         "current": "Epsilon",
         "currentTag": "Epsilon-tag",
         "parent": "Delta",
         "parentTag": "Delta-tag",
-        "root": "Alpha"
+        "root": "Alpha",
+        "rootTag": null
       }
     }
   }

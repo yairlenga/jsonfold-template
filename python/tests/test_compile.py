@@ -7,13 +7,13 @@ Run with:  python -m unittest test_compile.py -v
 import unittest
 
 from core import CompileError
-from runtime import NavigationExprNode
+from navigation import NavigationExprNode
 from engine import JFTLEngine, Literal, LiteralStatement, PathStatement, ObjectStatement, ArrayStatement
 
 
 def compile(source, where: str = ""):
     template, errors = JFTLEngine().compile(source, where, main_only=True)
-    return template.main
+    return template.main_entry
 
 
 class TestLiterals(unittest.TestCase):

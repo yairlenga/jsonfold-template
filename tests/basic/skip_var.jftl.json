@@ -1,0 +1,41 @@
+{
+	"main": {
+		"_missing": "$_missing",
+		"_error": { "$": true, "body": "$_error", "error": "Pass Error Check" },
+		"_skip": {
+			"Nothing array": [ "one", "$_skip", "two", "$_skip", "$_skip", "three", "four"],
+			"Nothing Object": {
+				"one": 1,
+				"skip1": "$_skip",
+				"two": 2,
+				"skip2": "$_skip",
+				"skip3": "$_skip",
+				"three": 3,
+				"four": 4
+			},
+			"Nothing foreach array": {
+				"$": true,
+				"foreach": { "in": [ "a", "s", "b", "s", "s", "c", "d" ] },
+				"body": "$py= _skip if _ == 's' else _"
+			},
+			"Nothing foreach object": {
+				"$": true,
+				"foreach": {
+					"in": {
+						"one": 1,
+						"skip1": "$_skip",
+						"two": 2,
+						"skip2": "$_skip",
+						"skip3": "$_skip",
+						"three": 3,
+						"four": 4
+					}
+				},
+				"body": "$py= _skip if _ == 's' else _"
+			}
+		},
+		"_current": "$_current",
+		"_parent": "$_parent",
+		"_top": "$_top"
+	}
+}

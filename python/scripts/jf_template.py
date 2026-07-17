@@ -32,7 +32,7 @@ from typing import Any, Optional, TextIO
 # --- make ../src importable when run directly from a sibling tests/ dir ---
 sys.path.insert(0, str((Path(__file__).resolve().parent / ".." / "src").resolve()))
 
-from template import Error, create_engine, Engine  # noqa: E402
+from template import Error, Missing, create_engine, Engine  # noqa: E402
 
 
 def _read_text(path: Optional[str]) -> tuple[str, str]:
@@ -50,10 +50,13 @@ def _count_lines(text: str) -> int:
     return text.count("\n") + (0 if text.endswith("\n") else 1)
 
 
+def _json_default(obj):
+    return None if isinstance(obj, Missing) else obj
+
 def _format_output(value: Any, indent: int, raw: bool) -> str:
     if raw:
-        return json.dumps(value, separators=(",", ":"))
-    return json.dumps(value, indent=indent)  # indent=0 is Python's own (odd but valid) behavior
+        return json.dumps(value, default=_json_default, separators=(",", ":"))
+    return json.dumps(value, indent=indent, default=_json_default)  # indent=0 is Python's own (odd but valid) behavior
 
 
 def _exception_summary(exc: Exception, verbose: bool) -> str:

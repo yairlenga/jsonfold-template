@@ -174,7 +174,7 @@ class TestReshape(unittest.TestCase):
     def setUp(self):
         compiled, _ = JFTLEngine().compile( TEMPLATE, main_only=True)
         frame = make_root(INPUT_DOCUMENT)
-        stmt = cast(JFTLTemplate, compiled).main
+        stmt = compiled.main_entry
         self.result = frame.eval_value(stmt)
 
     def test_pretty_print_for_visual_inspection(self):

@@ -6,12 +6,16 @@ from abc import ABC, abstractmethod
 from template import MISSING_VALUE, Template, Error, Missing
 # Template Class - represent compiled templates
 
+# Sentinal value to ignore a value in a collection
+
+SKIP_VALUE = object()
 @dataclass(slots=True)
 class JFTLTemplate(Template):
 
-    main: Statement
+    main_entry: Evaluator
+    config: JFTLConfig    
 
-    def valid() -> bool:
+    def valid(self) -> bool:
         return True
 
 #    macros: dict[str, Macro] = field(default_factory=dict)
@@ -22,10 +26,18 @@ class JFTLTemplate(Template):
 
 # Runtime Objects
 
+@dataclass
+class JFTLConfig:
+    # Default engine to use for '$=...'
+    default_engine: str = ""
+
+    plugins: dict[str, Any] = field(default_factory=dict)
+
 
 # Shared environment - created at the root.
 @dataclass
 class Environment:
+
     # Template in use
     template: Template
     # Original input document
@@ -42,7 +54,7 @@ class Frame:
     # Aliases as '_'
     current: Any
     # Aliases as '^'
-    parent: Frame
+    parent: Frame | None
     # From parent.level + 1, root = 0
     level: int
 
@@ -80,7 +92,12 @@ class Frame:
     @classmethod
     def top_frame(cls, template: Template, input: Any) -> Frame:
         env = Environment(template, input)
-        frame = cls(env=env, current=env.input, level=0, parent = None)
+        top_vars = {
+            "_missing": MISSING_VALUE,
+            "_error": Error(severity='ERROR', code='TEMPLATE-ERROR', message="Template Error"),
+            "_skip" : SKIP_VALUE,
+        }
+        frame = cls(env=env, current=env.input, level=0, parent=None, vars=top_vars)
         env.top = frame
         return frame
 
@@ -117,6 +134,8 @@ class Frame:
 #        for f in chain:
 #            f._cache[name] = MISSING_VALUE
         return MISSING_VALUE
+    
+
  
 
 # Draft - NIY
@@ -159,6 +178,8 @@ class CompileError(Exception):
     def __init__(self, error: Error):
         super().__init__(error.message)
         self.error = error
+
+
 
 class RenderError(Exception):
     def __init__(self, error: Error):

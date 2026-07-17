@@ -1,0 +1,33 @@
+{
+  "_missing": null,
+  "_error": "Pass Error Check",
+  "_skip": {
+    "Nothing array": [
+      "one",
+      "two",
+      "three",
+      "four"
+    ],
+    "Nothing Object": {
+      "one": 1,
+      "two": 2,
+      "three": 3,
+      "four": 4
+    },
+    "Nothing foreach array": [
+      "a",
+      "b",
+      "c",
+      "d"
+    ],
+    "Nothing foreach object": {
+      "one": 1,
+      "two": 2,
+      "three": 3,
+      "four": 4
+    }
+  },
+  "_current": null,
+  "_parent": null,
+  "_top": null
+}

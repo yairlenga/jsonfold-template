@@ -15,7 +15,7 @@ import unittest
 
 from core import Frame, Environment, CompileError
 from template import Error, Missing
-from runtime import NavigationExprNode
+from navigation import NavigationExprNode
 
 
 def make_root(current):

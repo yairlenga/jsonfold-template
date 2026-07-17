@@ -77,7 +77,7 @@ def extract(path_expr: str):
     against INPUT_DOCUMENT, and return the extracted 'result' value."""
     template = { "main": { "result": path_expr}}
     compiled, _ = JFTLEngine().compile(template)
-    stmt = cast(JFTLTemplate, compiled).main
+    stmt = cast(JFTLTemplate, compiled).main_entry
     frame = make_root(INPUT_DOCUMENT)
     result = stmt.eval(frame)
     return result["result"]

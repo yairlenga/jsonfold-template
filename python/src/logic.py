@@ -2,7 +2,7 @@ from types import NoneType
 from typing import Any, ItemsView, Iterator, Literal, Optional, cast
 from dataclasses import dataclass, replace
 
-from core import RenderError, Statement, Error, Missing, Frame, Expression, Evaluator, Condition, Compiler
+from core import SKIP_VALUE, RenderError, Statement, Error, Missing, Frame, Expression, Evaluator, Condition, Compiler
 from template import MISSING_VALUE
 
 """ {
@@ -256,14 +256,13 @@ class LogicStatement(Statement):
             new_val = frame.eval_value(body)
             if isinstance(new_val, Error):
                 return new_val
-            if new_key is None:
-                if isinstance(new_val, Missing):
-                    new_val = None
-                list_result.append(new_val)
-            else:
-                if isinstance(new_val, Missing):
-                    continue
+            elif new_val == SKIP_VALUE:
+                continue
+
+            if do_dict:
                 dict_result[new_key] = new_val
+            else:
+                list_result.append(new_val)
 
             # Apply limit, if ix_limit is set
             out_count = out_count + 1
@@ -348,6 +347,8 @@ class LogicStatement(Statement):
 
             # Skiped entries: [ null, null], and [false, null]
             if value in [None, False] and not key:
+                continue
+            elif isinstance(value, Missing):
                 continue
 
             # Validate key is string.
