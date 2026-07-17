@@ -125,9 +125,10 @@ class NavigationStatement(Statement, Expression):
         return result not in (False, None)
 
 
+import re
 NAV_RE_STR = r"""
-    (?P<head> | \^ | < | (?P<vars>\w+ ) )
-    (?P<segments> $ | \[.* | \..* )
+    (?P<start> \$ | \$\^ | \$< | \$(?P<vars>\w+ ) )
+    (?P<segments> (\[.* | \..* )? )
 """
 class NavigationPlugin(Compiler):
 
@@ -136,16 +137,13 @@ class NavigationPlugin(Compiler):
     def parse_nav(self, m: re.Match[str], where) -> NavigationStatement:
 
         start = None
-        head = m.group("head")
+        head = m.group("start")
         segments = m.group("segments")
-        if head == "":
+        if head == "$":
             start = "_current"
-            # Special case '$.' implied start with current, NO segments
-            if segments == ".":
-                segments = "" 
-        elif head == "^":
+        elif head == "$^":
             start = "_input"
-        elif head == "<":
+        elif head == "$<":
             start = "_parent.current"
         elif (vars := m.group("vars")) != "":
             # Convert $foo.bar to .foo.bar, starting with implied "_.vars"

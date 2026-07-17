@@ -46,7 +46,7 @@ class JFTLCompiler(Compiler):
     plugins: dict[str, Any] = field(default_factory=dict)
 
     # Call to natigation: 
-    _NAV_RE = re.compile('^ \\$' + NAV_RE_STR + "$", re.VERBOSE)
+    _NAV_RE = re.compile('^' + NAV_RE_STR + "$", re.VERBOSE)
     _nav_plugin : NavigationPlugin = field(default_factory=NavigationPlugin)
 
     # Call to expression engine: $prefix=expression
@@ -93,7 +93,7 @@ class JFTLCompiler(Compiler):
             if source.startswith('$$'):
                 return source[1:]
 
-            m = self._NAV_RE.match(source) if source != "$" else None
+            m = self._NAV_RE.match(source)
             if m:
                 return self._nav_plugin.parse_nav(m, where)
 

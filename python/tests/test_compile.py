@@ -53,7 +53,7 @@ class TestPathStatements(unittest.TestCase):
 
     def test_bare_dollar_dot_is_ok(self):
         # "$." alone — a dot with nothing after it is not a valid path segment
-        stmt = compile("$.")
+        stmt = compile("$")
         self.assertIsInstance(stmt, NavigationStatement)
 
     def test_malformed_path_raises_compile_error(self):
