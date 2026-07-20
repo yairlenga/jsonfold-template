@@ -21,11 +21,14 @@ Output:
 Exit code: 0 if every input succeeded, 1 if any failed.
 """
 
+from collections.abc import Set
 import sys
 import argparse
 import json
 import time
 import traceback
+import re
+
 from pathlib import Path
 from typing import Any, Optional, TextIO
 
@@ -35,6 +38,8 @@ sys.path.insert(0, str((Path(__file__).resolve().parent / ".." / "src").resolve(
 from template import Error, Missing, create_engine, Engine  # noqa: E402
 
 args: Any
+out_record_count = 0
+out_files = set()
 
 def info(msg: str) -> None:
     if not args.quiet:
@@ -43,7 +48,7 @@ def info(msg: str) -> None:
 def error(msg: str) -> None:
     print(msg, file=sys.stderr)  # errors always print, even under -q
 
-def _read_text(path: Optional[str]) -> tuple[str, str]:
+def _read_text(path: str) -> tuple[str, str]:
     """Read raw text either from a named file or from stdin.
     Returns (text, label) where label is the filename or '(stdin)'."""
     if path == "-":
@@ -51,12 +56,10 @@ def _read_text(path: Optional[str]) -> tuple[str, str]:
     with open(path, "r", encoding="utf-8") as f:
         return f.read(), path
 
-
 def _count_lines(text: str) -> int:
     if text == "":
         return 0
     return text.count("\n") + (0 if text.endswith("\n") else 1)
-
 
 def _json_default(obj):
     return None if isinstance(obj, Missing) else obj
@@ -73,77 +76,177 @@ def _exception_summary(exc: Exception, verbose: bool) -> str:
     return f"{type(exc).__name__}: {exc}"
 
 
+def _write_json_result(args, dest: TextIO, result: Any, input_label: str, input_desc: str, output_label: str) -> tuple[bool, Any]:
+
+    json_out = _format_output(result, args.indent, args.raw)
+    bytes = len(json_out.encode('utf-8'))
+    lines = _count_lines(json_out)
+
+    if args.sections:
+        desc = f"{bytes} bytes, {lines} lines"
+
+        comment = f"output: '{output_label}' ({desc}), Input: {input_label} ({input_desc})"
+        print("// " + comment, file=dest)
+    
+    print(json_out, file=dest)
+    return True, { "lines": lines, "bytes": bytes, "doc_count": 1 }
+
+def _write_json_file(args, out_file: str, result: Any, input_label: str, input_desc: str, output_id: str) -> tuple[bool, Any]:
+    with open(out_file, mode="w", encoding="utf-8") as dest:
+        ok, result = _write_json_result(args, dest, result, input_label, input_desc, output_id)
+    result = { "output": output_id } | result
+    return ok, result
+
+    # Read single json record from the input stream
+
+def _normalize_out_name(output_id: Optional[str]) -> str:
+    global out_record_count
+    global out_files
+    new_name = output_id
+    if not new_name or new_name in out_files or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", new_name):
+        out_record_count += 1
+        new_name = f"{out_record_count:06d}.out"    
+    out_files.add(new_name)
+    return new_name        
 
 
-def _output_target(input_label: str, target_dir: Optional[str]) -> tuple[Optional[TextIO], str]:
-    """Returns (file_handle_or_None, output_label).
-    file_handle is None when writing to stdout."""
-    if target_dir is None:
-        return None, "-"
-    if input_label == "(stdin)":
-        out_name = "stdin.out"
+def _write_one_result(args, doc: Any, dest: TextIO, *, input_label: str = "", input_desc: str = "", output_id: str = "") -> tuple[bool, Any]:
+    if args.target:
+        item_dest = str(Path(args.target) / output_id)
+        return _write_json_file(args, item_dest, doc, input_label, input_desc, output_id)
     else:
-        out_name = Path(input_label).name + ".out"
-    out_path = Path(target_dir) / out_name
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    return open(out_path, "w", encoding="utf-8"), str(out_path)
+        return _write_json_result(args, dest, doc, input_label, input_desc, output_id)
 
 
-def _write_result(args, dest: TextIO | str | None, result: Any, comment: str):
-    out : TextIO = dest if isinstance(dest, TextIO) else sys.stdout
-    if isinstance(dest, str) and dest != "-":
-        out = open(dest, "w", encoding="utf-8")
+def _process_record(args, engine, compiled, record: Any, dest: TextIO, *, input_label: str = "", input_desc: str = "", output_label: str = "") -> tuple[bool, Any]:
 
-    if args.sections and comment:
-        print("//" + comment, file=out)
-
-    if args.raw:
-        json.dump(result, fp=out, separators=(",", ":"))
-    else:
-        json.dump(result, fp=out, indent=args.indent)
-
-    out.close()
-
-def _process_input(args, engine, compiled, input_label, input_path):
-    if not input_path:
-        input_text, input_label = "", "(none)"
-        input_doc = None
-    else:
-        input_text, input_label = _read_text(input_path)
-        input_doc = json.loads(input_text)
-
-    t1 = time.perf_counter()
-    status, result = engine.render(compiled, input_doc, entry=args.entry)
-    elapsed = time.perf_counter() - t1
+    status, result = engine.render(compiled, record, entry=args.entry)
 
     if not status.ok:
         err = status.error
         msg = f"[{err.severity}] {err.code}: {err.message}" if err else "render failed"
         error(f"{input_label}: {msg}")
-        return False
+        return False, None
 
-    output_text = _format_output(result, args.indent, args.raw)
-    out_handle, output_label = _output_target(input_label, args.target)
+    if not args.split:
+        return _write_one_result(args, result, dest, input_label=input_label, input_desc = input_desc, output_id=output_label)
 
-    if args.sections:
-        comment = (
-            f"// Input: {input_label}  {_count_lines(input_text)} lines, "
-            f"{len(input_text.encode('utf-8'))} bytes, "
-            f"output: {output_label}, {_count_lines(output_text)} lines, "
-            f"{len(output_text.encode('utf-8'))} bytes "
-            f"in {elapsed:.3f} seconds"
-        )
+    # Handle Splitting
+
+    # Dict - use the ID for file name
+    if isinstance(result, dict):
+        manifest = {}
+        all_ok = True
+        for pos, [id, item] in enumerate(result.items(), start=1):
+        # Write to a folder only if the file name is valid.
+            ok, details = _write_one_result(args, item, dest, input_label=input_label, input_desc=f"#{pos}", output_id=_normalize_out_name(id))
+            manifest[id] = details
+            all_ok = all_ok and ok
+        return all_ok, manifest
+
+    # Unlikely - the top level object is scalar, just wrap it inside an array.
+    if not isinstance(result, list):
+        result = [ result ]
+
+    manifest = []
+    all_ok = True
+    for pos, item in enumerate(result, start=1):
+        ok, details = _write_one_result(args, item, dest, input_label=input_label, input_desc=f"#{pos}", output_id=_normalize_out_name(None))
+        manifest.append(details)
+        all_ok = all_ok and ok
+    return all_ok, manifest
+
+
+def _process_input(args, engine, compiled, input, input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any]:
+
+    decoder = json.JSONDecoder()
+    input_desc = f"{len(input.encode('utf-8'))} bytes, {_count_lines(input)} lines" if input else ""
+    t1 = time.perf_counter()
+    out_count = 0
+    record_count = 0
+    manifest = None
+    all_ok = True
+
+    if input and args.stream:
+        pos = 0
+        n = len(input)
+        manifest = []
+        while True:
+            while pos < n and input[pos].isspace():
+                pos += 1
+            if pos >= n:
+                break
+            record_count = record_count+1
+            start_line = _count_lines(input[:pos])
+            record, pos = decoder.raw_decode(input, pos)
+            label = f"{input_label} (record #{record_count})"
+            desc = f"{len(input.encode('utf-8'))} bytes, {_count_lines(input)} lines, starting at line {start_line}." if input else ""
+            ok, summary = _process_record(args, engine, compiled, record, dest, input_label=label, input_desc=desc, output_label=dest_label)
+            manifest.append(summary)
+            out_count += summary.get("doc_count", len(summary)) if isinstance(summary, dict) else len(summary) if isinstance(summary, list) else 0
+
+            if not ok:
+                all_ok = False
+        elapsed = time.perf_counter() - t1
+        if args.split:
+            info(f"Stream {input_label} ({input_desc}, {record_count} records), Generated {out_count} records in {elapsed:.3f} seconds")
+        else:
+            info(f"Stream {input_label} ({input_desc}, {record_count} records), Output: {dest_label}, completed in {elapsed:.3f} seconds")
+
     else:
-        comment = None
+        # Whole file one (and only one) record.
+        record = json.loads(input)
+        desc = f"{len(input.encode('utf-8'))} bytes, {_count_lines(input)} lines" if input else ""
 
-    dest = out_handle if out_handle is not None else sys.stdout
-    if comment:
-        print(comment, file=dest)
-    if output_text != "":
-        print(output_text, file=dest)
-    if out_handle is not None:
-        out_handle.close()
-    return True
+        all_ok, manifest = _process_record(args, engine, compiled, record, dest, input_label=input_label, input_desc=desc, output_label=dest_label)
+        out_count = len(manifest) if isinstance(manifest, list) else manifest.get("doc_count", 1)
+        elapsed = time.perf_counter() - t1
+        if args.target:
+            if args.split:
+                info(f"Input {input_label} ({input_desc}), {out_count} files, completed in {elapsed:.3f} seconds")
+            else:
+                info(f"Input {input_label} ({input_desc}), Output: {dest_label}, completed in {elapsed:.3f} seconds")
+        else:
+            if args.split:
+                info(f"Input {input_label} ({input_desc}), {out_count} files, completed in {elapsed:.3f} seconds")
+            else:
+                info(f"Input {input_label} ({input_desc}), Output: {dest_label}, completed in {elapsed:.3f} seconds")
+
+    return all_ok, manifest
+
+def _process_file(args, engine, compiled, input_path: Optional[str], input_label: str) -> Any:
+
+    input = ""
+    input_label = "(none)"
+    output_path = None
+    output_fp = sys.stdout
+
+    new_name = None
+    if input_path == "-":
+        input_label = "(stdin)"
+        input = sys.stdin.read()
+        if args.target and not args.split:
+            new_name = "stdin.out"
+            output_path = Path(args.target) / new_name
+
+    elif input_path is not None:
+        input_label = input_path
+        with open(input_path, mode="r", encoding="utf-8") as fp:
+            input = fp.read()
+
+        if args.target and not args.split:
+            new_name = Path(input_path).name.removesuffix(".json") + ".out"
+            output_path = Path(args.target) / new_name
+
+    if output_path:
+        output_fp = open(output_path, "w", encoding="utf-8")
+
+    status, summary = _process_input(args, engine, compiled, input, input_label, output_fp, new_name)
+
+    if output_path:
+        output_fp.close()
+
+    return status, summary
 
 
 def main() -> int:
@@ -221,23 +324,31 @@ def main() -> int:
     info(f"Template {template_label} compiled in {compile_elapsed:.3f} seconds, "
          f"{len(template_text.encode('utf-8'))} bytes, {_count_lines(template_text)} lines.")
 
-    # --- figure out which inputs to process ---
-    input_sources = args.files if args.files else [None]  # None -> stdin
+    # None in the input list will run the template without input
+    input_sources = args.files if args.files else [None]
     overall_ok = True
 
+    manifest = {}
     for input_path in input_sources:
-        input_map = { None: "(none)", "-": "(stdin)" }
-        input_label = input_map.get(input_path, input_path)
-        try:
-            if not _process_input(args, engine, compiled, input_label, input_path):
+        input_label = "(stdin)" if input_path == "-" else input_path if input_path else "(none)"
+        summary = None
+        try:           
+            ok, summary =  _process_file(args, engine, compiled, input_path, input_label)
+            if not ok:
                 overall_ok = False
 
         except Exception as exc:
+            summary = f"error: {type(exc).__name__}: {exc}"
             error(f"{input_label}: {_exception_summary(exc, args.verbose)}")
             overall_ok = False
 
-    return 0 if overall_ok else 1
+        manifest_id = input_path or ""
+        manifest[manifest_id] = summary
 
+    if args.target:
+        json.dump(manifest, fp=sys.stdout, indent=2)
+
+    return 0 if overall_ok else 1
 
 if __name__ == "__main__":
     sys.exit(main())
