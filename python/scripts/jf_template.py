@@ -22,6 +22,7 @@ Exit code: 0 if every input succeeded, 1 if any failed.
 """
 
 from collections.abc import Set
+from enum import IntEnum
 import sys
 import argparse
 import json
@@ -35,7 +36,29 @@ from typing import Any, Optional, TextIO
 # --- make ../src importable when run directly from a sibling tests/ dir ---
 sys.path.insert(0, str((Path(__file__).resolve().parent / ".." / "src").resolve()))
 
+from core import CompileError, RenderError
 from template import Error, Missing, create_engine, Engine  # noqa: E402
+
+class ExitCode(IntEnum):
+    SUCCESS = 0
+    # Codes 1-9 reserved for the CLI
+    READ_ERROR = 1               # Unable to read inputs
+    BAD_SYNTAX = 2               # Invocation errors, bad CLI, ...
+    TEMPLATE_IO = 3              # Error reading/processing template
+    GENERAL_ERROR = 4            # Unexpected error
+    OUTPUT_ERROR = 5             # Error writing results
+    PARTIAL = 6                  # Some failures occured, engine runing in "ignore error"
+
+    # Codes 10-19 classify engine errors
+    COMPILE_ERROR = 11           # Compiler failed
+    RENDER_ERROR = 13            # Engine intenal error
+    USER_ERROR = 14              # Template raise error
+    PY_EXCEPTION = 16            # Python runtime exception
+    PLUGIN_ERROR = 18            # Plugin raised an error
+
+class ProcessingException(Exception):
+    def __init__(self, code: int):
+        self.code = code
 
 args: Any
 out_record_count = 0
@@ -61,6 +84,7 @@ def _count_lines(text: str) -> int:
         return 0
     return text.count("\n") + (0 if text.endswith("\n") else 1)
 
+
 def _json_default(obj):
     return None if isinstance(obj, Missing) else obj
 
@@ -76,6 +100,9 @@ def _exception_summary(exc: Exception, verbose: bool) -> str:
     return f"{type(exc).__name__}: {exc}"
 
 
+def _text_desc(text: str) -> str:
+    return f"{len(text)} characters, {_count_lines(text)} lines"
+
 def _write_json_result(args, dest: TextIO, result: Any, input_label: str, input_desc: str, output_label: str) -> tuple[bool, Any]:
 
     json_out = _format_output(result, args.indent, args.raw)
@@ -83,7 +110,7 @@ def _write_json_result(args, dest: TextIO, result: Any, input_label: str, input_
     lines = _count_lines(json_out)
 
     if args.sections:
-        desc = f"{bytes} bytes, {lines} lines"
+        desc = f"{bytes} characters, {lines} lines"
 
         comment = f"output: '{output_label}' ({desc}), Input: {input_label} ({input_desc})"
         print("// " + comment, file=dest)
@@ -111,16 +138,26 @@ def _normalize_out_name(output_id: Optional[str]) -> str:
 
 
 def _write_one_result(args, doc: Any, dest: TextIO, *, input_label: str = "", input_desc: str = "", output_id: str = "") -> tuple[bool, Any]:
-    if args.target:
-        item_dest = str(Path(args.target) / output_id)
-        return _write_json_file(args, item_dest, doc, input_label, input_desc, output_id)
-    else:
-        return _write_json_result(args, dest, doc, input_label, input_desc, output_id)
+    try:
+        if args.target:
+            item_dest = str(Path(args.target) / output_id)
+            return _write_json_file(args, item_dest, doc, input_label, input_desc, output_id)
+        else:
+            return _write_json_result(args, dest, doc, input_label, input_desc, output_id)
+    except RenderError as ex:
+        raise ex
+    except Exception as ex:
+        raise ProcessingException(ExitCode.OUTPUT_ERROR) from ex
 
 
 def _process_record(args, engine, compiled, record: Any, dest: TextIO, *, input_label: str = "", input_desc: str = "", output_label: str = "") -> tuple[bool, Any]:
 
-    status, result = engine.render(compiled, record, entry=args.entry)
+    try:
+        status, result = engine.render(compiled, record, entry=args.entry)
+    except RenderError as ex:
+        raise ex
+    except Exception as ex:
+        raise ProcessingException(ExitCode.PY_EXCEPTION) from ex
 
     if not status.ok:
         err = status.error
@@ -159,9 +196,9 @@ def _process_record(args, engine, compiled, record: Any, dest: TextIO, *, input_
 
 def _process_input(args, engine, compiled, input: Optional[str], input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any]:
 
-    decoder = json.JSONDecoder()
-    input_desc = f"{len(input.encode('utf-8'))} bytes, {_count_lines(input)} lines" if input else ""
     t1 = time.perf_counter()
+    decoder = json.JSONDecoder()
+    input_desc = _text_desc(input) if input is not None else "(none)"
     out_count = 0
     record_count = 0
     manifest = None
@@ -178,9 +215,12 @@ def _process_input(args, engine, compiled, input: Optional[str], input_label: st
                 break
             record_count = record_count+1
             start_line = _count_lines(input[:pos])
-            record, pos = decoder.raw_decode(input, pos)
+            try:
+                record, pos = decoder.raw_decode(input, pos)
+            except Exception as ex:
+                raise ProcessingException(ExitCode.READ_ERROR) from ex
             label = f"{input_label} (record #{record_count})"
-            desc = f"{len(input.encode('utf-8'))} bytes, {_count_lines(input)} lines, starting at line {start_line}." if input else ""
+            desc = f"{_text_desc(input)}, starting at line {start_line}" if input else ""
             ok, summary = _process_record(args, engine, compiled, record, dest, input_label=label, input_desc=desc, output_label=dest_label)
             manifest.append(summary)
             out_count += summary.get("doc_count", len(summary)) if isinstance(summary, dict) else len(summary) if isinstance(summary, list) else 0
@@ -195,8 +235,12 @@ def _process_input(args, engine, compiled, input: Optional[str], input_label: st
 
     else:
         # Whole file one (and only one) record.
-        record = json.loads(input) if input else None
-        desc = f"{len(input.encode('utf-8'))} bytes, {_count_lines(input)} lines" if input else ""
+        try:
+            record = json.loads(input) if input is not None else None
+        except Exception as ex:
+            raise ProcessingException(ExitCode.READ_ERROR) from ex
+        
+        desc = f"{_text_desc(input)}" if input is not None else ""
 
         all_ok, manifest = _process_record(args, engine, compiled, record, dest, input_label=input_label, input_desc=desc, output_label=dest_label)
         out_count = len(manifest) if isinstance(manifest, list) else manifest.get("doc_count", 1)
@@ -231,8 +275,11 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
 
     elif input_path is not None:
         input_label = input_path
-        with open(input_path, mode="r", encoding="utf-8") as fp:
-            input = fp.read()
+        try:
+            with open(input_path, mode="r", encoding="utf-8") as fp:
+                input = fp.read()
+        except Exception as ex:
+            raise ProcessingException(ExitCode.READ_ERROR) from ex
 
         if args.target and not args.split:
             new_name = Path(input_path).name.removesuffix(".json") + ".out"
@@ -270,6 +317,10 @@ def main() -> int:
                             "to be fully rendered first (disables streaming).")
 
     # Logging
+    parser.add_argument("-k", "--keep-going", action="store_true",
+                        help="Suppress informational stderr output. Error messages "
+                            "are still always printed.")
+
     parser.add_argument("-q", "--quiet", action="store_true",
                         help="Suppress informational stderr output. Error messages "
                             "are still always printed.")
@@ -302,53 +353,100 @@ def main() -> int:
 
     # --- read + compile the template ---
     template_path = args.template if args.template else "-"
-    template_text, template_label = _read_text(template_path)
+    try:
+        template_text, template_label = _read_text(template_path)
+    except Exception as ex:
+        error(f"Failed to read template '{template_path}': {_exception_summary(ex, args.verbose)}")
+        return ExitCode.TEMPLATE_IO
+
     engine = create_engine(all_plugins = args.all_plugins, no_plugins = args.no_plugins)
 
     t0 = time.perf_counter()
     try:
-
         template_dict = json.loads(template_text)
+    except Exception as ex:
+        error(f"Failed to parse template '{template_path}': {_exception_summary(ex, args.verbose)}")
+        return ExitCode.TEMPLATE_IO
+
+    try:
         compiled, compile_errors = engine.compile(template_dict)
-    except Exception as exc:
-        error(f"{template_label}: {_exception_summary(exc, args.verbose)}")
-        return 1
+    except CompileError as exc:
+        error(f"Failed to compile template '{template_path}': {_exception_summary(exc, args.verbose)}")
+        return ExitCode.COMPILE_ERROR
+    except Exception as ex:
+        error(f"Failed during compile template '{template_path}': {_exception_summary(ex, args.verbose)}")
+        error(f"{template_label}: {_exception_summary(ex, args.verbose)}")
+        return ExitCode.COMPILE_ERROR
+
     compile_elapsed = time.perf_counter() - t0
 
     if compile_errors:
         for err in compile_errors:
             error(f"{template_label}: [{err.severity}] {err.code}: {err.message}")
         if any(e.severity == "ERROR" for e in compile_errors):
-            return 1
+            return ExitCode.COMPILE_ERROR
 
-    info(f"Template {template_label} compiled in {compile_elapsed:.3f} seconds, "
-         f"{len(template_text.encode('utf-8'))} bytes, {_count_lines(template_text)} lines.")
+    info(f"Template {template_label} compiled in {compile_elapsed:.3f} seconds, {_text_desc(template_text)}.")
 
     # None in the input list will run the template without input
     input_sources = args.files if args.files else [None]
-    overall_ok = True
+    all_ok = True
+    any_ok = False
+    exit_code = 0
 
     manifest = {}
     for input_path in input_sources:
         input_label = "(stdin)" if input_path == "-" else input_path if input_path else "(none)"
         summary = None
+        ok = False
+        error_code = 0
         try:           
             ok, summary =  _process_file(args, engine, compiled, input_path, input_label)
-            if not ok:
-                overall_ok = False
 
-        except Exception as exc:
-            summary = f"error: {type(exc).__name__}: {exc}"
-            error(f"{input_label}: {_exception_summary(exc, args.verbose)}")
-            overall_ok = False
+        except RenderError as ex:
+            summary = f"error: {type(ex).__name__}: {ex}"
+            error(f"Error rendering: {input_label}: {_exception_summary(ex, args.verbose)}")
+            error_code = ExitCode.RENDER_ERROR
+        
+        except ProcessingException as ex:
+            summary = f"error: {type(ex).__name__}: {ex}"
+            error(f"Error processing: {input_label}: {_exception_summary(ex.__cause__ or ex, args.verbose)}")
+            error_code = ex.code
+
+        except Exception as ex:
+            summary = f"error: {type(ex).__name__}: {ex}"
+            error(f"Exception Processing '{input_label}': {_exception_summary(ex, args.verbose)}")
+            error_code = ExitCode.PY_EXCEPTION
+
+        if ok:
+            any_ok = True
+        else:
+            all_ok = False
+            if not args.keep_going:
+                break
+            # Capture first error code
+            if not exit_code:
+                exit_code = error_code or ExitCode.GENERAL_ERROR
 
         manifest_id = input_path or ""
         manifest[manifest_id] = summary
 
     if args.target:
-        json.dump(manifest, fp=sys.stdout, indent=2)
+        try:
+            json.dump(manifest, fp=sys.stdout, indent=2)
+        except Exception as ex:
+            error(f"Error writing manifest: {_exception_summary(ex, args.verbose)}")
+            return ExitCode.OUTPUT_ERROR
 
-    return 0 if overall_ok else 1
+    return exit_code if not any_ok else ExitCode.SUCCESS if all_ok else ExitCode.PARTIAL
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except ProcessingException as ex:
+        error(f"Processing error {ex}")
+        sys.exit(ex.code)
+    except Exception as ex:
+        error(f"Unexpected error: {ex}")
+        sys.exit(ExitCode.GENERAL_ERROR)
+
