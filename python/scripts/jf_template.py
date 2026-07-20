@@ -157,7 +157,7 @@ def _process_record(args, engine, compiled, record: Any, dest: TextIO, *, input_
     return all_ok, manifest
 
 
-def _process_input(args, engine, compiled, input, input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any]:
+def _process_input(args, engine, compiled, input: Optional[str], input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any]:
 
     decoder = json.JSONDecoder()
     input_desc = f"{len(input.encode('utf-8'))} bytes, {_count_lines(input)} lines" if input else ""
@@ -195,7 +195,7 @@ def _process_input(args, engine, compiled, input, input_label: str,  dest: TextI
 
     else:
         # Whole file one (and only one) record.
-        record = json.loads(input)
+        record = json.loads(input) if input else None
         desc = f"{len(input.encode('utf-8'))} bytes, {_count_lines(input)} lines" if input else ""
 
         all_ok, manifest = _process_record(args, engine, compiled, record, dest, input_label=input_label, input_desc=desc, output_label=dest_label)
@@ -216,12 +216,12 @@ def _process_input(args, engine, compiled, input, input_label: str,  dest: TextI
 
 def _process_file(args, engine, compiled, input_path: Optional[str], input_label: str) -> Any:
 
-    input = ""
+    input = None
     input_label = "(none)"
     output_path = None
     output_fp = sys.stdout
 
-    new_name = None
+    new_name = ""
     if input_path == "-":
         input_label = "(stdin)"
         input = sys.stdin.read()
