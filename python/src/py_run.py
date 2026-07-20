@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Optional, cast
 
 from core import Compiler, Condition, Evaluator, Expression, Frame, CompileError, Statement
-from template import Error, Missing, MISSING_VALUE
+from template import JFTLError, Missing, MISSING_VALUE
 
 def _build_env(frame: Frame) -> dict[str, Any]:
     """Walk the frame chain, closest scope wins: '_' + locals + parent vars."""
@@ -47,20 +47,20 @@ class PyEvalEvaluator(Expression, Evaluator, Condition ):
         self._source = source_text
         self._where = where
 
-    def eval(self, frame: Frame) -> Any | Error | Missing:
+    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
         env = _build_env(frame)
         try:
             return eval(self._code, {"__builtins__": __builtins__}, env)
         except Exception as e:
-            return Error(
+            return JFTLError(
                 code="PYRUN_RUNTIME_ERROR", severity="ERROR",
                 where=self._where, location=None,
                 message=f"error evaluating {self._source!r}: {e}",
             )
 
-    def eval_bool(self, frame: Frame) -> bool | Error | Missing:
+    def eval_bool(self, frame: Frame) -> bool | JFTLError | Missing:
         result = self.eval(frame)
-        if isinstance(result, (Error, Missing)):
+        if isinstance(result, (JFTLError, Missing)):
             return result
         return bool(result)  # native Python truthiness — not JFTL's falsy rule
 
@@ -75,14 +75,14 @@ class PyEvalPlugin(Compiler):
         try:
             tree = ast.parse(source_text, mode="eval")
         except SyntaxError as e:
-            raise CompileError(Error(
+            raise CompileError(JFTLError(
                 code="INVALID_PYTHON", severity="ERROR", where=where, location=None,
                 message=f"invalid Python expression {source_text!r}: {e}",
             ))
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Lambda):
-                raise CompileError(Error(
+                raise CompileError(JFTLError(
                     code="INVALID_PYTHON", severity="ERROR", where=where, location=None,
                     message=f"lambda expressions are not allowed in {source_text!r}",
                 ))
@@ -90,13 +90,13 @@ class PyEvalPlugin(Compiler):
         code = compile(tree, filename="<jftl-pyrun-expr>", mode="eval")
         return PyEvalEvaluator(code, source_text, where)
 
-    def condition(self, source: str) -> tuple[Condition, Optional[list[Error]]]:
+    def condition(self, source: str) -> tuple[Condition, Optional[list[JFTLError]]]:
         return cast(Condition, self._compile(cast(str, source))), None
 
-    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[Error]]]:
+    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[JFTLError]]]:
         return cast(Expression, self._compile(cast(str, source))), None
 
-    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[Error]]]:
+    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[JFTLError]]]:
         return cast(Statement, self._compile(cast(str, source))), None
 
 
@@ -114,7 +114,7 @@ class PyRunEvaluator(Expression, Evaluator, Condition):
     where: Optional[str] = None
     source: Optional[str] = None
 
-    def eval(self, frame: Frame) -> Any | Error | Missing:
+    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
         names = _build_env(frame)
 
         # Global Object
@@ -126,15 +126,15 @@ class PyRunEvaluator(Expression, Evaluator, Condition):
         try:
             return eval(self.func_call, g)
         except Exception as e:
-            return Error(
+            return JFTLError(
                 code="PYRUN_RUNTIME_ERROR", severity="ERROR",
                 where=self.where, location=None,
                 message=f"error evaluating {self.source!r}: {e}",
             )
 
-    def eval_bool(self, frame: Frame) -> bool | Error | Missing:
+    def eval_bool(self, frame: Frame) -> bool | JFTLError | Missing:
         result = self.eval(frame)
-        if isinstance(result, (Error, Missing)):
+        if isinstance(result, (JFTLError, Missing)):
             return result
         return bool(result)  # native Python truthiness — not JFTL's falsy rule
 
@@ -209,11 +209,11 @@ class PyRunPlugin(Compiler):
 
         return PyRunEvaluator(func_call, build_locals.get(FUNC_NAME), eval_globals.copy(), where = where )
  
-    def condition(self, source: str) -> tuple[Condition, Optional[list[Error]]]:
+    def condition(self, source: str) -> tuple[Condition, Optional[list[JFTLError]]]:
         return cast(Condition, self._compile(cast(str, source))), None
 
-    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[Error]]]:
+    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[JFTLError]]]:
         return cast(Expression, self._compile(cast(str, source))), None
 
-    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[Error]]]:
+    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[JFTLError]]]:
         return cast(Statement, self._compile(cast(str, source))), None

@@ -20,7 +20,7 @@
 		"foreach": {},
 		"body": {
 			"$": true,
-			"body": "$.",
+			"body": "$",
 			"transform": "drop_missing",
 			"error": "ERROR"
 		}

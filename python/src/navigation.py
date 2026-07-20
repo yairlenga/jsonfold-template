@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional, Union
 
 from core import Compiler, Condition, Expression, Frame, Statement, CompileError
-from template import Error, Missing
+from template import MISSING_VALUE, JFTLError, Missing
 
 @dataclass
 class Key:
@@ -47,7 +47,7 @@ class NavigationStatement(Statement, Expression):
 
         for m in _SEGMENT_RE.finditer(path_text):
             if m.start() != pos:
-                raise CompileError(Error(
+                raise CompileError(JFTLError(
                     code="INVALID_PATH", severity="ERROR", where=self._where, location=None,
                     message=f"unexpected text at position {pos} in {path_text!r}"))
             pos = m.end()
@@ -64,13 +64,13 @@ class NavigationStatement(Statement, Expression):
                 segments.append(Var(m.group("var")))
 
         if pos != len(path_text):
-            raise CompileError(Error(
+            raise CompileError(JFTLError(
                 code="INVALID_PATH", severity="ERROR", where=self._where, location=None,
                 message=f"trailing unparsed text at position {pos} in {path_text!r}"))
 
         return segments
 
-    def eval(self, frame: Frame) -> Any | Error | Missing:
+    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
         value: Any = frame.current
         if self._start == "_current":
             value = frame.current
@@ -84,23 +84,21 @@ class NavigationStatement(Statement, Expression):
         traveled = "_"  # builds up the "location" string as we walk, for diagnostics
 
         for seg in self._segments:
-            if isinstance(value, (Error, Missing)):
+            if isinstance(value, (JFTLError, Missing)):
                 return value  # already failed upstream — propagate, stop walking
 
             if isinstance(seg, Key):
                 if isinstance(value, dict) and seg.name in value:
                     value = value[seg.name]
                 else:
-                    return Missing(code="MISSING", message=f"key {seg.name!r} not found",
-                                    where=self._where, location=f"{traveled}.{seg.name}")
+                    return MISSING_VALUE
                 traveled += f".{seg.name}"
 
             elif isinstance(seg, Index):
                 if isinstance(value, list) and -len(value) <= seg.i < len(value):
                     value = value[seg.i]
                 else:
-                    return Missing(code="MISSING", message=f"index {seg.i} out of range",
-                                    where=self._where, location=f"{traveled}[{seg.i}]")
+                    return MISSING_VALUE
                 traveled += f"[{seg.i}]"
 
             elif isinstance(seg, Var):
@@ -112,15 +110,14 @@ class NavigationStatement(Statement, Expression):
                 elif isinstance(key, int) and isinstance(value, list) and -len(value) <= key < len(value):
                     value = value[key]
                 else:
-                    return Missing(code="MISSING", message=f"key {seg.name!r} not found",
-                                    where=self._where, location=f"{traveled}.{seg.name}")
+                    return MISSING_VALUE
                 traveled += f".{key}"
 
         return value
 
-    def eval_bool(self, frame: Frame) -> bool | Error | Missing:
+    def eval_bool(self, frame: Frame) -> bool | JFTLError | Missing:
         result = self.eval(frame)
-        if isinstance(result, (Error, Missing)):
+        if isinstance(result, (JFTLError, Missing)):
             return result
         return result not in (False, None)
 
@@ -159,22 +156,22 @@ class NavigationPlugin(Compiler):
 
         m = self._NAV_RE.match(source)
         if not m:
-            raise CompileError(Error(severity="ERROR", code="BAD-NAV-SYNTAX", message=f"Unknown navigation: '${source}", where=where))
+            raise CompileError(JFTLError(severity="ERROR", code="BAD-NAV-SYNTAX", message=f"Unknown navigation: '${source}", where=where))
         
         node = self.parse_nav(m, where)
         if not node:
-            raise CompileError(Error(severity="ERROR", code="BAD-NAV-EXPR", message=f"Unknown navigation: '${source}", where=where))      
+            raise CompileError(JFTLError(severity="ERROR", code="BAD-NAV-EXPR", message=f"Unknown navigation: '${source}", where=where))      
         
         return node
 
-    def condition(self, source: str) -> tuple[Condition, Optional[list[Error]]]:
+    def condition(self, source: str) -> tuple[Condition, Optional[list[JFTLError]]]:
         assert isinstance(source, str)
         return self.parse(source, None), None
     
-    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[Error]]]:
+    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[JFTLError]]]:
         assert isinstance(source, str)
         return self.parse(source, None), None
 
-    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[Error]]]:
+    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[JFTLError]]]:
         assert isinstance(source, str)
         return self.parse(source, None), None

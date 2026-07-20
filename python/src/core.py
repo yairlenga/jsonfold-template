@@ -3,7 +3,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Optional, TextIO
 from abc import ABC, abstractmethod
 
-from template import MISSING_VALUE, Template, Error, Missing
+from template import MISSING_VALUE, Template, JFTLError, Missing
 # Template Class - represent compiled templates
 
 # Sentinal value to ignore a value in a collection
@@ -94,7 +94,7 @@ class Frame:
         env = Environment(template, input)
         top_vars = {
             "_missing": MISSING_VALUE,
-            "_error": Error(severity='ERROR', code='TEMPLATE-ERROR', message="Template Error"),
+            "_error": JFTLError(severity='ERROR', code='TEMPLATE-ERROR', message="Template Error"),
             "_skip" : SKIP_VALUE,
         }
         frame = cls(env=env, current=env.input, level=0, parent=None, vars=top_vars)
@@ -142,7 +142,7 @@ class Frame:
 
 class Evaluator(ABC):
     @abstractmethod
-    def eval(self, frame: Frame) -> Any | Error | Missing : ...
+    def eval(self, frame: Frame) -> Any | JFTLError | Missing : ...
 
 class Condition(ABC):
     def eval_bool(self, frame: Frame) -> bool:
@@ -163,25 +163,25 @@ class Macro(Evaluator, Condition): ...
 class Compiler(ABC):
 
     @abstractmethod
-    def condition(self, source: str) -> tuple[Condition, Optional[list[Error]]]: ...
+    def condition(self, source: str) -> tuple[Condition, Optional[list[JFTLError]]]: ...
 
     @abstractmethod
-    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[Error]]]: ...
+    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[JFTLError]]]: ...
 
     @abstractmethod
-    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[Error]]]: ...
+    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[JFTLError]]]: ...
 
 class CompileError(Exception):
     """Raised for any defect discovered while compiling a template.
     Carries the actual Error to report — no separate/duplicate fields.
     Caught by the compiler and appended directly to compile()'s error list."""
-    def __init__(self, error: Error):
+    def __init__(self, error: JFTLError):
         super().__init__(error.message)
         self.error = error
 
 
 
 class RenderError(Exception):
-    def __init__(self, error: Error):
+    def __init__(self, error: JFTLError):
         super().__init__(error.message)
         self.error = error

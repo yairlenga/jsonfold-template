@@ -2,7 +2,7 @@ from types import NoneType
 from typing import Any, ItemsView, Iterator, Literal, Optional, cast
 from dataclasses import dataclass, replace
 
-from core import SKIP_VALUE, RenderError, Statement, Error, Missing, Frame, Expression, Evaluator, Condition, Compiler
+from core import SKIP_VALUE, RenderError, Statement, JFTLError, Missing, Frame, Expression, Evaluator, Condition, Compiler
 from template import MISSING_VALUE
 
 """ {
@@ -128,7 +128,7 @@ class LogicStatement(Statement):
         )
         return self
 
-    def _eval_foreach(self, frame: Frame, body: Statement) -> list | dict | Error | Missing | None:
+    def _eval_foreach(self, frame: Frame, body: Statement) -> list | dict | JFTLError | Missing | None:
         foreach = cast(ForeachStatement, self._foreach)
         items = frame.eval_value(foreach.items) if foreach.items else frame.current
         loop_iter = None
@@ -138,7 +138,7 @@ class LogicStatement(Statement):
         do_dict = False
         if shape == "range":
             if foreach.items:
-                return Error(
+                return JFTLError(
                     code="NOT_ITERABLE", severity="ERROR",
                     message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
                     )
@@ -147,7 +147,7 @@ class LogicStatement(Statement):
             if items == None:
                 return None
             if not isinstance(items, dict):
-                return Error(
+                return JFTLError(
                     code="NOT_OBJECT", severity="ERROR",
                     message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
                     )
@@ -159,7 +159,7 @@ class LogicStatement(Statement):
             if items == None:
                 return None
             if not isinstance(items, list):
-                return Error(
+                return JFTLError(
                     code="NOT_ARRAY", severity="ERROR",
                     message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
                     )
@@ -168,30 +168,30 @@ class LogicStatement(Statement):
             loop_iter = enumerate(items)
 
         else:
-            if items == None or isinstance(items, Missing) or isinstance(items, Error):
+            if items == None or isinstance(items, Missing) or isinstance(items, JFTLError):
                 return items
             
-            return Error(
+            return JFTLError(
                 code="NOT_ITERABLE", severity="ERROR",
                 message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
             )
 
         ix_start = frame.eval_value(foreach.start)
         if ix_start is not None and not isinstance(ix_start, int):
-            return Error(
+            return JFTLError(
                     code="BAD_START", severity="ERROR",
                     message=f"foreach 'start' must be an integer value",
                 ) 
         ix_stop = frame.eval_value(foreach.stop)
         if ix_stop is not None and not isinstance(ix_stop, int):
-            return Error(
+            return JFTLError(
                     code="BAD_STOP", severity="ERROR",
                     message=f"foreach 'stop' must be an integer value",
                 ) 
 
         ix_limit = frame.eval_value(foreach.limit)
         if ix_limit is not None and not isinstance(ix_limit, int):
-            return Error(
+            return JFTLError(
                     code="BAD_STOP", severity="ERROR",
                     message=f"foreach 'stop' must be an integer value",
                 ) 
@@ -219,7 +219,7 @@ class LogicStatement(Statement):
         list_result = []
         if foreach.shape == "range":
             if stop_index is None:
-                return Error(
+                return JFTLError(
                     code="MISSING_STOP", severity="ERROR",
                     message=f"foreach 'stop' must is required when shape='range'",
                 )
@@ -254,7 +254,7 @@ class LogicStatement(Statement):
             if not frame.eval_bool(v_cond, True):
                 continue
             new_val = frame.eval_value(body)
-            if isinstance(new_val, Error):
+            if isinstance(new_val, JFTLError):
                 return new_val
             elif new_val == SKIP_VALUE:
                 continue
@@ -281,9 +281,9 @@ class LogicStatement(Statement):
 
         return v_body
     
-    def _flatten_transform(self, frame: Frame, input: list[list | None] | Any ) -> list | None | Error:
+    def _flatten_transform(self, frame: Frame, input: list[list | None] | Any ) -> list | None | JFTLError:
         if not isinstance(input, list):
-            return Error(
+            return JFTLError(
                     code="FLATTEN_INPUT", severity="ERROR",
                     message=f"The 'flatten' transform input is array of array, got non-list",
                 )
@@ -292,7 +292,7 @@ class LogicStatement(Statement):
             if item is None:
                 continue
             if not isinstance(item, list):
-                return Error(
+                return JFTLError(
                     code="FLATTEN_ITEM", severity="ERROR",
                     message=f"The 'flatten' transformation input is array of array, got non list items in position {pos}",
                 )
@@ -300,9 +300,9 @@ class LogicStatement(Statement):
         result = [x for sub in input if sub is not None for x in sub]
         return result
     
-    def _merge_transform(self, frame: Frame, input: list[dict | None] | Any) -> dict | None | Error:
+    def _merge_transform(self, frame: Frame, input: list[dict | None] | Any) -> dict | None | JFTLError:
         if not isinstance(input, list):
-            return Error(
+            return JFTLError(
                     code="MERGE_INPUT", severity="ERROR",
                     message=f"The 'merge' transformation input is array of objects, got non-list input",
                 )
@@ -311,7 +311,7 @@ class LogicStatement(Statement):
             if item is None:
                 continue
             if not isinstance(item, dict):
-                return Error(
+                return JFTLError(
                     code="MERGE_ITEM", severity="ERROR",
                     message=f"The 'merge' transformation input is array of objects, got non list items in position {pos}",
                 )
@@ -319,16 +319,16 @@ class LogicStatement(Statement):
         result = {k: v for d in input if d for k, v in d.items()}
         return result
 
-    def _to_pairs_transform(self, frame: Frame, input: dict) -> list[tuple[str, Any]] | Error:
+    def _to_pairs_transform(self, frame: Frame, input: dict) -> list[tuple[str, Any]] | JFTLError:
         if not isinstance(input, dict):
-            return Error(
+            return JFTLError(
                     code="TO_PAIRS_INPUT", severity="ERROR",
                     message=f"The 'to_pairs' transformation input is array of objects, got non-list input",
                 )
 
         return list(input.items())
     
-    def _drop_missing_transform(self, frame: Frame, input: dict) -> dict | list | None | Error:
+    def _drop_missing_transform(self, frame: Frame, input: dict) -> dict | list | None | JFTLError:
         if input is None or isinstance(input, Missing):
             return None
         if isinstance(input, dict):
@@ -336,7 +336,7 @@ class LogicStatement(Statement):
         elif isinstance(input, list):
             return [x for x in input if not isinstance(x, Missing)]
         else:
-            return Error(
+            return JFTLError(
                     code="DROP_MISSING_INPUT", severity="ERROR",
                     message=f"The 'drop_missing' transformation input ",
                 )
@@ -344,16 +344,16 @@ class LogicStatement(Statement):
         return list(input.items())
 
 
-    def _from_pairs_transform(self, frame: Frame, input: list[tuple[str, Any]]) -> dict | Error :
+    def _from_pairs_transform(self, frame: Frame, input: list[tuple[str, Any]]) -> dict | JFTLError :
         if not isinstance(input, list):
-            return Error(
+            return JFTLError(
                     code="FROM_PAIRS_INPUT", severity="ERROR",
                     message=f"The 'from_pairs' transformation input is array of objects, got non-list input",
                 )
 
         for pos, item in enumerate(input):
             if not isinstance(item, list) or len(item) != 2:
-                return Error(
+                return JFTLError(
                     code="FROM_PAIRS_DATA", severity="ERROR",
                     message=f"The 'from_pairs' transformation input is array of pairs, got non pair in position {pos} {input}",
                 )
@@ -369,7 +369,7 @@ class LogicStatement(Statement):
 
             # Validate key is string.
             if not isinstance(key, str):
-                return Error(
+                return JFTLError(
                     code="FROM_PAIRS_BAD_KEY", severity="ERROR",
                     message=f"Invalid key type {type(item[0])} for missing item in 'from_pairs' pairs position {pos}, {input}",
                 )
@@ -377,7 +377,7 @@ class LogicStatement(Statement):
         return dict(item for item in input if item[0])
 
 
-    def eval(self, prev_frame: Frame) -> Any | Error | Missing:
+    def eval(self, prev_frame: Frame) -> Any | JFTLError | Missing:
 
         # Create a new frame to use
         new_vars : dict[str, Any]= {}
@@ -419,7 +419,7 @@ class LogicStatement(Statement):
             if isinstance(result, Missing):
                 return new_frame.eval_value(self._default_val)
 
-        if self._transform is not None and result is not None and not isinstance(result, Error):
+        if self._transform is not None and result is not None and not isinstance(result, JFTLError):
 
             # Check for transformation
             match transform := self._transform:
@@ -439,14 +439,14 @@ class LogicStatement(Statement):
                     result = self._drop_missing_transform(new_frame, result)
 
                 case _:
-                    return Error(
+                    return JFTLError(
                         code="BAD_TRANSFORM", severity="ERROR",
                         message=f"Unknown transformation {transform}",
                     )
         
              
         # Error handler
-        if isinstance(result, Error):
+        if isinstance(result, JFTLError):
             if self._error_val is not None:
                 return new_frame.eval_value(self._error_val)
 

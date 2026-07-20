@@ -37,7 +37,7 @@ from typing import Any, Optional, TextIO
 sys.path.insert(0, str((Path(__file__).resolve().parent / ".." / "src").resolve()))
 
 from core import CompileError, RenderError
-from template import Error, Missing, create_engine, Engine  # noqa: E402
+from template import JFTLError, Missing, create_engine, Engine  # noqa: E402
 
 class ExitCode(IntEnum):
     SUCCESS = 0

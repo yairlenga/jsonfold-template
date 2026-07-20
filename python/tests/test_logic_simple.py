@@ -45,7 +45,8 @@ class TestBodyOnly(unittest.TestCase):
         # No "name" key in the input — the path resolves to Missing.
         template = {"$": True, "body": "$.name"}
         status, result = compile_and_render(template, {})
-        self.assertTrue(status.ok)  # a Missing navigation result is not itself an execution error
+        self.assertTrue(status.ok) 
+        # a Missing navigation result is not itself an execution error
         # Exact representation of "Missing" via the public API (None after
         # JSON-ification, or a Missing sentinel) is unconfirmed — flag if wrong.
         self.assertFalse(result)

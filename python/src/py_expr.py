@@ -8,7 +8,7 @@ from typing import Any, Optional
 from core import Compiler, Condition, Evaluator, Expression, Frame, Statement
 from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes
 
-from template import Error, Missing
+from template import JFTLError, Missing
 
 @dataclass
 class SimpleEvalEvaluator(Statement, Expression, Condition):
@@ -34,16 +34,16 @@ class SimpleEvalEvaluator(Statement, Expression, Condition):
         env["_input"] = frame.env.input
         return env
 
-    def eval(self, frame: Frame) -> Any | Error | Missing:
+    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
         se = self.se
         se.names = self._build_env(frame)
         return se.eval(self.source, self.compiled)
     
         # Using Python rules for falsyness. Can still return Missing, Error
-    def eval_cond(self, frame: Frame) -> Any | Error | Missing:
+    def eval_cond(self, frame: Frame) -> Any | JFTLError | Missing:
         result = self.se.eval(self.source, previously_parsed=self.compiled,)
         result = self.se.eval(self.source, previously_parsed=self.compiled,)
-        if isinstance(result, (Missing, Error)):
+        if isinstance(result, (Missing, JFTLError)):
             return result
         return bool(result)
    
@@ -92,17 +92,17 @@ class SimpleEvalPlugin(Compiler):
         }
         return se
 
-    def condition(self, source: str) -> tuple[Condition, Optional[list[Error]]]:
+    def condition(self, source: str) -> tuple[Condition, Optional[list[JFTLError]]]:
         assert isinstance(source, str)
         compiled = self._se.parse(source)
         return SimpleEvalEvaluator(self._se, source, compiled), None
 
-    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[Error]]]:
+    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[JFTLError]]]:
         assert isinstance(source, str)
         compiled = self._se.parse(source)
         return SimpleEvalEvaluator(self._se, source, compiled), None
 
-    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[Error]]]:
+    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[JFTLError]]]:
         assert isinstance(source, str)
         compiled = self._se.parse(source)
         return SimpleEvalEvaluator(self._se, source, compiled), None

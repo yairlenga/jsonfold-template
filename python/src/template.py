@@ -4,23 +4,20 @@ from pathlib import Path
 from dataclasses import dataclass, field
 
 @dataclass(kw_only=True)
-class Diagnostic:
-    severity: str
+class JFTLError(Exception):
+    severity: Literal["ERROR", "WARNING", "INFO"]
     code: str
     message: str
     where: Optional[str] = None
     location: Optional[str] = None
-    details: list["Diagnostic"] = None
+    details: list["Exception"] = None
     value: Any = None
     hasValue: bool = False
 
 @dataclass
-class Error(Diagnostic):
-    severity: Literal["ERROR", "WARNING", "INFO"]
-
-@dataclass
-class Missing(Diagnostic):
-    severity: ClassVar[Literal["MISSING"]] = "MISSING"
+class Missing():
+    code: str = "MISSING"
+    message: Optional[str] = None
     
     def __bool__(self):
         return False
@@ -35,7 +32,7 @@ class Missing(Diagnostic):
 class Status:
     ok: bool
     # Most severe error (first error, or first Warning or first info)
-    error: Optional[Error] = None
+    error: Optional[JFTLError] = None
     # TODO: Add statistics, runtime, ...
 
 class Template(ABC):
@@ -47,10 +44,10 @@ class Engine(ABC):
     _datasets: dict[str, Any] = field(default_factory=dict)
 
     @abstractmethod
-    def compile(self, source: str | dict, *, main_only: bool = False, **kwargs) -> tuple[Template, list[Error]]: ...
+    def compile(self, source: str | dict, *, main_only: bool = False, **kwargs) -> tuple[Template, list[JFTLError]]: ...
 
     @abstractmethod
-    def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[Error]]: ...
+    def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[JFTLError]]: ...
 
     @abstractmethod
     def render(self, template: Template, input: Any, *, entry: Optional[str] = None) -> tuple[Status, Any]: ...
@@ -62,7 +59,7 @@ class Engine(ABC):
     def add_plugin(self, prefix: str, plugin: Any): ...
 
     # Execute a simple template (not wrapped in macros) as a top level item
-    def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Status, Any, list[Error]]:
+    def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Status, Any, list[JFTLError]]:
         template, errors = self.compile(source, main_only = main_only)
         status, result = self.render(template, input) if template and template.valid else (None, None)
         return status, result, errors
@@ -96,4 +93,4 @@ def create_engine(*, no_plugins: bool = False, all_plugins: bool = False ) -> En
     return engine        
 
 
-MISSING_VALUE = Missing(code="MISSING", message="Unspecific MISSING", where=None, location=None)
+MISSING_VALUE = Missing(code="MISSING", message="Unspecific MISSING")

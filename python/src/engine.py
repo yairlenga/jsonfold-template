@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 import re
 
 from logic import LogicStatement
-from template import Template, Status, Error, Engine, Missing
+from template import Template, Status, JFTLError, Engine, Missing
 from core import SKIP_VALUE, CompileError, Condition, Environment, Evaluator, Expression, JFTLConfig, RenderError, Statement, Frame, Compiler, JFTLTemplate
 from navigation import NAV_RE_STR, NavigationPlugin
 
@@ -107,28 +107,28 @@ class JFTLCompiler(Compiler):
                     expr, _ = plugin.expression(m.group("expr"))
                     return expr
 
-            raise CompileError(Error(
+            raise CompileError(JFTLError(
                 code="BAD_EXPRESSION", severity="ERROR", where=where, location=None,
                 message=f"Unknown Expression {source!r}",
                 ))
         
         # Non string source
-        raise CompileError(Error(
+        raise CompileError(JFTLError(
             code="BAD_NODE", severity="ERROR", where=where, location=None,
             message=f"Unknown node {source!r}",
             ))
 
     # Compiler API
-    def condition(self, source: str, where: str|None) -> tuple[Condition, list[Error]]:
+    def condition(self, source: str, where: str|None) -> tuple[Condition, list[JFTLError]]:
         return self._compile(source), None
 
-    def expression(self, source: str | dict, where: str|None) -> tuple[Expression, list[Error]]:
+    def expression(self, source: str | dict, where: str|None) -> tuple[Expression, list[JFTLError]]:
         return self._compile(source), None
 
-    def statement(self, source: dict | str, where: str|None) -> tuple[Statement, list[Error]]:
+    def statement(self, source: dict | str, where: str|None) -> tuple[Statement, list[JFTLError]]:
         return self._compile(source), None
     
-    def compile(self, source: dict | str, where: str|None) -> tuple[Statement, list[Error]]:
+    def compile(self, source: dict | str, where: str|None) -> tuple[Statement, list[JFTLError]]:
         return self._compile(source), None
 
     
@@ -142,7 +142,7 @@ class JFTLEngine(Engine):
     def add_plugin(self, prefix: str, plugin: Any) -> None:
         self._plugins[prefix] = plugin
 
-    def compile(self, source: str | dict | list, where: str = "", *, main_only: bool = False) -> tuple[JFTLTemplate, list[Error]]:
+    def compile(self, source: str | dict | list, where: str = "", *, main_only: bool = False) -> tuple[JFTLTemplate, list[JFTLError]]:
         top = cast(dict, { "main": source } if main_only else source)
         config = JFTLConfig(**top.get("config", {}))
         compiler = JFTLCompiler(config, self._plugins)
@@ -150,14 +150,14 @@ class JFTLEngine(Engine):
 
         return JFTLTemplate(main_entry=compiled, config=config), None
     
-    def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[Error]]: ...
+    def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[JFTLError]]: ...
 
     def render(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None) -> tuple[Status, Any]:
         try:
             body = template.main_entry
             frame = Frame.top_frame(template, input)
             result, _ = self._render(body, frame)
-            if isinstance(result, Error):
+            if isinstance(result, JFTLError):
                 status = Status(False, result)
             else:
                 status = Status(ok=True)
@@ -171,7 +171,7 @@ class JFTLEngine(Engine):
 
 
     # Returning JSON friendly types
-    def _render(self, source: Any | Evaluator, frame: Frame) -> tuple[TYPE_ANY_REC, list[Error] | None]:
+    def _render(self, source: Any | Evaluator, frame: Frame) -> tuple[TYPE_ANY_REC, list[JFTLError] | None]:
         if isinstance(source, Evaluator):
             return source.eval(frame), None
 
@@ -179,7 +179,7 @@ class JFTLEngine(Engine):
             result = {}
             for k, v in source.items():
                 eval_v, _ = self._render(v, frame)
-                if isinstance(eval_v, Error):
+                if isinstance(eval_v, JFTLError):
                     return eval_v, None
                 elif eval_v == SKIP_VALUE:
                     continue  # silently dropped from objects, per locked sentinel rules
@@ -190,7 +190,7 @@ class JFTLEngine(Engine):
             result = []
             for v in source:
                 eval_v, _ = self._render(v, frame)
-                if isinstance(eval_v, Error):
+                if isinstance(eval_v, JFTLError):
                     return eval_v, None
                 elif eval_v == SKIP_VALUE:
                     continue
@@ -209,18 +209,18 @@ class JFTLEngine(Engine):
 class LiteralStatement(Statement):
     value: Any
 
-    def eval(self, frame: Frame) -> Any | Error | Missing:
+    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
         return self.value
 
 @dataclass
 class ObjectStatement(Statement):
     entries: dict[str, Statement]
 
-    def eval(self, frame: Frame) -> Any | Error | Missing:
+    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
         result = {}
         for key, item in self.entries.items():
             value = item.eval(frame) if isinstance(item, Evaluator) else item
-            if isinstance(value, Error):
+            if isinstance(value, JFTLError):
                 return value
             if value == SKIP_VALUE:
                 continue  # silently dropped from objects, per locked sentinel rules
@@ -232,11 +232,11 @@ class ObjectStatement(Statement):
 class ArrayStatement(Statement):
     items: list[Statement]
 
-    def eval(self, frame: Frame) -> Any | Error | Missing:
+    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
         result = []
         for item in self.items:
             value = item.eval(frame) if isinstance(item, Evaluator) else item
-            if isinstance(value, Error):
+            if isinstance(value, JFTLError):
                 return value
             elif value == SKIP_VALUE:
                 continue

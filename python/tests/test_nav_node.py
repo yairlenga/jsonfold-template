@@ -15,7 +15,7 @@ import unittest
 
 from core import Frame, Environment, CompileError
 from navigation import NavigationStatement
-from template import Error, Missing
+from template import JFTLError, Missing
 
 
 def make_root(current):
