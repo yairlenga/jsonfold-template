@@ -12,7 +12,7 @@ setup:
 	@echo "Updating pyproject.toml to $(VERSION)"
 	sed -i -E 's/^(version *= *")[^"]*(")/\1$(VERSION)\2/' pyproject.toml
 
-SRCS = src/core.py src/engine.py src/logic.py src/navigation.py src/template.py src/py_expr.py src/py_run.py
+SRCS = src/core.py src/engine.py src/logic.py src/navigation.py src/template.py src/py_expr.py src/py_run.py scripts/jf_template.py
 
 %.py.check: %.py
 	$(PYTHON) -m py_compile $<
@@ -36,7 +36,7 @@ jqtest-test:
 pytest-test:
 	pytest
 
-run-test: pytest basic-test pyrun-test jqtest-test jqman-test
+run-test: pytest-test basic-test pyrun-test jqtest-test jqman-test
 
 test:
 	$(MAKE) run-test | tee test.log

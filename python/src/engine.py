@@ -155,7 +155,8 @@ class JFTLEngine(Engine):
 
     def render_raw(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None, globals: Optional[dict] = None) -> tuple[Status, Any]:
         body = template.main_entry
-        frame = Frame.top_frame(template, input)
+        env = Environment(template, input, datasets=self._datasets)
+        frame = Frame.top_frame(env)
         result, _ = self._render(body, frame)
         frame.reset()
         if isinstance(result, JFTLError):

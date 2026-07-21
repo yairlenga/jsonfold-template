@@ -1,0 +1,12 @@
+{
+    "RUS": { "name": "Russia", "capital": "Moscow" },
+    "CAN": { "name": "Canada", "capital": "Ottawa" },
+    "USA": { "name": "United States", "capital": "Washington, D.C." },
+    "CHN": { "name": "China", "capital": "Beijing" },
+    "BRA": { "name": "Brazil", "capital": "Brasília" },
+    "AUS": { "name": "Australia", "capital": "Canberra" },
+    "IND": { "name": "India", "capital": "New Delhi" },
+    "ARG": { "name": "Argentina", "capital": "Buenos Aires" },
+    "KAZ": { "name": "Kazakhstan", "capital": "Astana" },
+    "DZA": { "name": "Algeria", "capital": "Algiers" }
+}

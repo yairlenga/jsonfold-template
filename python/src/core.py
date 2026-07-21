@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Optional, TextIO
 from abc import ABC, abstractmethod
 
-from template import Template, JFTLError, Missing, ERROR_VALUE, MISSING_VALUE
+from template import Engine, Template, JFTLError, Missing, ERROR_VALUE, MISSING_VALUE
 # Template Class - represent compiled templates
 
 # Sentinal value to ignore a value in a collection
@@ -45,8 +45,12 @@ class Environment:
     input: Any
     # Destination - for streaming mode. only relevant if level = 0.
     to: Optional[TextIO] = None
+    # Run time Data Sets, mapped via _datasets
+    datasets: dict[str, Any] = field(default_factory=dict)
+
     # Reference to top frame. Set later, as top frame and top environment point to each other.
     top: Frame | None = None
+
 
 @dataclass
 class Frame (Mapping):
@@ -101,17 +105,19 @@ class Frame (Mapping):
         self.reset(self)
 
     @classmethod
-    def top_frame(cls, template: Template, input: Any) -> Frame:
-        env = Environment(template, input)
+    def top_frame(cls, env: Environment) -> Frame:
         top_vars = {
             "_missing": MISSING_VALUE,
             "_error": ERROR_VALUE,
             "_skip" : SKIP_VALUE,
             "_input" : input,
             "_level" : 0,
+            "_datasets": env.datasets,
             "_": input,
         }
         frame = cls(env=env, current=env.input, level=0, parent=None, vars=top_vars)
+        # Must "Patch" the environment to point back to the root frame.
+        # May want one day to point each frame direct to the top, to avoid circular
         env.top = frame
         top_vars["_top"] = frame
         top_vars["_external"] = top_vars

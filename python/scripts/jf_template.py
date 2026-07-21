@@ -365,12 +365,82 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
     return status, summary
 
 
+def _parse_datasets(args):
+    """Parses a list of "key=value" / "key=@file.json" strings (from
+    repeated -D/--dataset CLI args) into a name -> parsed-JSON-value dict."""
+    datasets: dict[str, Any] = {}
+    value_count = 0
+    file_count = 0
+
+    for item in args.data:
+        key, sep, raw_value = item.partition("=")
+        if not sep:
+            raise ProcessingException(ExitCode.BAD_SYNTAX, f"--dataset expects key=value, got: {item!r}")
+        if not key:
+            raise ProcessingException(ExitCode.BAD_SYNTAX, f"--dataset expects a non-empty key, got: {item!r}")
+
+        if raw_value.startswith("@"):
+            path = raw_value[1:]
+            try:
+                with open(path) as f:
+                    value = json.load(f)
+                file_count += 1
+            except OSError as ex:
+                raise ProcessingException(ExitCode.READ_ERROR, f"--dataset {key}: failed to read {path!r}: {ex}") from ex
+            except json.JSONDecodeError as ex:
+                raise ProcessingException(ExitCode.READ_ERROR, f"--dataset {key}: invalid JSON in {path!r}: {ex}") from ex
+        else:
+            try:
+                value = json.loads(raw_value)
+                value_count += 1
+            except json.JSONDecodeError as ex:
+                raise ProcessingException(ExitCode.BAD_SYNTAX, f"--dataset {key}: invalid JSON: {ex}") from ex
+
+        if key in datasets:
+            raise ProcessingException(ExitCode.BAD_SYNTAX, f"--dataset {key}: duplicate dataset name")
+
+        datasets[key] = value
+
+    for key, path in args.datasets:
+        try:
+            with open(path) as f:
+                value = json.load(f)
+            file_count += 1
+        except OSError as ex:
+            raise ProcessingException(ExitCode.READ_ERROR, f"--dataset {key}: failed to read {path!r}: {ex}") from ex
+        except json.JSONDecodeError as ex:
+            raise ProcessingException(ExitCode.READ_ERROR, f"--dataset {key}: invalid JSON in {path!r}: {ex}") from ex
+
+        if key in datasets:
+            raise ProcessingException(ExitCode.BAD_SYNTAX, f"--dataset {key}: duplicate dataset name")
+
+        datasets[key] = value
+
+    return datasets, file_count, value_count
+
+
+def _load_datasets(args, engine: Engine) -> None:
+    """Parses -D/--dataset CLI arguments and registers each into the engine."""
+    ds, file_count, value_count = _parse_datasets(args)
+    for name, value in ds.items():
+        engine.add_dataset(name, value)
+
+    if ds:
+        info(f"Loaded {file_count} files, and {value_count} values")
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="jf-template", description=__doc__,
                                       formatter_class=argparse.RawDescriptionHelpFormatter)
     # Input Options
     parser.add_argument("-f", "--input-format", choices=["json", "stream", "jsonl", "yaml", "toml"], default="json",
                         help="format of input records (default: json)")
+
+    parser.add_argument("-D", "--data", dest="data", metavar="KEY=VALUE", action="append", default=[],
+                        help="define a dataset: -Dname=<json> or -Dname=@file.json (repeatable)")
+
+    parser.add_argument("-F", "--dataset", dest="datasets", nargs=2, metavar=("NAME", "PATH"), action="append", default=[],
+                        help="load dataset from a file --dataset-file NAME PATH (repeaatable)")
+
 
     # Output Options
     parser.add_argument("--split", default=None, action="store_true",
@@ -448,15 +518,16 @@ def main() -> int:
         error(f"{template_label}: {_exception_summary(ex, args.verbose)}")
         return ExitCode.COMPILE_ERROR
 
-    compile_elapsed = time.perf_counter() - t0
-
     if compile_errors:
         for err in compile_errors:
             error(f"{template_label}: [{err.severity}] {err.code}: {err.message}")
         if any(e.severity == "ERROR" for e in compile_errors):
             return ExitCode.COMPILE_ERROR
 
+    compile_elapsed = time.perf_counter() - t0
     info(f"Template {template_label} compiled in {compile_elapsed:.3f} seconds, {_text_desc(template_text)}.")
+
+    _load_datasets(args, engine)
 
     # None in the input list will run the template without input
     input_sources = args.files if args.files else [None]
@@ -517,6 +588,6 @@ if __name__ == "__main__":
         error(f"Processing error {ex}")
         sys.exit(ex.code)
     except Exception as ex:
-        error(f"Unexpected error: {ex}")
+        error(f"Unexpected error: {_exception_summary(ex, True)}")
         sys.exit(ExitCode.GENERAL_ERROR)
 
