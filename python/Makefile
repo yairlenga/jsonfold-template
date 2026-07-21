@@ -19,9 +19,13 @@ SRCS = src/core.py src/engine.py src/logic.py src/navigation.py src/template.py 
 
 build: $(SRCS:=.check)
 
-.PHONY: %.t
-
 TESTS = $(wildcard tests/test_*.py)
+
+basic-test:
+	(cd ../tests/basic && ../run_tests.sh -mpython)
+
+pyrun-test:
+	(cd ../tests/pyrun && ../run_tests.sh -mpyrun)
 
 jqman-test:
 	(cd ../tests/jqman && cat *.jqt | ../run_jqt.sh)
@@ -29,12 +33,10 @@ jqman-test:
 jqtest-test:
 	(cd ../tests/jqtests && cat *.jqt | ../run_jqt.sh)
 
-run-test:
+pytest-test:
 	pytest
-	(cd ../tests/basic && ../run_tests.sh -mpython)
-	(cd ../tests/pyrun && ../run_tests.sh -mpyrun)
-	$(MAKE) jqtest-test
-	$(MAKE) jqman-test
+
+run-test: pytest basic-test pyrun-test jqtest-test jqman-test
 
 test:
 	$(MAKE) run-test | tee test.log
