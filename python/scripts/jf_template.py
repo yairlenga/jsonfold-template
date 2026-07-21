@@ -31,7 +31,7 @@ import traceback
 import re
 
 from pathlib import Path
-from typing import Any, Optional, TextIO
+from typing import Any, Iterator, Optional, TextIO
 
 # --- make ../src importable when run directly from a sibling tests/ dir ---
 sys.path.insert(0, str((Path(__file__).resolve().parent / ".." / "src").resolve()))
@@ -57,7 +57,8 @@ class ExitCode(IntEnum):
     PLUGIN_ERROR = 18            # Plugin raised an error
 
 class ProcessingException(Exception):
-    def __init__(self, code: int):
+    def __init__(self, code: int, message: Optional[str] = None):
+        super().__init__(message)
         self.code = code
 
 args: Any
@@ -194,6 +195,64 @@ def _process_record(args, engine, compiled, record: Any, dest: TextIO, *, input_
     return all_ok, manifest
 
 
+
+def _process_multi_records(args, engine, compiled, records: Iterator[tuple[Any, str]], multi_doc: bool, input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any]:
+
+    t1 = time.perf_counter()
+#    decoder = json.JSONDecoder()
+#    input_desc = _text_desc(input) if input is not None else "(none)"
+    out_count = 0
+    record_count = 0
+    manifest = None
+    all_ok = True
+
+    manifest = []
+    while True:
+        try:
+            record, desc = next(record)
+        except StopIteration:
+            break
+        except Exception as ex:
+            raise ProcessingException(ExitCode.READ_ERROR) from ex
+        label = f"{input_label} (record #{record_count})"
+        ok, summary = _process_record(args, engine, compiled, record, dest, input_label=label, input_desc=desc, output_label=dest_label)
+        elapsed = time.perf_counter() - t1
+
+        manifest.append(summary)
+        out_count += summary.get("doc_count", len(summary)) if isinstance(summary, dict) else len(summary) if isinstance(summary, list) else 0
+        if not ok:
+            all_ok = False
+
+        elapsed = time.perf_counter() - t1
+        if args.split:
+            info(f"Stream {input_label} ({desc}, {record_count} records), Generated {out_count} records in {elapsed:.3f} seconds")
+        else:
+            info(f"Stream {input_label} ({desc}, {record_count} records), Output: {dest_label}, completed in {elapsed:.3f} seconds")
+
+    return all_ok, manifest
+
+def _process_single_doc(args, engine, compiled, input, input_desc, input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any]:
+
+    t1 = time.perf_counter()
+
+    all_ok, manifest = _process_record(args, engine, compiled, input, dest, input_label=input_label, input_desc=input_desc, output_label=dest_label)
+    elapsed = time.perf_counter() - t1
+    out_count = len(manifest) if isinstance(manifest, list) else manifest.get("doc_count", 1)
+    elapsed = time.perf_counter() - t1
+    if args.target:
+        if args.split:
+            info(f"Input {input_label} ({input_desc}), {out_count} files, completed in {elapsed:.3f} seconds")
+        else:
+            info(f"Input {input_label} ({input_desc}), Output: {dest_label}, completed in {elapsed:.3f} seconds")
+    else:
+        if args.split:
+            info(f"Input {input_label} ({input_desc}), {out_count} files, completed in {elapsed:.3f} seconds")
+        else:
+            info(f"Input {input_label} ({input_desc}), Output: {dest_label}, completed in {elapsed:.3f} seconds")
+
+    return all_ok, manifest
+
+
 def _process_input(args, engine, compiled, input: Optional[str], input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any]:
 
     t1 = time.perf_counter()
@@ -258,17 +317,65 @@ def _process_input(args, engine, compiled, input: Optional[str], input_label: st
 
     return all_ok, manifest
 
+
+def _read_empty_doc() -> tuple[Any, str]:
+    return None, "(none)"
+
+    # Generate single document from a file
+def _read_json_doc(fp: TextIO) -> tuple[Any, str]:
+    data = json.load(fp)
+    desc = "Document"
+    return data, desc
+
+    # Generate stream of documents from json lines input
+def _jsonline_record_reader(fp: TextIO) -> Iterator[tuple[Any, str]]:
+    for line_no, line in enumerate(fp, start=1):
+        stripped= line.strip()
+        if not stripped:
+            continue
+        data = json.loads(stripped)
+        desc = f"{_text_desc(stripped)}, at line {line_no}"
+        yield data, desc    
+
+    # Generate stream of documents from JSON objects
+def _json_stream_reader(fp: TextIO) -> Iterator[tuple[Any, str]]:
+
+    input = fp.read()
+    decoder = json.JSONDecoder()
+
+    start_line = 1
+    record_count = 0
+    pos = 0
+    n = len(input)
+    while True:
+        # Skip over new lines
+        start_pos = pos
+        while pos < n and input[pos].isspace():
+            pos += 1
+        if pos >= n:
+            return
+        start_line += input[start_pos:pos].count("\n")
+        start_pos = pos
+        # Parse the next
+        record_count += 1
+        data, pos = decoder.raw_decode(input, pos)
+        desc = f"{_text_desc(input[start_pos:pos])}, starting at line {start_line}"
+        start_line += input[start_pos:pos].count("\n")
+        yield data, desc
+
+
 def _process_file(args, engine, compiled, input_path: Optional[str], input_label: str) -> Any:
 
-    input = None
     input_label = "(none)"
     output_path = None
     output_fp = sys.stdout
+    input_fp = None
+    close_input = False
 
     new_name = ""
     if input_path == "-":
         input_label = "(stdin)"
-        input = sys.stdin.read()
+        input_fp = sys.stdin
         if args.target and not args.split:
             new_name = "stdin.out"
             output_path = Path(args.target) / new_name
@@ -276,8 +383,8 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
     elif input_path is not None:
         input_label = input_path
         try:
-            with open(input_path, mode="r", encoding="utf-8") as fp:
-                input = fp.read()
+            input_fp = open(input_path, mode="r", encoding="utf-8")
+            close_input = True
         except Exception as ex:
             raise ProcessingException(ExitCode.READ_ERROR) from ex
 
@@ -288,7 +395,35 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
     if output_path:
         output_fp = open(output_path, "w", encoding="utf-8")
 
-    status, summary = _process_input(args, engine, compiled, input, input_label, output_fp, new_name)
+    input = None
+    records = None
+    if input_fp:
+        match args.input_format:
+            case "json":
+                input, desc = _read_json_doc(input_fp)
+
+            case "stream":
+                records = _json_stream_reader(input_fp)
+                multi_doc = True
+
+            case "jsonl":
+                records = _jsonline_record_reader(input_fp)
+                multi_doc = True
+
+            case _:
+                error(f"Unknown input_format={args.input_format}")
+                raise ProcessingException(ExitCode.BAD_SYNTAX)
+    else:            
+        input, desc = _read_empty_doc()
+
+    if records:
+        status, summary = _process_multi_records(args, engine, compiled, records, multi_doc, input_label, output_fp, new_name)
+        if close_input:
+            input_fp.close()
+    else:
+        if close_input:
+            input_fp.close()
+        status, summary = _process_single_doc(args, engine, compiled, input, desc, input_label, output_fp, new_name)
 
     if output_path:
         output_fp.close()
@@ -300,11 +435,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(prog="jf-template", description=__doc__,
                                       formatter_class=argparse.RawDescriptionHelpFormatter)
     # Input Options
-    parser.add_argument("--stream", default=None, action="store_true",
-                        help="Read multiple JSON objecs from the standard input, and apply the template for each one of them")
-
-    parser.add_argument("-e", "--entry", default=None, metavar="NAME",
-                        help="Macro entry point to render.")
+    parser.add_argument("-f", "--input-format", choices=["json", "stream", "jsonl", "yaml", "toml"], default="json",
+                        help="format of input records (default: json)")
 
     # Output Options
     parser.add_argument("--split", default=None, action="store_true",
@@ -342,6 +474,10 @@ def main() -> int:
     parser.add_argument("--enable", action="append", default=[], metavar="PLUGIN",
                         choices=["pyrun", "pyeval", "cel", "simpleeval"],
                         help="Enable an optional plugin. May be specified multiple times.")
+
+    # Template Execution
+    parser.add_argument("-e", "--entry", default=None, metavar="NAME",
+                        help="Macro entry point to render.")
 
     parser.add_argument("template", nargs="?", default=None, metavar="TEMPLATE",
                         help="Path to the template JSON file.")
