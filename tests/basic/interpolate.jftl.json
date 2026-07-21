@@ -1,0 +1,14 @@
+{
+	"main": {
+		"$": true,
+		"set": {
+			"count": 12,
+			"prize": "bar",
+			"name": "Joe Smith"
+		},
+		"body": {
+			"foo": "Hello ${name}, you won ${count} ${prize}"
+
+		}
+	}
+}
