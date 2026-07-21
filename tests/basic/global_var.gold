@@ -1,0 +1,48 @@
+[
+  {
+    "test": "glob/local",
+    "foo": "glob.foo",
+    "bar": "local.bar",
+    "g.foo": "glob.foo",
+    "g.bar": null,
+    "l.foo": null,
+    "l.bar": "local.bar"
+  },
+  {
+    "test": "none/local",
+    "foo": null,
+    "bar": "local.bar",
+    "g.foo": null,
+    "g.bar": "local.bar",
+    "l.foo": null,
+    "l.bar": "local.bar"
+  },
+  {
+    "test": "glob/mid/local",
+    "foo": "local.foo",
+    "bar": "local.bar",
+    "g.foo": "glob.foo",
+    "g.bar": null,
+    "l.foo": "local.foo",
+    "l.bar": "local.bar"
+  },
+  {
+    "test": "none/globl/local",
+    "foo": "local.foo",
+    "bar": "local.bar",
+    "g.foo": "glob.foo",
+    "g.bar": null,
+    "l.foo": "local.foo",
+    "l.bar": "local.bar"
+  },
+  {
+    "test": "glob",
+    "foo": "glob.foo",
+    "bar": null,
+    "g.foo": "glob.foo",
+    "g.bar": null,
+    "l.foo": "glob.foo",
+    "l.bar": null
+  },
+  null
+]

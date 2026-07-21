@@ -1,0 +1,37 @@
+{
+	"main": {
+		"$": true,
+		"set": {
+			"key": "aa"
+		},
+		"data": "AA",
+		"body": {
+			"$": true,
+			"set": {
+				"key": "bb"
+			},
+			"data": "BB",
+			"body": {
+				"$": true,
+				"set": {
+					"key": "cc"
+				},
+				"data": "CC",
+				"body": {
+					"key": "$key",
+					"_parent.key": "$_parent.key",
+					"_parent._parent.key": "$_parent._parent.key",
+					"_top.key": "$_top.key",
+
+					"_": "$",
+					"_parent._": "$_parent._",
+					"_parent._parent._": "$_parent._parent._",
+					"_top._": "$_top._",
+
+					"$^": "$^",
+					"$<": "$<"
+				}
+			}
+		}
+	}
+}

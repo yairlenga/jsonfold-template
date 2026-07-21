@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Optional, TextIO
 from abc import ABC, abstractmethod
 
-from template import MISSING_VALUE, Template, JFTLError, Missing
+from template import Template, JFTLError, Missing, ERROR_VALUE, MISSING_VALUE
 # Template Class - represent compiled templates
 
 # Sentinal value to ignore a value in a collection
@@ -56,8 +56,10 @@ class Frame (Mapping):
     current: Any
     # Aliases as '^'
     parent: Frame | None
+    # Global Frame, top frame with user variables
+    global_frame: Optional[Frame] = None
     # From parent.level + 1, root = 0
-    level: int
+    level: int = 0
 
     # User defined variables in the CURRENT frame    
     vars: dict[str, Any] = field(default_factory=dict)
@@ -103,7 +105,7 @@ class Frame (Mapping):
         env = Environment(template, input)
         top_vars = {
             "_missing": MISSING_VALUE,
-            "_error": JFTLError(severity='ERROR', code='TEMPLATE-ERROR', message="Template Error"),
+            "_error": ERROR_VALUE,
             "_skip" : SKIP_VALUE,
             "_input" : input,
             "_level" : 0,
@@ -112,7 +114,7 @@ class Frame (Mapping):
         frame = cls(env=env, current=env.input, level=0, parent=None, vars=top_vars)
         env.top = frame
         top_vars["_top"] = frame
-        top_vars["_global"] = top_vars
+        top_vars["_external"] = top_vars
         top_vars["_local"] = top_vars
         frame._update_current()
         return frame

@@ -388,6 +388,9 @@ class LogicStatement(Statement):
                 name = set_var._name
                 value = new_frame.eval_value(set_var._expr)
                 new_vars[name] = value
+            if not new_frame.global_frame:
+                new_frame.global_frame = new_frame
+                new_vars["_global"] = new_frame
 
         # Check the condition
         if not new_frame.eval_bool(self._if, True):

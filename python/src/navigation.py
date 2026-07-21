@@ -89,7 +89,7 @@ class NavigationStatement(Statement, Expression):
                 return value  # already failed upstream — propagate, stop walking
 
             if isinstance(seg, Key):
-                if isinstance(value, dict) and seg.name in value:
+                if isinstance(value, Mapping) and seg.name in value:
                     value = value[seg.name]
                 else:
                     return MISSING_VALUE

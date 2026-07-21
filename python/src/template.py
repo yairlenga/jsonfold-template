@@ -94,3 +94,4 @@ def create_engine(*, no_plugins: bool = False, all_plugins: bool = False ) -> En
 
 
 MISSING_VALUE = Missing(code="MISSING", message="Unspecific MISSING")
+ERROR_VALUE = JFTLError(severity='ERROR', code='GENERIC-ERROR', message="Template Error")

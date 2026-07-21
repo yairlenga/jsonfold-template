@@ -1,0 +1,119 @@
+{
+	"main": [
+		{
+			"$": true,
+			"set": {
+				"foo": "glob.foo"
+			},
+			"body": {
+				"$": true,
+				"set": {
+					"bar": "local.bar"
+				},
+				"body": {
+					"test": "glob/local",
+					"foo": "$foo",
+					"bar": "$bar",
+					"g.foo": "$_global.foo",
+					"g.bar": "$_global.bar",
+					"l.foo": "$_local.foo",
+					"l.bar": "$_local.bar"
+				}
+			}
+		},
+		{
+			"$": true,
+			"body": {
+				"$": true,
+				"set": {
+					"bar": "local.bar"
+				},
+				"body": {
+					"test": "none/local",
+					"foo": "$foo",
+					"bar": "$bar",
+					"g.foo": "$_global.foo",
+					"g.bar": "$_global.bar",
+					"l.foo": "$_local.foo",
+					"l.bar": "$_local.bar"
+				}
+			}
+		},
+		{
+			"$": true,
+			"set": {
+				"foo": "glob.foo"
+			},
+			"body": {
+				"$": true,
+				"set": {
+					"foo": "mid.foo",
+					"bar": "mid.bar"
+				},
+				"body": {
+					"$": true,
+					"body": {
+						"$": true,
+						"set": {
+							"foo": "local.foo",
+							"bar": "local.bar"
+						},
+						"body": {						
+							"test": "glob/mid/local",
+							"foo": "$foo",
+							"bar": "$bar",
+							"g.foo": "$_global.foo",
+							"g.bar": "$_global.bar",
+							"l.foo": "$_local.foo",
+							"l.bar": "$_local.bar"
+								}
+					}
+				}
+			}
+		},
+		{
+			"$": true,
+			"body": {
+				"$": true,
+				"set": {
+					"foo": "glob.foo"
+				},
+				"body": {
+					"$": true,
+					"body": {
+						"$": true,
+						"set": {
+							"foo": "local.foo",
+							"bar": "local.bar"
+						},
+						"body": {						
+							"test": "none/globl/local",
+							"foo": "$foo",
+							"bar": "$bar",
+							"g.foo": "$_global.foo",
+							"g.bar": "$_global.bar",
+							"l.foo": "$_local.foo",
+							"l.bar": "$_local.bar"
+								}
+					}
+				}
+			}
+		},
+		{
+			"$": true,
+			"set": {
+				"foo": "glob.foo"
+			},
+			"body": {
+				"test": "glob",
+				"foo": "$foo",
+				"bar": "$bar",
+				"g.foo": "$_global.foo",
+				"g.bar": "$_global.bar",
+				"l.foo": "$_local.foo",
+				"l.bar": "$_local.bar"
+			}
+		},
+		null
+	]
+}
