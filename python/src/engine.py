@@ -1,6 +1,7 @@
 from __future__ import annotations
+from collections.abc import Mapping
 from types import NoneType
-from typing import Any, Literal, Optional, TextIO, cast
+from typing import Any, Literal, Optional, Sequence, TextIO, cast
 from pathlib import Path
 from dataclasses import dataclass, field
 import re
@@ -152,19 +153,24 @@ class JFTLEngine(Engine):
     
     def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[JFTLError]]: ...
 
+    def render_raw(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None, globals: Optional[dict] = None) -> tuple[Status, Any]:
+        body = template.main_entry
+        frame = Frame.top_frame(template, input)
+        result, _ = self._render(body, frame)
+        frame.reset()
+        if isinstance(result, JFTLError):
+            status = Status(False, result)
+        else:
+            status = Status(ok=True)
+        return status, result
+
     def render(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None) -> tuple[Status, Any]:
+        result = None
         try:
-            body = template.main_entry
-            frame = Frame.top_frame(template, input)
-            result, _ = self._render(body, frame)
-            if isinstance(result, JFTLError):
-                status = Status(False, result)
-            else:
-                status = Status(ok=True)
+            status, result = self.render_raw(template, input, entry = entry)
+            result = self._materialize(result)
         except RenderError as re:
             status = Status(False, re.error)
-        finally:
-            frame.reset()
         return status, result
         
     def render_to(self, output: TextIO, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
@@ -196,14 +202,23 @@ class JFTLEngine(Engine):
                     continue
                 result.append(eval_v)
             return result, None
-
-        if isinstance(source, Evaluator):
-            eval_v, _v = source.eval(frame)
-            return eval_v, None
-        
+       
         return source, None
-    
 
+    def materialize(self, result: Any) -> Any:
+        return self._materialize(result)
+
+    def _materialize(self, value: Any) -> Any:
+        if isinstance(value, (Missing, Frame)):
+            return None
+        if isinstance(value, dict):
+            return { k: self._materialize(v) for k, v in value.items() }
+        if isinstance(value, (list, tuple)):
+            return [ self._materialize(v) for v in value ]
+        if isinstance(value, ( NoneType, bool, int, float, str)):
+            return value
+        return RenderError(JFTLError(severity = 'ERROR', code='BAD-RESULT', message=f"Result contained unknown type {type(value)}"))
+           
 
 @dataclass
 class LiteralStatement(Statement):

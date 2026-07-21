@@ -24,7 +24,7 @@ from template import MISSING_VALUE
         { "when": "COND-2", "then": "EXPR-2" },
     ],
     "body": "EXPR",
-    "transform": "MERGE|FLATTEN|NONE",
+    "transform": "flatten" | "merge" | "to_pairs" | "from_pairs" | "drop_missing" | None,
     "error": "EXPR",
 } """
 
@@ -249,7 +249,7 @@ class LogicStatement(Statement):
             if v_value:
                 new_vars[v_value] = item
             else:
-                frame.current = item
+                frame.set_current(item)
 
             if not frame.eval_bool(v_cond, True):
                 continue
@@ -380,9 +380,8 @@ class LogicStatement(Statement):
     def eval(self, prev_frame: Frame) -> Any | JFTLError | Missing:
 
         # Create a new frame to use
-        new_vars : dict[str, Any]= {}
-
-        new_frame = replace(prev_frame, parent = prev_frame, level = prev_frame.level+1, vars = new_vars, _cache = {})
+        new_frame = prev_frame.child_frame()
+        new_vars = new_frame.vars
         # Build local vars, inside the new frame.
         if (set_vars := self._defines):
             for set_var in set_vars:
@@ -396,7 +395,7 @@ class LogicStatement(Statement):
             
         # Consider new data object.
         if ( v_data := self._set_current):
-            new_frame.current = new_frame.eval_value(v_data)
+            new_frame.set_current(new_frame.eval_value(v_data))
         
         # Choose body to execute
         v_body = self._choose_body(new_frame)

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from typing import Any, Optional, TextIO
 from abc import ABC, abstractmethod
@@ -48,7 +49,7 @@ class Environment:
     top: Frame | None = None
 
 @dataclass
-class Frame:
+class Frame (Mapping):
 
     env: Environment 
     # Aliases as '_'
@@ -63,6 +64,14 @@ class Frame:
     # Cached value, including inherited, calculated, ...
     _cache:  dict[str, Any] = field(default_factory=dict)
 
+    # Sync the exposed var '_' with the current attribute
+    def _update_current(self):
+        self.vars["_"] = self.current
+
+    def set_current(self, current: Any):
+        self.current = current
+        self._update_current()
+
     def eval_value(self, expr: Evaluator | Any, default_val=None) -> Any:
         if expr is None:
             return default_val
@@ -71,7 +80,7 @@ class Frame:
         result = expr.eval(self) if isinstance(expr, Evaluator) else expr
         return result        
     
-    def eval_bool(self, cond: Condition | Any, default_val=None) -> bool:
+    def eval_bool(self, cond: Condition | Any, default_val=None) -> bool | None:
         if cond is None:
             return default_val
         result = cond.eval_bool(self)        
@@ -96,50 +105,71 @@ class Frame:
             "_missing": MISSING_VALUE,
             "_error": JFTLError(severity='ERROR', code='TEMPLATE-ERROR', message="Template Error"),
             "_skip" : SKIP_VALUE,
+            "_input" : input,
+            "_level" : 0,
+            "_": input,
         }
         frame = cls(env=env, current=env.input, level=0, parent=None, vars=top_vars)
         env.top = frame
+        top_vars["_top"] = frame
+        top_vars["_global"] = top_vars
+        top_vars["_local"] = top_vars
+        frame._update_current()
         return frame
 
-    def child_frame(self, vars: dict[str, Any] = {} ) -> Frame:
-        return replace(
+    def child_frame(self) -> Frame:
+        child_vars : dict[str, Any] = {
+            "_parent" : self,
+        }
+        frame = replace(
             self,
             parent = self,
             level = self.level+1,
-            vars = vars,
+            vars = child_vars,
             _cache = {},
         )
+        frame._update_current()
+        child_vars["_local"] = child_vars
+        return frame
     
-    def lookup_var(self, name: str) -> Any:
+    def  __getitem__(self, key):
+        if key in self._cache:
+            return self._cache[key]
+
+        return self.lookup_var(key)
+    
+    def __iter__(self):
+        return self.vars.__iter__()
+
+    def __len__(self):
+        return self.vars.__len__()
+
+    def __contains__(self, key: object) -> bool:
+        return key in self.vars
+
+    def lookup_var(self, name: str, cache_value: bool = False) -> Any:
         """Search this frame, then parent, then parent's parent, ...
         for `name` in `vars`. Caches the result (or MISSING) at every
         frame walked through, so a repeated lookup from the same frame
         is O(1) afterward."""
-        if name in self._cache:
-            return self._cache[name]
-
         frame = self
-#        chain = []
+        chain = []
         while frame is not None:
             if name in frame.vars:
+                # Found a value - cache at all levels
                 value = frame.vars[name]
-#                for f in chain:
-#                    f._cache[name] = value
-                if frame != self:
-                    self._cache[name] = value
+                if cache_value:
+                    for f in chain[1:]:
+                        f._cache[name] = value
                 return value
-#            chain.append(frame)
+            chain.append(frame)
             frame = frame.parent
 
+        # May want to cache missing at some time, but not use too much memory
 #        for f in chain:
 #            f._cache[name] = MISSING_VALUE
         return MISSING_VALUE
     
-
- 
-
-# Draft - NIY
-
 class Evaluator(ABC):
     @abstractmethod
     def eval(self, frame: Frame) -> Any | JFTLError | Missing : ...

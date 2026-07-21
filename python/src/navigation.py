@@ -1,7 +1,8 @@
 
 # runtime.py
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal, Optional, Sequence, Union
 
 from core import Compiler, Condition, Expression, Frame, Statement, CompileError
 from template import MISSING_VALUE, JFTLError, Missing
