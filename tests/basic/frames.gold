@@ -1,11 +1,11 @@
 {
   "key": "cc",
-  "_parent.key": null,
-  "_parent._parent.key": null,
+  "_parent.key": "bb",
+  "_parent._parent.key": "aa",
   "_top.key": null,
   "_": "CC",
-  "_parent._": null,
-  "_parent._parent._": null,
+  "_parent._": "BB",
+  "_parent._parent._": "AA",
   "_top._": null,
   "$^": null,
   "$<": "BB"
