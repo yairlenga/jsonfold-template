@@ -95,7 +95,7 @@ def _format_output(value: Any, indent: int, raw: bool) -> str:
     return json.dumps(value, indent=indent, default=_json_default)  # indent=0 is Python's own (odd but valid) behavior
 
 
-def _exception_summary(exc: Exception, verbose: bool) -> str:
+def _exception_summary(exc: BaseException, verbose: bool) -> str:
     if verbose:
         return traceback.format_exc()
     return f"{type(exc).__name__}: {exc}"
@@ -196,40 +196,30 @@ def _process_record(args, engine, compiled, record: Any, dest: TextIO, *, input_
 
 
 
-def _process_multi_records(args, engine, compiled, records: Iterator[tuple[Any, str]], multi_doc: bool, input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any]:
+def _process_multi_records(args, engine, compiled, records: Iterator[tuple[Any, str]], input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any, int]:
 
-    t1 = time.perf_counter()
 #    decoder = json.JSONDecoder()
 #    input_desc = _text_desc(input) if input is not None else "(none)"
     out_count = 0
-    record_count = 0
     manifest = None
     all_ok = True
 
     manifest = []
     while True:
         try:
-            record, desc = next(record)
+            record, desc = next(records)
         except StopIteration:
             break
         except Exception as ex:
             raise ProcessingException(ExitCode.READ_ERROR) from ex
-        label = f"{input_label} (record #{record_count})"
-        ok, summary = _process_record(args, engine, compiled, record, dest, input_label=label, input_desc=desc, output_label=dest_label)
-        elapsed = time.perf_counter() - t1
+        ok, summary = _process_record(args, engine, compiled, record, dest, input_label=input_label, input_desc=desc, output_label=dest_label)
 
         manifest.append(summary)
         out_count += summary.get("doc_count", len(summary)) if isinstance(summary, dict) else len(summary) if isinstance(summary, list) else 0
         if not ok:
             all_ok = False
 
-        elapsed = time.perf_counter() - t1
-        if args.split:
-            info(f"Stream {input_label} ({desc}, {record_count} records), Generated {out_count} records in {elapsed:.3f} seconds")
-        else:
-            info(f"Stream {input_label} ({desc}, {record_count} records), Output: {dest_label}, completed in {elapsed:.3f} seconds")
-
-    return all_ok, manifest
+    return all_ok, manifest, out_count
 
 def _process_single_doc(args, engine, compiled, input, input_desc, input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any]:
 
@@ -249,71 +239,6 @@ def _process_single_doc(args, engine, compiled, input, input_desc, input_label: 
             info(f"Input {input_label} ({input_desc}), {out_count} files, completed in {elapsed:.3f} seconds")
         else:
             info(f"Input {input_label} ({input_desc}), Output: {dest_label}, completed in {elapsed:.3f} seconds")
-
-    return all_ok, manifest
-
-
-def _process_input(args, engine, compiled, input: Optional[str], input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any]:
-
-    t1 = time.perf_counter()
-    decoder = json.JSONDecoder()
-    input_desc = _text_desc(input) if input is not None else "(none)"
-    out_count = 0
-    record_count = 0
-    manifest = None
-    all_ok = True
-
-    if input and args.stream:
-        pos = 0
-        n = len(input)
-        manifest = []
-        while True:
-            while pos < n and input[pos].isspace():
-                pos += 1
-            if pos >= n:
-                break
-            record_count = record_count+1
-            start_line = _count_lines(input[:pos])
-            try:
-                record, pos = decoder.raw_decode(input, pos)
-            except Exception as ex:
-                raise ProcessingException(ExitCode.READ_ERROR) from ex
-            label = f"{input_label} (record #{record_count})"
-            desc = f"{_text_desc(input)}, starting at line {start_line}" if input else ""
-            ok, summary = _process_record(args, engine, compiled, record, dest, input_label=label, input_desc=desc, output_label=dest_label)
-            manifest.append(summary)
-            out_count += summary.get("doc_count", len(summary)) if isinstance(summary, dict) else len(summary) if isinstance(summary, list) else 0
-
-            if not ok:
-                all_ok = False
-        elapsed = time.perf_counter() - t1
-        if args.split:
-            info(f"Stream {input_label} ({input_desc}, {record_count} records), Generated {out_count} records in {elapsed:.3f} seconds")
-        else:
-            info(f"Stream {input_label} ({input_desc}, {record_count} records), Output: {dest_label}, completed in {elapsed:.3f} seconds")
-
-    else:
-        # Whole file one (and only one) record.
-        try:
-            record = json.loads(input) if input is not None else None
-        except Exception as ex:
-            raise ProcessingException(ExitCode.READ_ERROR) from ex
-        
-        desc = f"{_text_desc(input)}" if input is not None else ""
-
-        all_ok, manifest = _process_record(args, engine, compiled, record, dest, input_label=input_label, input_desc=desc, output_label=dest_label)
-        out_count = len(manifest) if isinstance(manifest, list) else manifest.get("doc_count", 1)
-        elapsed = time.perf_counter() - t1
-        if args.target:
-            if args.split:
-                info(f"Input {input_label} ({input_desc}), {out_count} files, completed in {elapsed:.3f} seconds")
-            else:
-                info(f"Input {input_label} ({input_desc}), Output: {dest_label}, completed in {elapsed:.3f} seconds")
-        else:
-            if args.split:
-                info(f"Input {input_label} ({input_desc}), {out_count} files, completed in {elapsed:.3f} seconds")
-            else:
-                info(f"Input {input_label} ({input_desc}), Output: {dest_label}, completed in {elapsed:.3f} seconds")
 
     return all_ok, manifest
 
@@ -403,12 +328,12 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
                 input, desc = _read_json_doc(input_fp)
 
             case "stream":
+                desc = ""
                 records = _json_stream_reader(input_fp)
-                multi_doc = True
 
             case "jsonl":
+                desc = ""
                 records = _jsonline_record_reader(input_fp)
-                multi_doc = True
 
             case _:
                 error(f"Unknown input_format={args.input_format}")
@@ -417,11 +342,20 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
         input, desc = _read_empty_doc()
 
     if records:
-        status, summary = _process_multi_records(args, engine, compiled, records, multi_doc, input_label, output_fp, new_name)
-        if close_input:
+        t1 = time.perf_counter()
+        status, summary, out_count = _process_multi_records(args, engine, compiled, records, input_label, output_fp, new_name)
+        elapsed = time.perf_counter() - t1
+        inp_count = len(summary)
+
+        if args.split:
+            info(f"Stream {input_label} ({desc}, {inp_count} records), Generated {out_count} records in {elapsed:.3f} seconds")
+        else:
+            info(f"Stream {input_label} ({desc}, {inp_count} records), Output: {new_name}, completed in {elapsed:.3f} seconds")
+
+        if close_input and input_fp is not None:
             input_fp.close()
     else:
-        if close_input:
+        if close_input and input_fp is not None:
             input_fp.close()
         status, summary = _process_single_doc(args, engine, compiled, input, desc, input_label, output_fp, new_name)
 
