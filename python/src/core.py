@@ -4,12 +4,11 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Optional, TextIO
 from abc import ABC, abstractmethod
 
-from template import Engine, Template, JFTLError, Missing, ERROR_VALUE, MISSING_VALUE
+from template import SKIP_VALUE, Engine, Template, JFTLError, Missing, ERROR_VALUE, MISSING_VALUE
 # Template Class - represent compiled templates
 
 # Sentinal value to ignore a value in a collection
 
-SKIP_VALUE = Missing(code="SKIP", message= "Skip entry sentinel")
 
 
 # Runtime Objects
@@ -25,7 +24,7 @@ class JFTLConfig:
 @dataclass(slots=True)
 class JFTLTemplate(Template):
 
-    main_entry: Optional[Evaluator]
+    main_entry: Optional[Evaluator] = None
     config: JFTLConfig = field(default_factory=JFTLConfig)
     datasets: dict = field(default_factory=dict)
 
@@ -53,6 +52,8 @@ class Environment:
     # Reference to top frame. Set later, as top frame and top environment point to each other.
     top: Frame | None = None
 
+_NULL_TEMPLATE = JFTLTemplate()
+_NULL_ENVIRONMENT = Environment(_NULL_TEMPLATE, None)
 
 @dataclass
 class Frame (Mapping):
@@ -95,16 +96,16 @@ class Frame (Mapping):
         return result
     
     def reset(self) -> None:
-        self.env = None
+        self.env = _NULL_ENVIRONMENT
         self.current = None
         self.parent = None
-        self.level = None
+        self.level = 0
 
     def __enter__(self):
         return self
 
-    def __exit__(self):
-        self.reset(self)
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.reset()
 
     @classmethod
     def top_frame(cls, env: Environment) -> Frame:
@@ -184,7 +185,7 @@ class Evaluator(ABC):
     @abstractmethod
     def eval(self, frame: Frame) -> Any | JFTLError | Missing : ...
 
-class Condition(ABC):
+class Condition():
     def eval_bool(self, frame: Frame) -> bool:
         result = self.eval(frame)
         if result is False or result is None or isinstance(result, Missing):
@@ -218,8 +219,6 @@ class CompileError(Exception):
     def __init__(self, error: JFTLError):
         super().__init__(error.message)
         self.error = error
-
-
 
 class RenderError(Exception):
     def __init__(self, error: JFTLError):

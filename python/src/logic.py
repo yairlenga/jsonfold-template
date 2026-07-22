@@ -270,7 +270,7 @@ class LogicStatement(Statement):
                 continue
 
             if do_dict:
-                dict_result[new_key] = new_val
+                dict_result[cast(str, new_key)] = new_val
             else:
                 list_result.append(new_val)
 

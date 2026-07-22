@@ -2,7 +2,7 @@
 # runtime.py
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Literal, Optional, Sequence, Union
+from typing import Any, Literal, Optional, Sequence, Union, cast
 
 from core import Compiler, Condition, Expression, Frame, Statement, CompileError
 from template import MISSING_VALUE, JFTLError, Missing
@@ -78,7 +78,7 @@ class NavigationStatement(Statement, Expression):
         elif self._start == "_input":
             value = frame.env.input
         elif self._start == "_parent.current":
-            value = frame.parent.current
+            value = cast(Frame, frame.parent).current
         else:
             value = frame.lookup_var(self._start)
 
@@ -148,7 +148,7 @@ class NavigationPlugin(Compiler):
             start = vars
 
         if not start:
-            return None
+            raise CompileError(JFTLError(severity="ERROR", code="BAD-NAV-SYNTAX", message=f"Unknown start: '${head}", where=where))
         
         engine = NavigationStatement(segments, start=start, where=where)
         return engine

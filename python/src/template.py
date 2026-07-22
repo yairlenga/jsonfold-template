@@ -3,16 +3,27 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from dataclasses import dataclass, field
 
+
+class _NoValueType:
+    def __repr__(self) -> str:
+        return "NO_VALUE"
+
+NO_VALUE = _NoValueType()
 @dataclass(kw_only=True)
-class JFTLError(Exception):
-    severity: Literal["ERROR", "WARNING", "INFO"]
+class JFTLError():
+    severity: Literal["ERROR", "WARNING", "INFO", "DEBUG"] = "ERROR"
+    phase: Optional[Literal["COMPILE", "RENDER"]] = None
     code: str
     message: str
-    where: Optional[str] = None
-    location: Optional[str] = None
-    details: list["Exception"] = None
-    value: Any = None
-    hasValue: bool = False
+    where: Optional[str] = None                  # Location in the template
+    location: Optional[str] = None               # Location in the data tree
+    details: Optional[list["JFTLError"]] = None
+    value: Any = NO_VALUE
+
+class JFTLException(Exception):
+    def __init__(self, error: JFTLError):
+        super().__init__(error.message)
+        self.error = error
 
 @dataclass
 class Missing():
@@ -21,9 +32,6 @@ class Missing():
     
     def __bool__(self):
         return False
-    
-    def __getattr__(self, name: str) -> "Missing":
-        return self
     
     def __getitem__(self, key: Any) -> "Missing":
         return self
@@ -37,7 +45,7 @@ class Status:
 
 class Template(ABC):
     @abstractmethod
-    def valid(): bool: ...
+    def valid(self) -> bool: ...
 
 @dataclass
 class Engine(ABC):
@@ -61,18 +69,27 @@ class Engine(ABC):
     # Execute a simple template (not wrapped in macros) as a top level item
     def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Status, Any, list[JFTLError]]:
         template, errors = self.compile(source, main_only = main_only)
-        status, result = self.render(template, input) if template and template.valid else (None, None)
+        if template and template.valid():
+            status, result = (self.render(template, input))
+        else:
+            status = Status(False, errors[0] if errors else None)
+            result = None
+
         return status, result, errors
 
     def add_dataset(self, name: str, data: Any) -> None:
         self._datasets[name] = data
 
 def create_engine(*, no_plugins: bool = False, all_plugins: bool = False ) -> Engine:
-    """strict=False (default) treats recoverable issues (over-'^' past root,
-    unsafe navigation, etc.) as WARNING-severity and continues execution —
-    useful during development when many such issues may surface at once.
-    strict=True escalates the same conditions to ERROR and halts.
-    Global per-engine for now; per-call override may be added later if needed."""
+    """Creates a JFTLEngine with default plugins registered.
+
+    By default, registers the always-safe 'py' (simpleeval) and 'nav'
+    (navigation) plugins. Pass all_plugins=True to also register the
+    trusted 'pyeval'/'pyrun' tiers (full Python eval, no sandboxing —
+    only enable for trusted templates). Pass no_plugins=True to skip
+    even the default plugins, for callers who want to register their
+    own set from scratch via add_plugin().
+    """
     from engine import JFTLEngine
     engine = JFTLEngine()
 
@@ -95,3 +112,4 @@ def create_engine(*, no_plugins: bool = False, all_plugins: bool = False ) -> En
 
 MISSING_VALUE = Missing(code="MISSING", message="Unspecific MISSING")
 ERROR_VALUE = JFTLError(severity='ERROR', code='GENERIC-ERROR', message="Template Error")
+SKIP_VALUE = Missing(code="SKIP", message= "Skip entry sentinel")
