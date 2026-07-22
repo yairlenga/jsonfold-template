@@ -23,7 +23,7 @@ import json
 from typing import cast
 import unittest
 
-from core import Frame, Environment, JFTLTemplate
+from core import Frame, Environment
 from engine import JFTLEngine
 
 

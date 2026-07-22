@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Optional, Sequence, Union, cast
 
-from core import Compiler, Condition, Expression, Frame, Statement, CompileError
+from core import Compiler, Condition, Evaluator, Expression, Frame, CompileError
 from template import MISSING_VALUE, JFTLError, Missing
 
 @dataclass
@@ -31,7 +31,7 @@ _SEGMENT_RE = re.compile(r"""
   | \[\$(?P<var>\w+)\]
 """, re.VERBOSE)
 
-class NavigationStatement(Statement, Expression):
+class NavigationStatement(Expression):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
     def __init__(self, path: str, where: str | None = None, start: Literal["_current", "_parent.current", "_input"] | str= "_current"):
@@ -165,14 +165,8 @@ class NavigationPlugin(Compiler):
         
         return node
 
-    def condition(self, source: str) -> tuple[Condition, Optional[list[JFTLError]]]:
+    def compile(self, source: str) -> tuple[Evaluator, Optional[list[JFTLError]]]:
         assert isinstance(source, str)
         return self.parse(source, None), None
     
-    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[JFTLError]]]:
-        assert isinstance(source, str)
-        return self.parse(source, None), None
 
-    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[JFTLError]]]:
-        assert isinstance(source, str)
-        return self.parse(source, None), None

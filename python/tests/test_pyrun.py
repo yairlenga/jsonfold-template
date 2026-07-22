@@ -3,7 +3,7 @@
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from template import Engine, create_engine
+from template import create_engine
 
 
 def test1():

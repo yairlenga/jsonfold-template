@@ -8,7 +8,7 @@ import re
 
 from logic import LogicStatement
 from template import Template, Status, JFTLError, Engine, Missing
-from core import SKIP_VALUE, CompileError, Condition, Environment, Evaluator, Expression, JFTLConfig, RenderError, Statement, Frame, Compiler, JFTLTemplate
+from core import SKIP_VALUE, CompileError, Condition, Environment, Evaluator, Expression, JFTLConfig, RenderError, Frame, Compiler, JFTLTemplate, Stringifier
 from navigation import NAV_RE_STR, NavigationPlugin
 
 from typing import Any, Union
@@ -62,7 +62,7 @@ class JFTLCompiler(Compiler):
 
     INTERPOLATE_RE = re.compile(r"\$\$\{|\$\{([^}]*)\}")
 
-    def _compile_str(self, source: Any, where: str = "") -> Statement | Expression:
+    def _compile_str(self, source: Any, where: str = "") -> Stringifier:
 
         m = self._NAV_RE.match(source)
         if m:
@@ -117,7 +117,7 @@ class JFTLCompiler(Compiler):
         r"|\$\{(?P<inner>[^}]*)\}",
     )
 
-    def _compile_interpolated(self, source: str, where) -> Statement | str | None:
+    def _compile_interpolated(self, source: str, where) -> Stringifier | str | None:
         """Splits `source` into literal and expression segments.
 
         Returns None if `source` contains no interpolation at all (caller
@@ -251,10 +251,8 @@ class JFTLCompiler(Compiler):
     def expression(self, source: str | dict, where: str|None) -> tuple[Expression, list[JFTLError]]:
         return self._compile(source), None
 
-    def statement(self, source: dict | str, where: str|None) -> tuple[Statement, list[JFTLError]]:
-        return self._compile(source), None
     
-    def compile(self, source: dict | str, where: str|None) -> tuple[Statement, list[JFTLError]]:
+    def compile(self, source: dict | str, where: str|None) -> tuple[Expression, list[JFTLError]]:
         return self._compile(source), None
 
     
@@ -382,14 +380,14 @@ class JFTLEngine(Engine):
            
 
 @dataclass
-class LiteralStatement(Statement):
+class LiteralStatement(Expression):
     value: Any
 
     def eval(self, frame: Frame) -> Any | JFTLError | Missing:
         return self.value
 
 @dataclass
-class ObjectStatement(Statement):
+class ObjectStatement(Expression):
     entries: dict[str, Statement]
 
     def eval(self, frame: Frame) -> Any | JFTLError | Missing:
@@ -405,8 +403,8 @@ class ObjectStatement(Statement):
 
 
 @dataclass
-class ArrayStatement(Statement):
-    items: list[Statement]
+class ArrayStatement(Expression):
+    items: list[Expression]
 
     def eval(self, frame: Frame) -> Any | JFTLError | Missing:
         result = []
@@ -420,7 +418,7 @@ class ArrayStatement(Statement):
         return result
 
 @dataclass
-class ValueFormatStatement(Statement):
+class ValueFormatStatement(Expression):
     expr: Any
     format_spec: Optional[str]
 
@@ -437,8 +435,8 @@ class ValueFormatStatement(Statement):
         return formatted
 
 @dataclass
-class StringJoinStatement(Statement):
-    items: list[Statement]
+class StringJoinStatement(Expression):
+    items: list[Expression]
     separator: str = ""
 
     def eval(self, frame: Frame) -> Any | JFTLError | Missing:

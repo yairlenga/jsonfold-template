@@ -17,7 +17,7 @@ import ast
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, cast
 
-from core import Compiler, Condition, Evaluator, Expression, Frame, CompileError, Statement
+from core import Compiler, Condition, Evaluator, Expression, Frame, CompileError
 from template import JFTLError, Missing, MISSING_VALUE
 
 def _build_env(frame: Frame) -> dict[str, Any]:
@@ -39,7 +39,7 @@ def _build_env(frame: Frame) -> dict[str, Any]:
     return env
 
 
-class PyEvalEvaluator(Expression, Evaluator, Condition ):
+class PyEvalEvaluator(Evaluator ):
     """One compiled '$pyrun:' expression."""
 
     def __init__(self, code: Any, source_text: str, where: Optional[str]):
@@ -71,7 +71,7 @@ class PyEvalPlugin(Compiler):
     template compilation, and returns a PyRunEvaluator."""
 
 
-    def _compile(self, source_text: str, where: Optional[str] = None) -> Statement | Expression | Condition:
+    def _compile(self, source_text: str, where: Optional[str] = None) -> Evaluator:
         try:
             tree = ast.parse(source_text, mode="eval")
         except SyntaxError as e:
@@ -90,14 +90,9 @@ class PyEvalPlugin(Compiler):
         code = compile(tree, filename="<jftl-pyrun-expr>", mode="eval")
         return PyEvalEvaluator(code, source_text, where)
 
-    def condition(self, source: str) -> tuple[Condition, Optional[list[JFTLError]]]:
+    def compile(self, source: str) -> tuple[Evaluator, Optional[list[JFTLError]]]:
         return cast(Condition, self._compile(cast(str, source))), None
 
-    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[JFTLError]]]:
-        return cast(Expression, self._compile(cast(str, source))), None
-
-    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[JFTLError]]]:
-        return cast(Statement, self._compile(cast(str, source))), None
 
 
 import ast
@@ -107,7 +102,7 @@ from typing import Any
 
 
 @dataclass
-class PyRunEvaluator(Expression, Evaluator, Condition):
+class PyRunEvaluator(Evaluator):
     func_call: CodeType
     func_def: Callable | Any
     glob_env: dict[str, Any]
@@ -209,11 +204,8 @@ class PyRunPlugin(Compiler):
 
         return PyRunEvaluator(func_call, build_locals.get(FUNC_NAME), eval_globals.copy(), where = where )
  
-    def condition(self, source: str) -> tuple[Condition, Optional[list[JFTLError]]]:
+    def compile(self, source: str) -> tuple[Evaluator, Optional[list[JFTLError]]]:
         return cast(Condition, self._compile(cast(str, source))), None
 
-    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[JFTLError]]]:
-        return cast(Expression, self._compile(cast(str, source))), None
 
-    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[JFTLError]]]:
-        return cast(Statement, self._compile(cast(str, source))), None
+

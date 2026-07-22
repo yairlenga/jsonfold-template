@@ -1,10 +1,11 @@
 from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
+from types import NoneType
 from typing import Any, Optional, TextIO
 from abc import ABC, abstractmethod
 
-from template import SKIP_VALUE, Engine, Template, JFTLError, Missing, ERROR_VALUE, MISSING_VALUE
+from template import SKIP_VALUE, Engine, JFTLException, Template, JFTLError, Missing, ERROR_VALUE, MISSING_VALUE
 # Template Class - represent compiled templates
 
 # Sentinal value to ignore a value in a collection
@@ -89,7 +90,7 @@ class Frame (Mapping):
         result = expr.eval(self) if isinstance(expr, Evaluator) else expr
         return result        
     
-    def eval_bool(self, cond: Condition | Any, default_val=None) -> bool | None:
+    def eval_bool(self, cond: Evaluator | Any, default_val=None) -> bool | None:
         if cond is None:
             return default_val
         result = cond.eval_bool(self)        
@@ -181,36 +182,114 @@ class Frame (Mapping):
 #            f._cache[name] = MISSING_VALUE
         return MISSING_VALUE
     
-class Evaluator(ABC):
-    @abstractmethod
-    def eval(self, frame: Frame) -> Any | JFTLError | Missing : ...
+from abc import ABC, abstractmethod
+from typing import Any, Optional
 
-class Condition():
-    def eval_bool(self, frame: Frame) -> bool:
+_RAISE = object()   # default — raise a JFTLException on failure
+_ERROR = object()   # return the JFTLError object itself, don't raise
+
+
+class Evaluator(ABC):
+    where: str = ""
+    source_code: Optional[str] = None           # Source code, if known
+
+    @abstractmethod
+    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
+        ...
+
+    def _location(self, context: Optional[str]) -> str:
+        return f"{self.where} ({context})" if context else self.where
+
+    def _resolve(self, error: JFTLError, on: Any) -> Any:
+        if on is _RAISE:
+            raise JFTLException(error)
+        if on is _ERROR:
+            return error
+        return on
+
+    def eval_bool(
+        self,
+        frame: Frame,
+        *,
+        context: Optional[str] = None,
+        on_null: Any = False,
+        on_error: Any = _RAISE,
+    ) -> bool:
+        """Default: JFTL's strict falsiness — False | null | Missing are
+        falsy, everything else truthy. Pass on_null=_RAISE (or _ERROR)
+        to instead treat a missing/null result as a failure in this
+        context. Override for engine-specific truthiness."""
         result = self.eval(frame)
-        if result is False or result is None or isinstance(result, Missing):
+
+        if isinstance(result, JFTLError):
+            return self._resolve(result, on_error)
+
+        if isinstance(result, (NoneType, Missing)):
+            if on_null is _RAISE or on_null is _ERROR:
+                error = JFTLError(
+                    severity="ERROR", code="MISSING_VALUE",
+                    where=self._location(context),
+                    message="value is missing or null",
+                )
+                return self._resolve(error, on_null)
+            return on_null
+
+        if result is False:
             return False
         return True
 
-class Statement(Evaluator, Condition): ...
+    def eval_str(
+        self,
+        frame: Frame,
+        *,
+        context: Optional[str] = None,
+        on_null: Any = "",
+        on_error: Any = _RAISE,
+    ) -> str:
+        """Stringify this node's value."""
+        result = self.eval(frame)
 
-class Expression(Evaluator, Condition): ...
+        if isinstance(result, (NoneType, Missing)):
+            if on_null is _RAISE or on_null is _ERROR:
+                error = JFTLError(
+                    severity="ERROR", code="MISSING_VALUE",
+                    where=self._location(context),
+                    message="value is missing or null",
+                )
+                return self._resolve(error, on_null)
+            return on_null
 
-# Draft - NYI
-class Macro(Evaluator, Condition): ...
+        if isinstance(result, JFTLError):
+            return self._resolve(result, on_error)
+
+        if isinstance(result, bool):
+            return "true" if result else "false"
+        if isinstance(result, (int, float, str)):
+            return str(result)
+
+        error = JFTLError(
+            severity="ERROR", code="NON_SCALAR_VALUE",
+            where=self._location(context),
+            message=f"cannot stringify {type(result).__name__} value",
+        )
+        return self._resolve(error, on_error)
+    
+Condition = Evaluator
+Stringifier = Evaluator
+Expression = Evaluator
 
 # core.py (or wherever feels like the right shared home — maybe alongside Diagnostic/Error in template.py)
 
 class Compiler(ABC):
 
     @abstractmethod
-    def condition(self, source: str) -> tuple[Condition, Optional[list[JFTLError]]]: ...
+    def compile(self, source: str) -> tuple[Evaluator, Optional[list[JFTLError]]]: ...
 
-    @abstractmethod
-    def expression(self, source: str | dict) -> tuple[Expression, Optional[list[JFTLError]]]: ...
+    def condition(self, source: str) -> tuple[Condition, Optional[list[JFTLError]]]:
+        return self.compile(source)
 
-    @abstractmethod
-    def statement(self, source: dict | str) -> tuple[Statement, Optional[list[JFTLError]]]: ...
+    def expression(self, source: str) -> tuple[expression, Optional[list[JFTLError]]]:
+        return self.compile(source)
 
 class CompileError(Exception):
     """Raised for any defect discovered while compiling a template.

@@ -38,8 +38,6 @@ class FakeCompiler:
     def condition(self, raw, source):
         return Tagged("condition", raw), None
 
-    def statement(self, raw, source):
-        return Tagged("statement", raw), None
 
 
 def compile_logic(args: dict) -> LogicStatement:
@@ -147,7 +145,7 @@ class TestCases(unittest.TestCase):
         stmt = compile_logic({"case": [{"when": "$.a", "then": "$.b"}]})
         self.assertEqual(len(stmt._cases), 1)
         self.assertEqual(stmt._cases[0]._cond, Tagged("condition", "$.a"))
-        self.assertEqual(stmt._cases[0]._body, Tagged("statement", "$.b"))
+        self.assertEqual(stmt._cases[0]._body, Tagged("expression", "$.b"))
 
     def test_multiple_cases_preserve_order(self):
         stmt = compile_logic({
@@ -161,7 +159,7 @@ class TestCases(unittest.TestCase):
         self.assertEqual(stmt._cases[0]._cond, Tagged("condition", "$.a"))
         self.assertEqual(stmt._cases[1]._cond, Tagged("condition", "$.b"))
         self.assertEqual(stmt._cases[2]._cond, Tagged("condition", "$.c"))
-        self.assertEqual(stmt._cases[2]._body, Tagged("statement", "$.z"))
+        self.assertEqual(stmt._cases[2]._body, Tagged("expression", "$.z"))
 
     def test_missing_case_is_none(self):
         stmt = compile_logic({})
@@ -176,20 +174,20 @@ class TestBodyDefaultError(unittest.TestCase):
 
     def test_body_compiled_as_statement(self):
         stmt = compile_logic({"body": "$.result"})
-        self.assertEqual(stmt._body, Tagged("statement", "$.result"))
+        self.assertEqual(stmt._body, Tagged("expression", "$.result"))
 
     def test_default_compiled_as_statement(self):
         stmt = compile_logic({"default": "$.fallback"})
-        self.assertEqual(stmt._default_val, Tagged("statement", "$.fallback"))
+        self.assertEqual(stmt._default_val, Tagged("expression", "$.fallback"))
 
     def test_error_compiled_as_statement(self):
         stmt = compile_logic({"error": "$.errorHandler"})
-        self.assertEqual(stmt._error_val, Tagged("statement", "$.errorHandler"))
+        self.assertEqual(stmt._error_val, Tagged("expression", "$.errorHandler"))
 
     def test_body_default_error_independent(self):
         # setting one should not accidentally populate the others
         stmt = compile_logic({"body": "$.b"})
-        self.assertEqual(stmt._body, Tagged("statement", "$.b"))
+        self.assertEqual(stmt._body, Tagged("expression", "$.b"))
         self.assertIsNone(stmt._default_val)
         self.assertIsNone(stmt._error_val)
 
@@ -231,9 +229,9 @@ class TestFullRealisticBlock(unittest.TestCase):
         self.assertEqual(stmt._foreach.value, "row")
         self.assertEqual(stmt._foreach.items, Tagged("expression", "$.rows"))
         self.assertEqual(len(stmt._cases), 1)
-        self.assertEqual(stmt._body, Tagged("statement", "$.output"))
+        self.assertEqual(stmt._body, Tagged("expression", "$.output"))
         self.assertEqual(stmt._transform,LogicStatement._merge_transform)
-        self.assertEqual(stmt._error_val, Tagged("statement", "$.onError"))
+        self.assertEqual(stmt._error_val, Tagged("expression", "$.onError"))
         self.assertIsNone(stmt._set_current)
         self.assertIsNone(stmt._default_val)
 

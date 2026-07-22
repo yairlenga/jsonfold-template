@@ -1,8 +1,8 @@
 from types import NoneType
-from typing import Any, Callable, ClassVar, ItemsView, Iterator, Literal, Optional, cast
+from typing import Any, Callable, ClassVar, Literal, Optional, cast
 from dataclasses import dataclass, replace
 
-from core import SKIP_VALUE, CompileError, RenderError, Statement, JFTLError, Missing, Frame, Expression, Evaluator, Condition, Compiler
+from core import SKIP_VALUE, CompileError, Condition, Expression, JFTLError, Missing, Frame, Evaluator, Compiler
 from template import MISSING_VALUE
 
 """ {
@@ -31,13 +31,12 @@ from template import MISSING_VALUE
 @dataclass
 class Case:
     _cond: Condition
-    _body: Statement
+    _body: Expression
 
 @dataclass
 class DefineVar:
     _name: str
     _expr: Expression
-
 
 @dataclass
 class ForeachStatement():
@@ -52,17 +51,17 @@ class ForeachStatement():
     limit: Optional[Expression] = None
 
 @dataclass
-class LogicStatement(Statement):
+class LogicStatement(Expression):
 
     _defines: Optional[list[DefineVar]] = None
     _if: Optional[Condition] = None
     _set_current: Optional[Expression] = None
     _cases: Optional[list[Case]] = None
-    _body: Optional[Statement] = None
+    _body: Optional[Expression] = None
     _foreach: Optional[ForeachStatement] = None
     _transform: Optional[Callable] = None
-    _default_val: Optional[Statement] = None
-    _error_val: Optional[Statement] = None
+    _default_val: Optional[Expression] = None
+    _error_val: Optional[Expression] = None
 
     transformers: ClassVar[dict[str, Callable]] = {}  # just a type annotation here, no value yet
 
@@ -107,13 +106,13 @@ class LogicStatement(Statement):
             )
 
         v_cases = [
-            Case( _cond = compiler.condition( case["when"], source )[0], _body = compiler.statement( case[ "then" ], source )[0])
+            Case( _cond = compiler.condition( case["when"], source )[0], _body = compiler.expression( case[ "then" ], source )[0])
             for case in cases
             ] if (cases := args.get("case", None)) else None
 
-        v_body, _ = compiler.statement(v, source) if ( v := args.get("body", None)) is not None else (None, None)
-        v_default, _ = compiler.statement(v, source) if ( v := args.get("default", None)) is not None else (None, None)
-        v_error, _ = compiler.statement(v, source) if ( v := args.get("error", None)) is not None else (None, None)
+        v_body, _ = compiler.expression(v, source) if ( v := args.get("body", None)) is not None else (None, None)
+        v_default, _ = compiler.expression(v, source) if ( v := args.get("default", None)) is not None else (None, None)
+        v_error, _ = compiler.expression(v, source) if ( v := args.get("error", None)) is not None else (None, None)
         v_transform = None
 
         if ( transform := args.get("transform", None)):
@@ -138,7 +137,7 @@ class LogicStatement(Statement):
         )
         return self
 
-    def _eval_foreach(self, frame: Frame, body: Statement) -> list | dict | JFTLError | Missing | None:
+    def _eval_foreach(self, frame: Frame, body: Expression) -> list | dict | JFTLError | Missing | None:
         foreach = cast(ForeachStatement, self._foreach)
         items = frame.eval_value(foreach.items) if foreach.items else frame.current
         loop_iter = None
@@ -281,7 +280,7 @@ class LogicStatement(Statement):
 
         return dict_result if do_dict else list_result
         
-    def _choose_body(self, frame: Frame) -> Statement | None:
+    def _choose_body(self, frame: Frame) -> Expression | None:
         v_body = self._body
         if (cases := self._cases):
             for case in cases:
