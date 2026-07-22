@@ -123,7 +123,7 @@ class Frame (Mapping):
         # May want one day to point each frame direct to the top, to avoid circular
         env.top = frame
         top_vars["_top"] = frame
-#        top_vars["_external"] = top_vars
+        top_vars["_external"] = top_vars
         top_vars["_local"] = top_vars
         frame._update_current()
         return frame
