@@ -5,6 +5,6 @@
 		"range(5,10)": { "$": true, "data": "$=[x for x in range(5, 10)]","body":"$=list(_)"}
 	},
 	"config": {
-		"default_engine": "pyeval"
+		"default_expr_engine": "pyeval"
 	}
 }

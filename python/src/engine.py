@@ -1,7 +1,7 @@
 from __future__ import annotations
 from collections.abc import Mapping
 from types import NoneType
-from typing import Any, Literal, Optional, Sequence, TextIO, cast
+from typing import Any, ClassVar, Literal, Optional, Sequence, TextIO, cast
 from pathlib import Path
 from dataclasses import dataclass, field
 import re
@@ -72,7 +72,7 @@ class JFTLCompiler(Compiler):
 
         m = self.EXPR_RE.match(source)
         if m:
-            plugin_id = m.group("plugin") or self.config.default_engine
+            plugin_id = m.group("plugin") or self.config.default_expr_engine
             plugin = self.plugins.get(plugin_id, None)
             if isinstance(plugin, Compiler):
                 expr, _ = plugin.expression(m.group("expr"))
@@ -258,51 +258,17 @@ class JFTLCompiler(Compiler):
         return self._compile(source), None
 
     
-
-
 @dataclass
-class JFTLEngine(Engine):
+class JFTLRenderer():
+    template: JFTLTemplate
+    _drop_null_attributes: bool = False
 
-    _plugins: dict[str, Any] = field(default_factory=dict)
+    def __post_init__(self):
+        self._drop_null_attributes = self.template.config.drop_null_attributes
 
-    def add_plugin(self, prefix: str, plugin: Any) -> None:
-        self._plugins[prefix] = plugin
+    def render(self, source: Any | Evaluator, frame: Frame) -> tuple[TYPE_ANY_REC, list[JFTLError] | None]:
+        return self._render(source, frame)
 
-    def compile(self, source: str | dict | list, where: str = "", *, main_only: bool = False) -> tuple[JFTLTemplate, list[JFTLError]]:
-        top = cast(dict, { "main": source } if main_only else source)
-        config = JFTLConfig(**top.get("config", {}))
-        compiler = JFTLCompiler(config, self._plugins)
-        compiled = compiler._compile(top["main"], where)
-
-        return JFTLTemplate(main_entry=compiled, config=config), None
-    
-    def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[JFTLError]]: ...
-
-    def render_raw(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None, globals: Optional[dict] = None) -> tuple[Status, Any]:
-        body = template.main_entry
-        env = Environment(template, input, datasets=self._datasets)
-        frame = Frame.top_frame(env)
-        result, _ = self._render(body, frame)
-        frame.reset()
-        if isinstance(result, JFTLError):
-            status = Status(False, result)
-        else:
-            status = Status(ok=True)
-        return status, result
-
-    def render(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None) -> tuple[Status, Any]:
-        result = None
-        try:
-            status, result = self.render_raw(template, input, entry = entry)
-            result = self._materialize(result)
-        except RenderError as re:
-            status = Status(False, re.error)
-        return status, result
-        
-    def render_to(self, output: TextIO | Path | str, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
-
-
-    # Returning JSON friendly types
     def _render(self, source: Any | Evaluator, frame: Frame) -> tuple[TYPE_ANY_REC, list[JFTLError] | None]:
         if isinstance(source, Evaluator):
             return source.eval(frame), None
@@ -330,7 +296,7 @@ class JFTLEngine(Engine):
             return result, None
        
         return source, None
-
+    
     def materialize(self, result: Any) -> Any:
         return self._materialize(result)
 
@@ -338,12 +304,80 @@ class JFTLEngine(Engine):
         if isinstance(value, (Missing, Frame)):
             return None
         if isinstance(value, dict):
-            return { k: self._materialize(v) for k, v in value.items() }
+            drop_nulls = self.template.config.drop_null_attributes
+            return {
+                k: mv
+                for k, v in value.items()
+                if ( mv := self._materialize(v)) is not None or not drop_nulls
+            }
+
         if isinstance(value, (list, tuple)):
             return [ self._materialize(v) for v in value ]
         if isinstance(value, ( NoneType, bool, int, float, str)):
             return value
         return RenderError(JFTLError(severity = 'ERROR', code='BAD-RESULT', message=f"Result contained unknown type {type(value)}"))
+
+@dataclass
+class JFTLEngine(Engine):
+
+    _null_template: ClassVar[JFTLTemplate] = JFTLTemplate(main_entry=None, config=JFTLConfig())
+
+    _plugins: dict[str, Any] = field(default_factory=dict)
+
+    def add_plugin(self, prefix: str, plugin: Any) -> None:
+        self._plugins[prefix] = plugin
+
+    def compile(self, source: str | dict | list, where: str = "", *, main_only: bool = False) -> tuple[JFTLTemplate, list[JFTLError]]:
+        top = cast(dict, { "main": source } if main_only else source)
+        config = JFTLConfig(**top.get("config", {}))
+        compiler = JFTLCompiler(config, self._plugins)
+        compiled = compiler._compile(top["main"], where)
+        if not isinstance((datasets := top.get("datasets", {}) or {}) , dict):
+            raise CompileError(
+                JFTLError(severity = 'ERROR', code='BAD-DATASET', message=f"Dataset must be dictionary, got {type(datasets)}")
+                )
+        return JFTLTemplate(main_entry=compiled, config=config, datasets=datasets), None
+    
+    def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[JFTLError]]: ...
+
+    def _render_top(self, renderer: JFTLRenderer, input: Any, body: Optional[Evaluator], datasets: Optional[dict] = None) -> tuple[Status, Any]:
+        if not body:
+            return Status(False, JFTLError(severity='ERROR', code="NO-MAIN", message="Template does not have main")), None
+       
+        datasets = { **(renderer.template.datasets), **(self._datasets), **(datasets or {})}
+
+        env = Environment(renderer.template, input, datasets=datasets)
+        frame = Frame.top_frame(env)
+        result, _ = renderer._render(body, frame)
+        frame.reset()
+        if isinstance(result, JFTLError):
+            status = Status(False, result)
+        else:
+            status = Status(ok=True)
+        return status, result
+
+    def render_raw(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict] = None) -> tuple[Status, Any]:
+        renderer = JFTLRenderer(template)
+        return self._render_top(renderer, input, template.main_entry, datasets)       
+
+    def render(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None,  datasets: Optional[dict] = None) -> tuple[Status, Any]:
+        result = None
+        try:
+            renderer = JFTLRenderer(template)
+            status, result = self._render_top(renderer, input, template.main_entry, datasets=datasets)
+            result = renderer.materialize(result)
+
+        except RenderError as re:
+            status = Status(False, re.error)
+        return status, result
+        
+    def render_to(self, output: TextIO | Path | str, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
+
+    def materialize(self, result: Any, template: Optional[Template] = None) -> Any:
+        template = cast(JFTLTemplate, template) if template else self._null_template
+        renderer = JFTLRenderer(template)
+        return renderer.materialize(result)
+
            
 
 @dataclass

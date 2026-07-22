@@ -9,12 +9,25 @@ from template import Engine, Template, JFTLError, Missing, ERROR_VALUE, MISSING_
 
 # Sentinal value to ignore a value in a collection
 
-SKIP_VALUE = object()
+SKIP_VALUE = Missing(code="SKIP", message= "Skip entry sentinel")
+
+
+# Runtime Objects
+
+@dataclass
+class JFTLConfig:
+    # Default engine to use for '$=...'
+    default_expr_engine: str = ""
+    drop_null_attributes: bool = False
+
+    plugins: dict[str, Any] = field(default_factory=dict)
+
 @dataclass(slots=True)
 class JFTLTemplate(Template):
 
-    main_entry: Evaluator
-    config: JFTLConfig    
+    main_entry: Optional[Evaluator]
+    config: JFTLConfig = field(default_factory=JFTLConfig)
+    datasets: dict = field(default_factory=dict)
 
     def valid(self) -> bool:
         return True
@@ -22,17 +35,6 @@ class JFTLTemplate(Template):
 #    macros: dict[str, Macro] = field(default_factory=dict)
 #    functions: dict[str, Function] = field(default_factory=dict)
 #    expr_engines: dict[str, ExprEngine] = field(default_factory=dict)
-
-# Single compiled Statement 
-
-# Runtime Objects
-
-@dataclass
-class JFTLConfig:
-    # Default engine to use for '$=...'
-    default_engine: str = ""
-
-    plugins: dict[str, Any] = field(default_factory=dict)
 
 
 # Shared environment - created at the root.

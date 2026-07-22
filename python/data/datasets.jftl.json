@@ -1,1 +1,7 @@
-{ "main": "$_datasets" }
+{
+	"main": "$_datasets",
+	"datasets": {
+		"tax_rate": 3.45,
+		"planet": "earth"
+	}
+}

@@ -5,6 +5,6 @@
 		"range(5,10)": { "$": true, "data": "$=return [x for x in range(5, 10)]","body":"$=return _"}
 	},
 	"config": {
-		"default_engine": "pyrun"
+		"default_expr_engine": "pyrun"
 	}
 }

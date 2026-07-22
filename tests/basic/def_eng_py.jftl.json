@@ -4,6 +4,6 @@
 		"range(5,10)": { "$": true, "data": "$=[x for x in range(5, 10)]" }
 	},
 	"config": {
-		"default_engine": "py"
+		"default_expr_engine": "py"
 	}
 }
