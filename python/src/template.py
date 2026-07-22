@@ -58,7 +58,7 @@ class Engine(ABC):
     def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[JFTLError]]: ...
 
     @abstractmethod
-    def render(self, template: Template, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict[str, Any]] = None) -> tuple[Status, Any]: ...
+    def render(self, template: Template, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict[str, Any]] = None) -> tuple[Any, Status]: ...
         
     @abstractmethod
     def render_to(self, output: TextIO, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
@@ -67,15 +67,15 @@ class Engine(ABC):
     def add_plugin(self, prefix: str, plugin: Any): ...
 
     # Execute a simple template (not wrapped in macros) as a top level item
-    def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Status, Any, list[JFTLError]]:
+    def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Any, Status, list[JFTLError]]:
         template, errors = self.compile(source, main_only = main_only)
         if template and template.valid():
-            status, result = (self.render(template, input))
+            result, status = (self.render(template, input))
         else:
             status = Status(False, errors[0] if errors else None)
             result = None
 
-        return status, result, errors
+        return result, status, errors
 
     def add_dataset(self, name: str, data: Any) -> None:
         self._datasets[name] = data

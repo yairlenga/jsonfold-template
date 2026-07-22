@@ -12,7 +12,7 @@ def merge_datasets(template_datasets=None, engine_datasets=None, render_datasets
         "datasets": template_datasets,
     }
     template, _ = engine.compile(source)
-    _, result = engine.render(template, None, datasets=render_datasets)
+    result, _ = engine.render(template, None, datasets=render_datasets)
     return result
 
 TEMPLATE = {"template": "template_value", "merged": "from_template"}

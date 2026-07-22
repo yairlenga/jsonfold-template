@@ -19,7 +19,7 @@ from template import create_engine
 def compile_and_render(top: dict, input_doc):
     engine = create_engine()
 
-    status, result, errors = engine.compile_and_render(top, input_doc, main_only=True)
+    result, status, errors = engine.compile_and_render(top, input_doc, main_only=True)
     assert not errors, f"unexpected compile errors: {errors}"
     return status, result
 
@@ -108,7 +108,7 @@ class TestBodyPlusCase(unittest.TestCase):
             "case": [{"when": "$.useSpecial", "then": "$.specialName"}],
             "body": "$.name",
         }
-        status, result = compile_and_render(
+        status, result  = compile_and_render(
             template,
             {"useSpecial": False, "specialName": "Bob", "name": "Alice"},
         )

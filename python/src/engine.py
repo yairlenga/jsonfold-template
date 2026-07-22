@@ -356,11 +356,12 @@ class JFTLEngine(Engine):
             status = Status(ok=True)
         return status, result
 
-    def render_raw(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict] = None) -> tuple[Status, Any]:
+    def render_raw(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict] = None) -> tuple[Any, Status]:
         renderer = JFTLRenderer(template)
-        return self._render_top(renderer, input, template.main_entry, datasets)       
+        status, result = self._render_top(renderer, input, template.main_entry, datasets)       
+        return result, status
 
-    def render(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None,  datasets: Optional[dict] = None) -> tuple[Status, Any]:
+    def render(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None,  datasets: Optional[dict] = None) -> tuple[Any, Status]:
         result = None
         try:
             renderer = JFTLRenderer(template)
@@ -369,7 +370,7 @@ class JFTLEngine(Engine):
 
         except RenderError as re:
             status = Status(False, re.error)
-        return status, result
+        return result, status
         
     def render_to(self, output: TextIO | Path | str, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
 

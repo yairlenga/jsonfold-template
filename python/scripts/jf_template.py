@@ -154,7 +154,7 @@ def _write_one_result(args, doc: Any, dest: TextIO, *, input_label: str = "", in
 def _process_record(args, engine, compiled, record: Any, dest: TextIO, *, input_label: str = "", input_desc: str = "", output_label: str = "") -> tuple[bool, Any]:
 
     try:
-        status, result = engine.render(compiled, record, entry=args.entry)
+        result, status = engine.render(compiled, record, entry=args.entry)
     except RenderError as ex:
         raise ex
     except Exception as ex:
