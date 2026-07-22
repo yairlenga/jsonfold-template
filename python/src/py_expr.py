@@ -91,7 +91,7 @@ class SimpleEvalPlugin(Compiler):
         }
         return se
 
-    def compile(self, source: str) -> tuple[Condition, Optional[list[JFTLError]]]:
+    def compile(self, source: str, where: str = "") -> tuple[Condition, Optional[list[JFTLError]]]:
         assert isinstance(source, str)
         compiled = self._se.parse(source)
         return SimpleEvalEvaluator(self._se, source, compiled=compiled), None

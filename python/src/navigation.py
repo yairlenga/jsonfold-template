@@ -165,7 +165,7 @@ class NavigationPlugin(Compiler):
         
         return node
 
-    def compile(self, source: str) -> tuple[Evaluator, Optional[list[JFTLError]]]:
+    def compile(self, source: str, where: str = "") -> tuple[Evaluator, Optional[list[JFTLError]]]:
         assert isinstance(source, str)
         return self.parse(source, None), None
     

@@ -190,7 +190,7 @@ class JFTLCompiler(Compiler):
 
         return StringJoinStatement(segments)
 
-    def _compile(self, source: Any, where: str = "") -> Statement | Expression | str | int | float | bool | NoneType :
+    def _compile(self, source: Any, where: str = "") -> Evaluator | str | int | float | bool | NoneType :
 
         # Simple Literal returned here
         if isinstance(source, (int, float, bool, type(None))):
@@ -243,15 +243,7 @@ class JFTLCompiler(Compiler):
             code="BAD_NODE", severity="ERROR", where=where, location=None,
             message=f"Unknown node {source!r}",
             ))
-
-    # Compiler API
-    def condition(self, source: str, where: str|None) -> tuple[Condition, list[JFTLError]]:
-        return self._compile(source), None
-
-    def expression(self, source: str | dict, where: str|None) -> tuple[Expression, list[JFTLError]]:
-        return self._compile(source), None
-
-    
+   
     def compile(self, source: dict | str, where: str|None) -> tuple[Expression, list[JFTLError]]:
         return self._compile(source), None
 

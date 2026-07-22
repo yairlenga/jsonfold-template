@@ -283,13 +283,14 @@ Expression = Evaluator
 class Compiler(ABC):
 
     @abstractmethod
-    def compile(self, source: str) -> tuple[Evaluator, Optional[list[JFTLError]]]: ...
+    def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator, Optional[list[JFTLError]]]: ...
 
-    def condition(self, source: str) -> tuple[Condition, Optional[list[JFTLError]]]:
-        return self.compile(source)
+    def condition(self, source: Any | str, where: str = "" ) -> tuple[Condition, Optional[list[JFTLError]]]:
+        return self.compile(source, where)
 
-    def expression(self, source: str) -> tuple[expression, Optional[list[JFTLError]]]:
-        return self.compile(source)
+    def expression(self, source: Any | str, where: str = "") -> tuple[Expression, Optional[list[JFTLError]]]:
+        return self.compile(source, where)
+
 
 class CompileError(Exception):
     """Raised for any defect discovered while compiling a template.
