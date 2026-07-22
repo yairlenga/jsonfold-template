@@ -60,7 +60,7 @@ class LogicStatement(Statement):
     _cases: Optional[list[Case]] = None
     _body: Optional[Statement] = None
     _foreach: Optional[ForeachStatement] = None
-    _transform: Literal[None, "merge", "flatten", "from_pairs", "to_pairs", "drop_missing"] = None
+    _transform: Literal[None, "merge", "flatten", "from_pairs", "to_pairs", "drop_missing", "str_join"] = None
     _default_val: Optional[Statement] = None
     _error_val: Optional[Statement] = None
 
@@ -226,7 +226,7 @@ class LogicStatement(Statement):
 
             count = stop_index - start_index
             loop_iter = enumerate(range(start_index, stop_index))
-            start_index = None
+            start_index = 0
             stop_index = None
 
         result = dict_result if do_dict else list_result
@@ -375,7 +375,19 @@ class LogicStatement(Statement):
                 )
 
         return dict(item for item in input if item[0])
+    
+    def _join_str_transform(self, frame: Frame, input: list[str | None | Missing], sep: str = "") -> str | JFTLError :
+        result = []
+        for item in input:
+            if isinstance(item, (NoneType)):
+                item_str = "null"
+            elif isinstance(item, (bool, int, str, float)):
+                item_str = str(item)
+            else:
+                return JFTLError(severity = 'ERROR', code='JOIN-STR-TYPE', message=f"Result contained unknown type {type(item)}")
 
+            result.append(item_str)
+        return "".join(result)
 
     def eval(self, prev_frame: Frame) -> Any | JFTLError | Missing:
 
@@ -439,6 +451,9 @@ class LogicStatement(Statement):
 
                 case "drop_missing":
                     result = self._drop_missing_transform(new_frame, result)
+
+                case "join_str":
+                    result = self._join_str_transform(new_frame, result)
 
                 case _:
                     return JFTLError(

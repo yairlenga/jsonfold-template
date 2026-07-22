@@ -84,16 +84,119 @@ class JFTLCompiler(Compiler):
             ))
 
 
-    # --- navigation grammar, mirrors Navigation.md ---
+#### NEW
+
+# --- navigation grammar, mirrors Navigation.md ---
+    # Interpolation only supports navigation expressions this round —
+    # complex/computed values must be precomputed via `set` and
+    # interpolated by variable name instead.
 
     _NAV_HEAD = r"""
+        \^                            # top frame
+      | _                             # current
+      | \$ [A-Za-z_]\w*               # named variable ($foo)
+      | [A-Za-z_]\w*                  # bareword variable fallback
+    """
+
+    _NAV_SEGMENT = r"""
+        \. [A-Za-z_]\w*               # .foo
+      | \[ -?\d+ \]                   # [123] / [-1]
+      | \[ "[^"]*" \]                 # ["quoted"]
+      | \[ '[^']*' \]                 # ['quoted']
+      | \[ \$ [A-Za-z_]\w* \]         # [$var]
+    """
+
+    _NAV_ONLY_RE = re.compile(
+        r"^(?:" + _NAV_HEAD + r")(?:" + _NAV_SEGMENT + r")*$",
+        re.VERBOSE,
+    )
+
+    # --- outer scan: escape, single-brace nav ---
+    # NOTE: [^}]*-style matching — a literal '}' inside a quoted nav segment
+    # (e.g. ${foo["a}b"]}) is not yet supported; deferred.
+
+    _INTERP_RE = re.compile(
+        r"\$\$\{"
+        r"|\$\{(?P<inner>[^}]*)\}",
+    )
+
+    def _compile_interpolated(self, source: str, where) -> Statement | str | None:
+        """Splits `source` into literal and expression segments.
+
+        Returns None if `source` contains no interpolation at all (caller
+        should treat it as a plain literal). Otherwise returns a compiled
+        Statement (StringJoinStatement) or a plain str if everything
+        collapsed to a single literal/escaped chunk.
+        """
+        if "${" not in source:
+            return None   # fast path — nothing to do
+
+        segments: list = []
+        pos = 0
+
+        for m in self._INTERP_RE.finditer(source):
+            if m.start() > pos:
+                chunk = source[pos:m.start()]
+                if "${" in chunk:
+                    raise CompileError(JFTLError(
+                        code="BAD_INTERPOLATION", severity="ERROR", where=where,
+                        message=f"nested or unclosed interpolation before position {m.start()}",
+                    ))
+                segments.append(chunk)
+
+            if m.group(0) == "$${":
+                segments.append("${")   # escaped — literal, not an expression
+
+            else:
+                inner = m.group("inner")
+                if "${" in inner:
+                    raise CompileError(JFTLError(
+                        code="BAD_INTERPOLATION", severity="ERROR", where=where,
+                        message=f"nested or unclosed interpolation: {inner!r}",
+                    ))
+                if not self._NAV_ONLY_RE.match(inner):
+                    raise CompileError(JFTLError(
+                        code="BAD_INTERPOLATION", severity="ERROR", where=where,
+                        message=f"interpolation only supports navigation expressions, "
+                                f"got: {inner!r} (compute complex values via 'set' first)",
+                    ))
+                inner_expr = self._compile_str("$" + inner, where)
+                segments.append(inner_expr)
+
+            pos = m.end()
+
+        if pos < len(source):
+            tail = source[pos:]
+            if "${" in tail:
+                raise CompileError(JFTLError(
+                    code="BAD_INTERPOLATION", severity="ERROR", where=where,
+                    message=f"nested or unclosed interpolation at end of string: {tail!r}",
+                ))
+            segments.append(tail)
+
+        if len(segments) == 1:
+            return segments[0]
+
+        if all(isinstance(item, str) for item in segments):
+            return "".join(segments)
+
+        return StringJoinStatement(segments)
+
+#### NEW
+
+
+
+
+    # --- navigation grammar, mirrors Navigation.md ---
+
+    _NAV_HEAD1 = r"""
         \^                                 # top frame
     | _                                    # current
     | \$ [A-Za-z_]\w*            # named variable ($foo)
     | [A-Za-z_]\w*               # bareword variable fallback
     """
 
-    _NAV_SEGMENT = r"""
+    _NAV_SEGMENT1 = r"""
         \. [A-Za-z_]\w*          # .foo
     | \[ -?\d+ \]                       # [123] / [-1]
     | \[ "[^"]*" \]                        # ["quoted"]
@@ -102,7 +205,7 @@ class JFTLCompiler(Compiler):
     """
 
     # Anchored: must consume the WHOLE interior as nav, optional trailing :spec
-    _NAV_AND_SPEC_RE = re.compile(
+    _NAV_AND_SPEC_RE1 = re.compile(
         rf"^(?P<nav>(?:{_NAV_HEAD})(?:{_NAV_SEGMENT})*)(?::(?P<spec>.*))?$",
         re.VERBOSE,
     )
@@ -112,14 +215,14 @@ class JFTLCompiler(Compiler):
     # a literal '}' inside a quoted nav segment (e.g. ${foo["a}b"]}) is not
     # yet supported; deferred per "enhance parsing later."
 
-    _INTERP_RE = re.compile(
+    _INTERP_RE1 = re.compile(
         r"\$\$\{"
         r"|\$\{\{(?P<dexpr>.*?)\}\}"
         r"|\$\{(?P<nav>(?:" + _NAV_HEAD + r")(?:" + _NAV_SEGMENT + r")*)(?::(?P<spec>[^}]*))?\}",
         re.VERBOSE,
     )
 
-    def _compile_interpolated(self, source: str, where) -> Statement | str | None:
+    def _compile_interpolated1(self, source: str, where) -> Statement | str | None:
         """Splits `text` into literal and expression segments.
 
         Returns None if `text` contains no interpolation at all (caller
@@ -395,8 +498,17 @@ class StringJoinStatement(Statement):
         result = []
         for item in self.items:
             value = item.eval(frame) if isinstance(item, Evaluator) else item
+            if isinstance(value, str):
+                pass
+            elif isinstance(value, (NoneType, Missing)):
+                value = "null"
+            elif isinstance(value, (int, float)):
+                value = str(value)
+            elif isinstance(value, bool):
+                value = ["false", "true"][value]
+
             if not isinstance(value, str):
-                return RenderError(JFTLError(severity = 'ERROR', code='JOIN-NON-STR', message=f"Expecting string got {type(value)}"))
+                return RenderError(JFTLError(severity = 'ERROR', code='JOIN-STR-VALUE', message=f"Expecting string got {type(value)}"))
 
             result.append(value)
         return "".join(result)

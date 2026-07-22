@@ -4,10 +4,18 @@
 		"set": {
 			"count": 12,
 			"prize": "bar",
-			"name": "Joe Smith"
+			"name": "Joe Smith",
+			"tax": "$py=2/3"
 		},
 		"body": {
-			"foo": "Hello ${name}, you won ${count} ${prize}"
+			"interpolate": "Hello ${name}, you won ${count} ${prize}, tax=${tax}",
+			"join_str": {
+				"$": true,
+				"body": [ "hello ", "$name", " you won ", "$count", " ", "$prize", ", ", "tax=", "$tax" ],
+				"transform": "join_str"
+			},
+			"escape": "Hello ${name}, you won $${count} ${prize}, tax=${tax}",
+			"all-escape": "Hello $${name}, you won $${count} $${prize}, tax=$${tax}"
 
 		}
 	}
