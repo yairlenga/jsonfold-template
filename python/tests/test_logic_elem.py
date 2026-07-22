@@ -197,12 +197,12 @@ class TestBodyDefaultError(unittest.TestCase):
 class TestTransform(unittest.TestCase):
 
     def test_transform_merge(self):
-        stmt = compile_logic({"transform": "MERGE"})
-        self.assertEqual(stmt._transform, "MERGE")
+        stmt = compile_logic({"transform": "merge"})
+        self.assertEqual(stmt._transform, LogicStatement._merge_transform)
 
     def test_transform_flatten(self):
-        stmt = compile_logic({"transform": "FLATTEN"})
-        self.assertEqual(stmt._transform, "FLATTEN")
+        stmt = compile_logic({"transform": "flatten"})
+        self.assertEqual(stmt._transform, LogicStatement._flatten_transform)
 
     def test_missing_transform_is_none(self):
         stmt = compile_logic({})
@@ -218,7 +218,7 @@ class TestFullRealisticBlock(unittest.TestCase):
             "foreach": {"key": "idx", "value": "row", "in": "$.rows"},
             "case": [{"when": "$.a", "then": "$.x"}],
             "body": "$.output",
-            "transform": "MERGE",
+            "transform": "merge",
             "error": "$.onError",
         }
         stmt = compile_logic(args)
@@ -232,7 +232,7 @@ class TestFullRealisticBlock(unittest.TestCase):
         self.assertEqual(stmt._foreach.items, Tagged("expression", "$.rows"))
         self.assertEqual(len(stmt._cases), 1)
         self.assertEqual(stmt._body, Tagged("statement", "$.output"))
-        self.assertEqual(stmt._transform, "MERGE")
+        self.assertEqual(stmt._transform,LogicStatement._merge_transform)
         self.assertEqual(stmt._error_val, Tagged("statement", "$.onError"))
         self.assertIsNone(stmt._set_current)
         self.assertIsNone(stmt._default_val)

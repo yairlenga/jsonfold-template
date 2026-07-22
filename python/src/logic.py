@@ -1,8 +1,8 @@
 from types import NoneType
-from typing import Any, ItemsView, Iterator, Literal, Optional, cast
+from typing import Any, Callable, ClassVar, ItemsView, Iterator, Literal, Optional, cast
 from dataclasses import dataclass, replace
 
-from core import SKIP_VALUE, RenderError, Statement, JFTLError, Missing, Frame, Expression, Evaluator, Condition, Compiler
+from core import SKIP_VALUE, CompileError, RenderError, Statement, JFTLError, Missing, Frame, Expression, Evaluator, Condition, Compiler
 from template import MISSING_VALUE
 
 """ {
@@ -24,7 +24,7 @@ from template import MISSING_VALUE
         { "when": "COND-2", "then": "EXPR-2" },
     ],
     "body": "EXPR",
-    "transform": "flatten" | "merge" | "to_pairs" | "from_pairs" | "drop_missing" | None,
+    "transform": "flatten" | "merge" | "to_pairs" | "from_pairs" | "drop_missing" | "join_str" | None,
     "error": "EXPR",
 } """
 
@@ -46,7 +46,7 @@ class ForeachStatement():
     index: Optional[str] = None
     items: Optional[Expression] = None
     cond: Optional[Condition] = None
-    shape: Literal["array", "range", None] = None
+    shape: Literal["array", "range", "object", None] = None
     start: Optional[Expression] = None
     stop: Optional[Expression] = None
     limit: Optional[Expression] = None
@@ -60,9 +60,11 @@ class LogicStatement(Statement):
     _cases: Optional[list[Case]] = None
     _body: Optional[Statement] = None
     _foreach: Optional[ForeachStatement] = None
-    _transform: Literal[None, "merge", "flatten", "from_pairs", "to_pairs", "drop_missing", "str_join"] = None
+    _transform: Optional[Callable] = None
     _default_val: Optional[Statement] = None
     _error_val: Optional[Statement] = None
+
+    transformers: ClassVar[dict[str, Callable]] = {}  # just a type annotation here, no value yet
 
     @classmethod
     def compile(cls, compiler: Compiler, args: dict[str, Any]):
@@ -112,7 +114,15 @@ class LogicStatement(Statement):
         v_body, _ = compiler.statement(v, source) if ( v := args.get("body", None)) is not None else (None, None)
         v_default, _ = compiler.statement(v, source) if ( v := args.get("default", None)) is not None else (None, None)
         v_error, _ = compiler.statement(v, source) if ( v := args.get("error", None)) is not None else (None, None)
-        v_transform = args.get("transform", None) 
+        v_transform = None
+
+        if ( transform := args.get("transform", None)):
+            v_transform = cls.transformers.get(transform, None)
+            if not v_transform:
+                raise CompileError(JFTLError(
+                        code="BAD_TRANSFORM", severity="ERROR",
+                        message=f"Unknown transformation {transform}",
+                ))
 
 
         self = cls(
@@ -434,33 +444,7 @@ class LogicStatement(Statement):
                 return new_frame.eval_value(self._default_val)
 
         if self._transform is not None and result is not None and not isinstance(result, JFTLError):
-
-            # Check for transformation
-            match transform := self._transform:
-                case "flatten":
-                    result = self._flatten_transform(new_frame, result)
-
-                case "merge":
-                    result = self._merge_transform(new_frame, result)
-
-                case "to_pairs":
-                    result = self._to_pairs_transform(new_frame, result)
-
-                case "from_pairs":
-                    result = self._from_pairs_transform(new_frame, result)
-
-                case "drop_missing":
-                    result = self._drop_missing_transform(new_frame, result)
-
-                case "join_str":
-                    result = self._join_str_transform(new_frame, result)
-
-                case _:
-                    return JFTLError(
-                        code="BAD_TRANSFORM", severity="ERROR",
-                        message=f"Unknown transformation {transform}",
-                    )
-        
+            result = self._transform(self, new_frame, result)
              
         # Error handler
         if isinstance(result, JFTLError):
@@ -469,3 +453,15 @@ class LogicStatement(Statement):
 
         return result
     
+    @classmethod
+    def class_init(cls):
+        cls.transformers = {
+            "flatten": cls._flatten_transform,
+            "merge": cls._merge_transform,
+            "to_pairs": cls._to_pairs_transform,
+            "from_pairs": cls._from_pairs_transform,
+            "drop_missing": cls._drop_missing_transform,
+            "join_str": cls._join_str_transform,
+        }
+
+LogicStatement.class_init()

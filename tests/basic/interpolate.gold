@@ -1,4 +1,6 @@
 {
   "interpolate": "Hello Joe Smith, you won 12 bar, tax=0.6666666666666666",
-  "join_str": "hello Joe Smith you won 12 bar, tax=0.6666666666666666"
+  "join_str": "hello Joe Smith you won 12 bar, tax=0.6666666666666666",
+  "escape": "Hello Joe Smith, you won ${count} bar, tax=0.6666666666666666",
+  "all-escape": "Hello ${name}, you won ${count} ${prize}, tax=${tax}"
 }

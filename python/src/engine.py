@@ -83,9 +83,6 @@ class JFTLCompiler(Compiler):
             message=f"Unknown Expression {source!r}",
             ))
 
-
-#### NEW
-
 # --- navigation grammar, mirrors Navigation.md ---
     # Interpolation only supports navigation expressions this round —
     # complex/computed values must be precomputed via `set` and
@@ -135,6 +132,9 @@ class JFTLCompiler(Compiler):
         pos = 0
 
         for m in self._INTERP_RE.finditer(source):
+            literal = ""
+            inner_expr = None
+
             if m.start() > pos:
                 chunk = source[pos:m.start()]
                 if "${" in chunk:
@@ -142,10 +142,10 @@ class JFTLCompiler(Compiler):
                         code="BAD_INTERPOLATION", severity="ERROR", where=where,
                         message=f"nested or unclosed interpolation before position {m.start()}",
                     ))
-                segments.append(chunk)
+                literal += chunk
 
             if m.group(0) == "$${":
-                segments.append("${")   # escaped — literal, not an expression
+                literal += "${"
 
             else:
                 inner = m.group("inner")
@@ -161,6 +161,14 @@ class JFTLCompiler(Compiler):
                                 f"got: {inner!r} (compute complex values via 'set' first)",
                     ))
                 inner_expr = self._compile_str("$" + inner, where)
+
+            # Combine literal segments together to avoid re-joining at run time.
+            if literal:
+                if segments and isinstance(segments[-1], str):
+                    segments[-1] += literal
+                else:
+                    segments.append(literal)
+            if inner_expr:
                 segments.append(inner_expr)
 
             pos = m.end()
@@ -181,102 +189,6 @@ class JFTLCompiler(Compiler):
             return "".join(segments)
 
         return StringJoinStatement(segments)
-
-#### NEW
-
-
-
-
-    # --- navigation grammar, mirrors Navigation.md ---
-
-    _NAV_HEAD1 = r"""
-        \^                                 # top frame
-    | _                                    # current
-    | \$ [A-Za-z_]\w*            # named variable ($foo)
-    | [A-Za-z_]\w*               # bareword variable fallback
-    """
-
-    _NAV_SEGMENT1 = r"""
-        \. [A-Za-z_]\w*          # .foo
-    | \[ -?\d+ \]                       # [123] / [-1]
-    | \[ "[^"]*" \]                        # ["quoted"]
-    | \[ '[^']*' \]                        # ['quoted']
-    | \[ \$ [A-Za-z_]\w* \]      # [$var]
-    """
-
-    # Anchored: must consume the WHOLE interior as nav, optional trailing :spec
-    _NAV_AND_SPEC_RE1 = re.compile(
-        rf"^(?P<nav>(?:{_NAV_HEAD})(?:{_NAV_SEGMENT})*)(?::(?P<spec>.*))?$",
-        re.VERBOSE,
-    )
-
-    # --- outer scan: escape, double-brace (expr), single-brace (nav:spec) ---
-    # NOTE: single/double-brace spans use non-greedy [^}]*-style matching —
-    # a literal '}' inside a quoted nav segment (e.g. ${foo["a}b"]}) is not
-    # yet supported; deferred per "enhance parsing later."
-
-    _INTERP_RE1 = re.compile(
-        r"\$\$\{"
-        r"|\$\{\{(?P<dexpr>.*?)\}\}"
-        r"|\$\{(?P<nav>(?:" + _NAV_HEAD + r")(?:" + _NAV_SEGMENT + r")*)(?::(?P<spec>[^}]*))?\}",
-        re.VERBOSE,
-    )
-
-    def _compile_interpolated1(self, source: str, where) -> Statement | str | None:
-        """Splits `text` into literal and expression segments.
-
-        Returns None if `text` contains no interpolation at all (caller
-        should treat it as a plain literal). Otherwise returns a list where
-        each element is either:
-        - a plain str  -> literal text, use as-is
-        - a tuple (expr_text, format_spec_or_None) -> compile expr_text
-            as an expression; format_spec is only ever non-None for
-            single-brace (navigation) forms.
-        """
-        if "${" not in source:
-            return None   # fast path — nothing to do
-
-        segments: list = []
-        pos = 0
-
-        for m in self._INTERP_RE.finditer(source):
-            if m.start() > pos:
-                segments.append(source[pos:m.start()])
-
-            if m.group(0) == "$${":
-                segments.append("${")   # escaped — literal, not an expression
-
-            elif m.group("dexpr") is not None:
-                # ${{ ... }} — raw expression (=, py=, etc.), no format spec
-                expr = self._compile_str(source, where)
-                segments.append((m.group("dexpr"), None))
-
-            elif m.group("nav"):
-                # ${ ... } — navigation, optional trailing :spec
-                inner = "$" + m.group("nav")
-                inner_expr = self._compile_str(inner, where)
-                inner_expr = ValueFormatStatement(inner_expr, m.group("spec") or "")
-
-                if not inner_expr:
-                    raise CompileError(JFTLError(
-                        code="BAD_INTERPOLATION", severity="ERROR", where=where,\
-                        message=f"invalid interpolation expression {inner!r}",
-                    ))
-                segments.append(inner_expr)
-
-            pos = m.end()
-
-        if pos < len(source):
-            segments.append(source[pos:])
-
-        if len(segments) == 1:
-            return segments[0]
-        
-        if all(isinstance(item, str) for item in segments):
-            return "".join(segments)
-
-        return StringJoinStatement(segments)
-
 
     def _compile(self, source: Any, where: str = "") -> Statement | Expression | str | int | float | bool | NoneType :
 
