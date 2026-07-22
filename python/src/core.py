@@ -113,17 +113,17 @@ class Frame (Mapping):
             "_missing": MISSING_VALUE,
             "_error": ERROR_VALUE,
             "_skip" : SKIP_VALUE,
-            "_input" : input,
+            "_input" : env.input,
             "_level" : 0,
             "_datasets": env.datasets,
-            "_": input,
+            "_": env.input,
         }
         frame = cls(env=env, current=env.input, level=0, parent=None, vars=top_vars)
         # Must "Patch" the environment to point back to the root frame.
         # May want one day to point each frame direct to the top, to avoid circular
         env.top = frame
         top_vars["_top"] = frame
-        top_vars["_external"] = top_vars
+#        top_vars["_external"] = top_vars
         top_vars["_local"] = top_vars
         frame._update_current()
         return frame
