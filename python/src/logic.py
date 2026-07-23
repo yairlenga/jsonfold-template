@@ -51,7 +51,7 @@ class ForeachStatement():
     limit: Optional[Expression] = None
 
 @dataclass
-class LogicStatement(Expression):
+class LogicStatement(Evaluator):
 
     _defines: Optional[list[DefineVar]] = None
     _if: Optional[Condition] = None

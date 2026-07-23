@@ -11,10 +11,14 @@ from navigation import NavigationStatement
 from engine import JFTLEngine, ObjectStatement, ArrayStatement
 
 
-def compile(source, where: str = ""):
-    template, errors = JFTLEngine().compile(source, where, main_only=True)
-    return template.main_entry
+def template_of(source, where = ""):
+    template, _ = JFTLEngine().compile(source, where, main_only=True)
+    return template
 
+def compile(source, where: str = ""):
+    template = template_of(source, where)
+    assert(template.valid)
+    return template.main_entry
 
 class TestLiterals(unittest.TestCase):
 
@@ -56,9 +60,9 @@ class TestPathStatements(unittest.TestCase):
         stmt = compile("$")
         self.assertIsInstance(stmt, NavigationStatement)
 
-    def test_malformed_path_raises_compile_error(self):
-        with self.assertRaises(CompileError):
-            compile("$.foo!bar")
+    def test_malformed_path_compile_error(self):
+        template = template_of("$.foo!bar")
+        self.assertFalse(template.valid)
 
     def test_where_is_threaded_through_for_diagnostics(self):
         stmt = compile("$.name", where="macros.personCard")
@@ -91,8 +95,8 @@ class TestObjectStatements(unittest.TestCase):
         self.assertIsInstance(inner_stmt.entries["inner"], NavigationStatement)
 
     def test_malformed_path_inside_nested_dict_raises(self):
-        with self.assertRaises(CompileError):
-            compile({"a": {"b": "$.foo!bar"}})
+        template = template_of({"a": {"b": "$.foo!bar"}})
+        self.assertFalse(template.valid)
 
     def test_where_includes_key_path(self):
         stmt = compile({"a": {"b": "$.x"}}, where="root")
@@ -122,8 +126,8 @@ class TestArrayStatements(unittest.TestCase):
         self.assertIsInstance(stmt.items[1], ObjectStatement)
 
     def test_malformed_path_inside_list_raises(self):
-        with self.assertRaises(CompileError):
-            compile(["ok", "$.foo!bar"])
+        template = template_of(["ok", "$.foo!bar"])
+        self.assertFalse(template.valid)
 
     def test_where_includes_index(self):
         stmt = compile(["a", "$.x"], where="root")

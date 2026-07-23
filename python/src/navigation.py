@@ -31,7 +31,7 @@ _SEGMENT_RE = re.compile(r"""
   | \[\$(?P<var>\w+)\]
 """, re.VERBOSE)
 
-class NavigationStatement(Expression):
+class NavigationStatement(Evaluator):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
     def __init__(self, path: str, where: str | None = None, start: Literal["_current", "_parent.current", "_input"] | str= "_current"):
@@ -165,7 +165,7 @@ class NavigationPlugin(Compiler):
         
         return node
 
-    def compile(self, source: str, where: str = "") -> tuple[Evaluator, Optional[list[JFTLError]]]:
+    def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator | Any, Optional[JFTLError]]:
         assert isinstance(source, str)
         return self.parse(source, None), None
     

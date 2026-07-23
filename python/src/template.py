@@ -2,6 +2,7 @@ from typing import Any, ClassVar, Optional, TextIO, Literal
 from abc import ABC, abstractmethod
 from pathlib import Path
 from dataclasses import dataclass, field
+import json
 
 
 class _NoValueType:
@@ -37,15 +38,15 @@ class Missing():
         return self
 
 @dataclass
-class Status:
+class JFTLStatus:
     ok: bool
     # Most severe error (first error, or first Warning or first info)
-    error: Optional[JFTLError] = None
+    errors: Optional[JFTLError] = None
     # TODO: Add statistics, runtime, ...
 
 class Template(ABC):
-    @abstractmethod
-    def valid(self) -> bool: ...
+    valid: bool
+    error: Optional[JFTLError]
 
 @dataclass
 class Engine(ABC):
@@ -55,27 +56,46 @@ class Engine(ABC):
     def compile(self, source: str | dict, *, main_only: bool = False, **kwargs) -> tuple[Template, list[JFTLError]]: ...
 
     @abstractmethod
-    def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[JFTLError]]: ...
+    def compile_from(self, source: str | Path | TextIO, **kwargs ) -> tuple[Template, list[JFTLError]]:
+        if isinstance(source, TextIO):
+            body = json.load(source)
+        elif isinstance(source, (Path, str)):
+            with open(source, "r") as fp:
+                body = json.load(fp)
+        else:
+            raise TypeError(f"expected string, Path of TextIO, got {type(value).name}")
+        return self.compile(body, *kwargs)
 
     @abstractmethod
-    def render(self, template: Template, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict[str, Any]] = None) -> tuple[Any, Status]: ...
+    def render(self, template: Template, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict[str, Any]] = None) -> tuple[Any, JFTLStatus]: ...
         
     @abstractmethod
-    def render_to(self, output: TextIO, template: Template, input: Any, *, entry: Optional[str]= None) -> Status: ...
+    def render_to(self, output: TextIO, template: Template, input: Any, **kwargs) -> JFTLStatus:
+        result, status = self.render(template, input, **kwargs)
+        if not status:
+            if isinstance(output, TextIO):
+                json.dump(result, output)
+            elif isinstance(output, (Path, str)):
+                with open(output, "w") as fp:
+                    json.dump(result)
+            else:
+                raise TypeError(f"expected string, Path of TextIO, got {type(value).name}")
+
+        return status
 
     @abstractmethod
     def add_plugin(self, prefix: str, plugin: Any): ...
 
     # Execute a simple template (not wrapped in macros) as a top level item
-    def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Any, Status, list[JFTLError]]:
-        template, errors = self.compile(source, main_only = main_only)
-        if template and template.valid():
-            result, status = (self.render(template, input))
+    def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Any, JFTLStatus, JFTLStatus]:
+        template, compile_errors = self.compile(source, main_only = main_only)
+        result = None
+        if template and template.valid:
+            result, render_status = self.render(template, input)
         else:
-            status = Status(False, errors[0] if errors else None)
-            result = None
+            status = JFTLStatus(False, errors[0] if errors else None)
 
-        return result, status, errors
+        return result, render_status, compile_errors
 
     def add_dataset(self, name: str, data: Any) -> None:
         self._datasets[name] = data

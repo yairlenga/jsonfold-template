@@ -90,8 +90,8 @@ class PyEvalPlugin(Compiler):
         code = compile(tree, filename="<jftl-pyrun-expr>", mode="eval")
         return PyEvalEvaluator(code, source_text, where)
 
-    def compile(self, source: str, where: str = "") -> tuple[Evaluator, Optional[list[JFTLError]]]:
-        return cast(Condition, self._compile(cast(str, source))), None
+    def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator | Any, Optional[JFTLError]]:
+        return self._compile(cast(str, source)), None
 
 
 
@@ -203,9 +203,10 @@ class PyRunPlugin(Compiler):
         eval_globals[FUNC_NAME] = build_locals[FUNC_NAME]
 
         return PyRunEvaluator(func_call, build_locals.get(FUNC_NAME), eval_globals.copy(), where = where )
- 
-    def compile(self, source: str, where: str = "") -> tuple[Evaluator, Optional[list[JFTLError]]]:
-        return cast(Condition, self._compile(cast(str, source))), None
+
+        
+    def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator | Any, Optional[JFTLError]]:
+        return self._compile(cast(str, source)), None
 
 
 

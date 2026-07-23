@@ -2,10 +2,19 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from types import NoneType
-from typing import Any, Optional, TextIO
+from typing import Any, Optional, TextIO, Union
 from abc import ABC, abstractmethod
 
 from template import SKIP_VALUE, Engine, JFTLException, Template, JFTLError, Missing, ERROR_VALUE, MISSING_VALUE
+
+
+
+TYPE_SCALAR = Union[str, int, float, bool]
+TYPE_CONTAINER = Union[dict[str, Any], list[Any]]
+TYPE_SIMPLE = Union[TYPE_SCALAR, None]
+TYPE_ANY = Union[TYPE_SCALAR, TYPE_CONTAINER, None]
+
+
 # Template Class - represent compiled templates
 
 # Sentinal value to ignore a value in a collection
@@ -25,12 +34,15 @@ class JFTLConfig:
 @dataclass(slots=True)
 class JFTLTemplate(Template):
 
+    # From Template:
+    valid: bool
+    error: Optional[JFTLError] = None
+
+    # Implementation
     main_entry: Optional[Evaluator] = None
     config: JFTLConfig = field(default_factory=JFTLConfig)
     datasets: dict = field(default_factory=dict)
 
-    def valid(self) -> bool:
-        return True
 
 #    macros: dict[str, Macro] = field(default_factory=dict)
 #    functions: dict[str, Function] = field(default_factory=dict)
@@ -53,7 +65,7 @@ class Environment:
     # Reference to top frame. Set later, as top frame and top environment point to each other.
     top: Frame | None = None
 
-_NULL_TEMPLATE = JFTLTemplate()
+_NULL_TEMPLATE = JFTLTemplate(valid=False)
 _NULL_ENVIRONMENT = Environment(_NULL_TEMPLATE, None)
 
 @dataclass
@@ -192,6 +204,8 @@ _ERROR = object()   # return the JFTLError object itself, don't raise
 class Evaluator(ABC):
     where: str = ""
     source_code: Optional[str] = None           # Source code, if known
+    valid: bool = False
+    error: Optional[JFTLError] = None
 
     @abstractmethod
     def eval(self, frame: Frame) -> Any | JFTLError | Missing:
@@ -274,21 +288,21 @@ class Evaluator(ABC):
         )
         return self._resolve(error, on_error)
     
-Condition = Evaluator
-Stringifier = Evaluator
-Expression = Evaluator
+Condition = Evaluator | TYPE_ANY
+StringExpr = Evaluator | TYPE_ANY
+Expression = Evaluator | TYPE_ANY
 
 # core.py (or wherever feels like the right shared home — maybe alongside Diagnostic/Error in template.py)
 
 class Compiler(ABC):
 
     @abstractmethod
-    def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator, Optional[list[JFTLError]]]: ...
+    def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator | Any, Optional[JFTLError]]: ...
 
-    def condition(self, source: Any | str, where: str = "" ) -> tuple[Condition, Optional[list[JFTLError]]]:
+    def condition(self, source: Any | str, where: str = "" ) -> tuple[Condition, Optional[JFTLError]]:
         return self.compile(source, where)
 
-    def expression(self, source: Any | str, where: str = "") -> tuple[Expression, Optional[list[JFTLError]]]:
+    def expression(self, source: Any | str, where: str = "") -> tuple[Expression, Optional[JFTLError]]:
         return self.compile(source, where)
 
 
