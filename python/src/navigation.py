@@ -34,9 +34,9 @@ _SEGMENT_RE = re.compile(r"""
 class NavigationStatement(Evaluator):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
-    def __init__(self, path: str, where: str | None = None, start: Literal["_current", "_parent.current", "_input"] | str= "_current"):
+    def __init__(self, path: str, start: Literal["_current", "_parent.current", "_input"] | str= "_current", where: str = "" ):
         self._path = path
-        self._where = where   # for diagnostics, e.g. "user.items[0].name"
+        self.where = where   # for diagnostics, e.g. "user.items[0].name"
         self._start = start
         self._segments = self._compile(path)
 
@@ -49,7 +49,7 @@ class NavigationStatement(Evaluator):
         for m in _SEGMENT_RE.finditer(path_text):
             if m.start() != pos:
                 raise CompileError(JFTLError(
-                    code="INVALID_PATH", severity="ERROR", where=self._where, location=None,
+                    code="INVALID_PATH", severity="ERROR", where=self.where, location=None,
                     message=f"unexpected text at position {pos} in {path_text!r}"))
             pos = m.end()
 
@@ -66,7 +66,7 @@ class NavigationStatement(Evaluator):
 
         if pos != len(path_text):
             raise CompileError(JFTLError(
-                code="INVALID_PATH", severity="ERROR", where=self._where, location=None,
+                code="INVALID_PATH", severity="ERROR", where=self.where, location=None,
                 message=f"trailing unparsed text at position {pos} in {path_text!r}"))
 
         return segments

@@ -8,7 +8,7 @@ import re
 
 from logic import LogicStatement
 from template import Template, JFTLStatus, JFTLError, Engine, Missing
-from core import SKIP_VALUE, CompileError, Condition, Environment, Evaluator, Expression, JFTLConfig, RenderError, Frame, Compiler, JFTLTemplate, StringExpr
+from core import SKIP_VALUE, TYPE_CONTAINER, CompileError, Condition, Environment, Evaluator, Expression, JFTLConfig, RenderError, Frame, Compiler, JFTLTemplate, StringExpr
 from navigation import NAV_RE_STR, NavigationPlugin
 
 from typing import Any, Union
@@ -55,9 +55,9 @@ class JFTLCompiler(Compiler):
     _max_warn = 20
     _max_debug = 0
 
-    def add_error(self, error: JFTLError) -> None:
+    def add_error(self, error: JFTLError) -> JFTLError:
         keep_msg = False
-        keep_going = False
+        keep_going = True
         match error.severity:
             case "DEBUG":
                 self._debug_count += 1
@@ -68,17 +68,20 @@ class JFTLCompiler(Compiler):
             case "WARNING":
                 self._warn_count += 1
                 keep_msg = self._warn_count < self._max_warn
-            case "ERROR", _:
-                fail = True
+            case _:
+#            case "ERROR":
+                self._fail = True
                 self._error_count += 1
-                keep_msg = self._error_count < self._max_error
-                keep_going = not keep_msg
+                keep_msg = self._error_count < self._max_errors
+                keep_going = keep_msg
 
         if not keep_going:
-            Fail = True
+            self._fail = True
             raise CompileError(error)
         if keep_msg:
             self._errors.append(error)
+
+        return error
 
     # Call to natigation: 
     _NAV_RE = re.compile('^' + NAV_RE_STR + "$", re.VERBOSE)
@@ -112,10 +115,15 @@ class JFTLCompiler(Compiler):
                 expr, _ = plugin.expression(m.group("expr"))
                 return expr
 
-        raise CompileError(JFTLError(
+        self.add_error(JFTLError(
             code="BAD_EXPRESSION", severity="ERROR", where=where, location=None,
             message=f"Unknown Expression {source!r}",
             ))
+
+#        raise CompileError(JFTLError(
+#            code="BAD_EXPRESSION", severity="ERROR", where=where, location=None,
+#            message=f"Unknown Expression {source!r}",
+#            ))
 
 # --- navigation grammar, mirrors Navigation.md ---
     # Interpolation only supports navigation expressions this round —
@@ -290,6 +298,7 @@ class JFTLCompiler(Compiler):
         except CompileError as ex:
             self._fail = True
             self._errors.append(ex.error)
+            self._error_count += 1
             error = ex.error
         return compiled, error
 

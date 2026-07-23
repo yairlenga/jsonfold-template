@@ -86,14 +86,14 @@ class Engine(ABC):
     @abstractmethod
     def add_plugin(self, prefix: str, plugin: Any): ...
 
-    # Execute a simple template (not wrapped in macros) as a top level item
-    def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Any, JFTLStatus, JFTLStatus]:
+    # Execute a simple template (potentially, not wrapped in macros) as a top level item
+    def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Any, JFTLStatus, list[JFTLError]]:
         template, compile_errors = self.compile(source, main_only = main_only)
         result = None
         if template and template.valid:
             result, render_status = self.render(template, input)
         else:
-            status = JFTLStatus(False, errors[0] if errors else None)
+            render_status = JFTLStatus(False, JFTLError(code="COMPILE_ERRORS", message="Error compiling template"))
 
         return result, render_status, compile_errors
 
