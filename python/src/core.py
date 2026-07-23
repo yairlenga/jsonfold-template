@@ -204,8 +204,6 @@ _ERROR = object()   # return the JFTLError object itself, don't raise
 class Evaluator(ABC):
     where: str = ""
     source_code: Optional[str] = None           # Source code, if known
-    valid: bool = False
-    error: Optional[JFTLError] = None
 
     @abstractmethod
     def eval(self, frame: Frame) -> Any | JFTLError | Missing:
@@ -304,7 +302,7 @@ class Compiler(ABC):
 
     def expression(self, source: Any | str, where: str = "") -> tuple[Expression, Optional[JFTLError]]:
         return self.compile(source, where)
-
+    
 
 class CompileError(Exception):
     """Raised for any defect discovered while compiling a template.

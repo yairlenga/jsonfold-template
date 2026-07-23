@@ -132,7 +132,7 @@ class NavigationPlugin(Compiler):
 
     _NAV_RE = re.compile("^" + NAV_RE_STR + "$", re.VERBOSE)
 
-    def parse_nav(self, m: re.Match[str], where) -> NavigationStatement:
+    def parse_nav(self, m: re.Match[str], where) -> NavigationStatement | JFTLError:
 
         start = None
         head = m.group("start")
@@ -148,25 +148,26 @@ class NavigationPlugin(Compiler):
             start = vars
 
         if not start:
-            raise CompileError(JFTLError(severity="ERROR", code="BAD-NAV-SYNTAX", message=f"Unknown start: '${head}", where=where))
+            return JFTLError(severity="ERROR", code="BAD-NAV-SYNTAX", message=f"Unknown start: '${head}", where=where)
         
-        engine = NavigationStatement(segments, start=start, where=where)
-        return engine
+        expr = NavigationStatement(segments, start=start, where=where)
+        return expr
 
     def parse(self, source, where):
 
         m = self._NAV_RE.match(source)
         if not m:
-            raise CompileError(JFTLError(severity="ERROR", code="BAD-NAV-SYNTAX", message=f"Unknown navigation: '${source}", where=where))
+            return JFTLError(severity="ERROR", code="BAD-NAV-SYNTAX", message=f"Unknown navigation: '${source}", where=where)
         
-        node = self.parse_nav(m, where)
-        if not node:
-            raise CompileError(JFTLError(severity="ERROR", code="BAD-NAV-EXPR", message=f"Unknown navigation: '${source}", where=where))      
+        expr = self.parse_nav(m, where)
+        if not expr:
+            return JFTLError(severity="ERROR", code="BAD-NAV-EXPR", message=f"Unknown navigation: '${source}", where=where)
         
-        return node
+        return expr
 
     def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator | Any, Optional[JFTLError]]:
         assert isinstance(source, str)
-        return self.parse(source, None), None
+        expr = self.parse(source, where)
+        return (None, expr) if isinstance(expr, JFTLError) else (expr, None)
     
 

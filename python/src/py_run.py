@@ -71,27 +71,27 @@ class PyEvalPlugin(Compiler):
     template compilation, and returns a PyRunEvaluator."""
 
 
-    def _compile(self, source_text: str, where: Optional[str] = None) -> Evaluator:
+    def _compile(self, source_text: str, where: Optional[str] = None) -> tuple[Evaluator | Any, Optional[JFTLError]]:
         try:
             tree = ast.parse(source_text, mode="eval")
         except SyntaxError as e:
-            raise CompileError(JFTLError(
+            return None, JFTLError(
                 code="INVALID_PYTHON", severity="ERROR", where=where, location=None,
                 message=f"invalid Python expression {source_text!r}: {e}",
-            ))
+            )
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Lambda):
-                raise CompileError(JFTLError(
+                return None, JFTLError(
                     code="INVALID_PYTHON", severity="ERROR", where=where, location=None,
                     message=f"lambda expressions are not allowed in {source_text!r}",
-                ))
+                )
 
         code = compile(tree, filename="<jftl-pyrun-expr>", mode="eval")
-        return PyEvalEvaluator(code, source_text, where)
+        return PyEvalEvaluator(code, source_text, where), None
 
     def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator | Any, Optional[JFTLError]]:
-        return self._compile(cast(str, source)), None
+        return self._compile(cast(str, source))
 
 
 

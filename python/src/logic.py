@@ -3,7 +3,6 @@ from typing import Any, Callable, ClassVar, Literal, Optional, cast
 from dataclasses import dataclass, replace
 
 from core import SKIP_VALUE, CompileError, Condition, Expression, JFTLError, Missing, Frame, Evaluator, Compiler
-from template import MISSING_VALUE
 
 """ {
     "$": true,

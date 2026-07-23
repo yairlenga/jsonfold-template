@@ -159,7 +159,7 @@ class JFTLCompiler(Compiler):
         r"|\$\{(?P<inner>[^}]*)\}",
     )
 
-    def _compile_interpolated(self, source: str, where) -> StringExpr | str | None:
+    def _compile_interpolated(self, source: str, where) -> StringExpr | str | JFTLError:
         """Splits `source` into literal and expression segments.
 
         Returns None if `source` contains no interpolation at all (caller
@@ -180,10 +180,10 @@ class JFTLCompiler(Compiler):
             if m.start() > pos:
                 chunk = source[pos:m.start()]
                 if "${" in chunk:
-                    raise CompileError(JFTLError(
+                    return JFTLError(
                         code="BAD_INTERPOLATION", severity="ERROR", where=where,
                         message=f"nested or unclosed interpolation before position {m.start()}",
-                    ))
+                    )
                 literal += chunk
 
             if m.group(0) == "$${":
@@ -192,16 +192,16 @@ class JFTLCompiler(Compiler):
             else:
                 inner = m.group("inner")
                 if "${" in inner:
-                    raise CompileError(JFTLError(
+                    return JFTLError(
                         code="BAD_INTERPOLATION", severity="ERROR", where=where,
                         message=f"nested or unclosed interpolation: {inner!r}",
-                    ))
+                    )
                 if not self._NAV_ONLY_RE.match(inner):
-                    raise CompileError(JFTLError(
+                    return JFTLError(
                         code="BAD_INTERPOLATION", severity="ERROR", where=where,
                         message=f"interpolation only supports navigation expressions, "
                                 f"got: {inner!r} (compute complex values via 'set' first)",
-                    ))
+                    )
                 inner_expr = self._compile_str("$" + inner, where)
 
             # Combine literal segments together to avoid re-joining at run time.
@@ -218,10 +218,10 @@ class JFTLCompiler(Compiler):
         if pos < len(source):
             tail = source[pos:]
             if "${" in tail:
-                raise CompileError(JFTLError(
+                return JFTLError(
                     code="BAD_INTERPOLATION", severity="ERROR", where=where,
                     message=f"nested or unclosed interpolation at end of string: {tail!r}",
-                ))
+                )
             segments.append(tail)
 
         if len(segments) == 1:
@@ -258,6 +258,7 @@ class JFTLCompiler(Compiler):
         # Scalar Cases - string
         if isinstance(source, str):
 
+            # Check if this is potential interpolation:
             if "${" in source:
                 interpolated = self._compile_interpolated(source, where)
                 if interpolated:
@@ -271,20 +272,13 @@ class JFTLCompiler(Compiler):
             if source.startswith('$$'):
                 return source[1:]
 
-            # Check if this is potential interpolation:
-            if "${" in source:
-                interpolated = self._compile_interpolated(source, where)
-                if interpolated:
-                    return interpolated
-
-
             return self._compile_str(source, where)
         
         # Non string source
-        raise CompileError(JFTLError(
+        return JFTLError(
             code="BAD_NODE", severity="ERROR", where=where, location=None,
             message=f"Unknown node {source!r}",
-            ))
+            )
    
 
     def compile(self, source: Any, where: str = "") -> tuple[Any, Optional[JFTLError]]:
