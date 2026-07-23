@@ -41,7 +41,7 @@ class FakeCompiler:
 
 
 def compile_logic(args: dict) -> LogicStatement:
-    return LogicStatement.compile(FakeCompiler(), args)
+    return LogicStatement.compile_object(FakeCompiler(), args)
 
 
 class TestEmptyInput(unittest.TestCase):

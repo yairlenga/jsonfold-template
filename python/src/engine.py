@@ -243,7 +243,7 @@ class JFTLCompiler(Compiler):
 
             action = source.get("$", None)
             if action is True:
-                return LogicStatement.compile(self, source)
+                return LogicStatement.compile_object(self, source)
             elif action is False:
                 return LiteralStatement(source)
     

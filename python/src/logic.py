@@ -65,7 +65,7 @@ class LogicStatement(Evaluator):
     transformers: ClassVar[dict[str, Callable]] = {}  # just a type annotation here, no value yet
 
     @classmethod
-    def compile(cls, compiler: Compiler, args: dict[str, Any]):
+    def compile_object(cls, compiler: Compiler, args: dict[str, Any]):
 
         source = ""
         v_defines = [
