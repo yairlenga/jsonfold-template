@@ -7,19 +7,19 @@ from abc import ABC, abstractmethod
 
 from template import SKIP_VALUE, Engine, JFTLException, Template, JFTLError, Missing, ERROR_VALUE, MISSING_VALUE
 
+JSON_SCALAR = str | bool | int | float
+JSON_KEY = str
+JSON_CONTAINER = dict[JSON_KEY, "JSON_ANY"] |  list["JSON_ANY"]
+JSON_NULL = NoneType | Missing
+JSON_SIMPLE = JSON_SCALAR | JSON_NULL | JFTLError
+JSON_ANY = JSON_SIMPLE | JSON_CONTAINER
 
-
-TYPE_SCALAR = Union[str, int, float, bool]
-TYPE_CONTAINER = Union[dict[str, Any], list[Any]]
-TYPE_SIMPLE = Union[TYPE_SCALAR, None]
-TYPE_ANY = Union[TYPE_SCALAR, TYPE_CONTAINER, None]
-
+JSON_OBJECT_TYPES = (dict,)
+JSON_ARRAY_TYPES = (list,)
+JSON_CONTAINER_TYPES = (dict, list)
+JSON_ANY_TYPES = (str, bool, int, float, NoneType, Missing, JFTLError, dict, list)  # keep in sync with JSON_ANY
 
 # Template Class - represent compiled templates
-
-# Sentinal value to ignore a value in a collection
-
-
 
 # Runtime Objects
 
@@ -200,7 +200,6 @@ from typing import Any, Optional
 _RAISE = object()   # default — raise a JFTLException on failure
 _ERROR = object()   # return the JFTLError object itself, don't raise
 
-
 class Evaluator(ABC):
     where: str = ""
     source_code: Optional[str] = None           # Source code, if known
@@ -286,9 +285,9 @@ class Evaluator(ABC):
         )
         return self._resolve(error, on_error)
     
-Condition = Evaluator | TYPE_ANY
-StringExpr = Evaluator | TYPE_ANY
-Expression = Evaluator | TYPE_ANY
+Condition = Evaluator | JFTLError | JSON_ANY
+StringExpr = Evaluator | JFTLError | JSON_ANY
+Expression = Evaluator | JFTLError | JSON_ANY
 
 # core.py (or wherever feels like the right shared home — maybe alongside Diagnostic/Error in template.py)
 

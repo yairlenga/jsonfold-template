@@ -1,15 +1,21 @@
-from typing import Any, ClassVar, Optional, TextIO, Literal
+from typing import Any, Optional, TextIO, Literal, Union
 from abc import ABC, abstractmethod
 from pathlib import Path
 from dataclasses import dataclass, field
 import json
 
+JSONValue = Union[
+    None, bool, int, float, str,
+    list["JSONValue"],
+    dict[str, "JSONValue"],
+]
 
 class _NoValueType:
     def __repr__(self) -> str:
         return "NO_VALUE"
 
 NO_VALUE = _NoValueType()
+
 @dataclass(kw_only=True)
 class JFTLError():
     severity: Literal["ERROR", "WARNING", "INFO", "DEBUG"] = "ERROR"
@@ -20,6 +26,8 @@ class JFTLError():
     location: Optional[str] = None               # Location in the data tree
     details: Optional[list["JFTLError"]] = None
     value: Any = NO_VALUE
+
+ERROR_VALUE = JFTLError(severity='ERROR', code='GENERIC-ERROR', message="Template Error")
 
 class JFTLException(Exception):
     def __init__(self, error: JFTLError):
@@ -36,6 +44,10 @@ class Missing():
     
     def __getitem__(self, key: Any) -> "Missing":
         return self
+    
+MISSING_VALUE = Missing(code="MISSING", message="Unspecific MISSING")
+SKIP_VALUE = Missing(code="SKIP", message= "Skip entry sentinel")
+
 
 @dataclass
 class JFTLStatus:
@@ -130,6 +142,3 @@ def create_engine(*, no_plugins: bool = False, all_plugins: bool = False ) -> En
     return engine        
 
 
-MISSING_VALUE = Missing(code="MISSING", message="Unspecific MISSING")
-ERROR_VALUE = JFTLError(severity='ERROR', code='GENERIC-ERROR', message="Template Error")
-SKIP_VALUE = Missing(code="SKIP", message= "Skip entry sentinel")

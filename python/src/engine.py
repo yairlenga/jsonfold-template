@@ -1,4 +1,5 @@
 from __future__ import annotations
+from ast import TypeAlias
 from collections.abc import Mapping
 from types import NoneType
 from typing import Any, ClassVar, Literal, Optional, Sequence, TextIO, cast
@@ -8,34 +9,19 @@ import re
 
 from logic import LogicStatement
 from template import Template, JFTLStatus, JFTLError, Engine, Missing
-from core import SKIP_VALUE, TYPE_CONTAINER, CompileError, Condition, Environment, Evaluator, Expression, JFTLConfig, RenderError, Frame, Compiler, JFTLTemplate, StringExpr
+from core import SKIP_VALUE, CompileError, Condition, Environment, Evaluator, Expression, JFTLConfig, RenderError, Frame, Compiler, JFTLTemplate, StringExpr
 from navigation import NAV_RE_STR, NavigationPlugin
 
 from typing import Any, Union
 
 # --- Flat version (Any for container contents — simpler, less precise) ---
 
-
-# There is no type-level way to express "empty container" — emptiness is a
-# runtime property (len(x) == 0), not something the type system can encode.
-# Literal(...) only accepts hashable/immutable literal values, so
-# Literal([], {}) is invalid and raises TypeError at runtime. If you need
-# this concept, use a runtime helper instead:
-#
-def is_empty_container(x: TYPE_CONTAINER) -> bool:
-    return len(x) == 0
-
-
 # --- Recursive version (fully precise — containers hold TYPE_ANY_REC, not Any) ---
 # Uncomment and use this instead of the flat version if you want type checkers
 # to verify JSON-shape all the way down (e.g. catch a non-JSON value nested
 # three levels deep inside a dict-of-lists-of-dicts).
 
-TYPE_ANY_REC = Union[
-     None, bool, int, float, str,
-     list["TYPE_ANY_REC"],
-     dict[str, "TYPE_ANY_REC"],
-]
+
 
 @dataclass
 class JFTLCompiler(Compiler):
