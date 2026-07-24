@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Optional, Sequence, Union, cast
 
-from core import COMPILE_DOC, Compiler, Condition, Evaluator, Expression, Frame, CompileError
+from core import COMPILE_DOC, StatementCompiler, Condition, Evaluator, Expression, Frame, CompileError
 from template import MISSING_VALUE, JFTLError, Missing
 
 @dataclass
@@ -128,7 +128,7 @@ NAV_RE_STR = r"""
     (?P<start> \$ | \$\^ | \$< | \$(?P<vars>\w+ ) )
     (?P<segments> (\[.* | \..* )? )
 """
-class NavigationPlugin(Compiler):
+class NavigationPlugin(StatementCompiler):
 
     _NAV_RE = re.compile("^" + NAV_RE_STR + "$", re.VERBOSE)
 
@@ -165,7 +165,7 @@ class NavigationPlugin(Compiler):
         
         return expr
 
-    def compile(self, source: Any | str, where: str = "") -> COMPILE_DOC:
+    def compile_str(self, source: Any | str, where: str = "") -> COMPILE_DOC:
         assert isinstance(source, str)
         expr = self.parse(source, where)
         return expr

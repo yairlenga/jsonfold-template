@@ -17,7 +17,7 @@ import ast
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, cast
 
-from core import COMPILE_DOC, Compiler, Condition, Evaluator, Expression, Frame, CompileError
+from core import COMPILE_DOC, StatementCompiler, Condition, Evaluator, Expression, Frame, CompileError
 from template import JFTLError, Missing, MISSING_VALUE
 
 def _build_env(frame: Frame) -> dict[str, Any]:
@@ -53,7 +53,7 @@ class PyEvalEvaluator(Evaluator ):
             return eval(self._code, {"__builtins__": __builtins__}, env)
         except Exception as e:
             return JFTLError(
-                code="PYRUN_RUNTIME_ERROR", severity="ERROR",
+                code="PYRUN_RUNTIME_ERROR",
                 where=self._where, location=None,
                 message=f"error evaluating {self._source!r}: {e}",
             )
@@ -65,7 +65,7 @@ class PyEvalEvaluator(Evaluator ):
         return bool(result)  # native Python truthiness — not JFTL's falsy rule
 
 
-class PyEvalPlugin(Compiler):
+class PyEvalPlugin(StatementCompiler):
     """Registered once (e.g. via engine.add_expr_engine('pyrun', PyRunExprEngine())).
     Stateless — compile() is called once per '$pyrun:' expression found during
     template compilation, and returns a PyRunEvaluator."""
@@ -76,21 +76,21 @@ class PyEvalPlugin(Compiler):
             tree = ast.parse(source_text, mode="eval")
         except SyntaxError as e:
             return JFTLError(
-                code="INVALID_PYTHON", severity="ERROR", where=where, location=None,
+                code="INVALID_PYTHON", where=where, location=None,
                 message=f"invalid Python expression {source_text!r}: {e}",
             )
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Lambda):
                 return JFTLError(
-                    code="INVALID_PYTHON", severity="ERROR", where=where, location=None,
+                    code="INVALID_PYTHON",where=where, location=None,
                     message=f"lambda expressions are not allowed in {source_text!r}",
                 )
 
         code = compile(tree, filename="<jftl-pyrun-expr>", mode="eval")
         return PyEvalEvaluator(code, source_text, where)
 
-    def compile(self, source: Any | str, where: str = "") -> COMPILE_DOC:
+    def compile_str(self, source: str, where: str = "") -> COMPILE_DOC:
         return self._compile(cast(str, source))
 
 
@@ -122,7 +122,7 @@ class PyRunEvaluator(Evaluator):
             return eval(self.func_call, g)
         except Exception as e:
             return JFTLError(
-                code="PYRUN_RUNTIME_ERROR", severity="ERROR",
+                code="PYRUN_RUNTIME_ERROR",
                 where=self.where, location=None,
                 message=f"error evaluating {self.source!r}: {e}",
             )
@@ -134,7 +134,7 @@ class PyRunEvaluator(Evaluator):
         return bool(result)  # native Python truthiness — not JFTL's falsy rule
 
 
-class PyRunPlugin(Compiler):
+class PyRunPlugin(StatementCompiler):
     """Registered once (e.g. via engine.add_expr_engine('pyrun', PyRunExprEngine())).
     Stateless — compile() is called once per '$pyrun:' expression found during
     template compilation, and returns a PyRunEvaluator."""
@@ -205,7 +205,7 @@ class PyRunPlugin(Compiler):
         return PyRunEvaluator(func_call, build_locals.get(FUNC_NAME), eval_globals.copy(), where = where )
 
         
-    def compile(self, source: Any | str, where: str = "") -> COMPILE_DOC:
+    def compile_str(self, source: Any | str, where: str = "") -> COMPILE_DOC:
         return self._compile(cast(str, source))
 
 

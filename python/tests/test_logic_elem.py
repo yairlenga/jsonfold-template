@@ -14,7 +14,7 @@ from dataclasses import asdict
 from typing import Any
 import unittest
 
-from core import Compiler
+from core import DocCompiler, StatementCompiler
 from logic import ForeachStatement, LogicStatement, Case
 
 
@@ -33,7 +33,10 @@ class Tagged:
         return f"Tagged({self.kind!r}, {self.raw!r})"
 
 
-class FakeCompiler(Compiler):
+class FakeCompiler(DocCompiler):
+
+    def compile_str(self, source: Any, where: str = "", **kwards) -> None:
+        return None
 
     def compile(self, source: Any, where: str = "", **kwards) -> None:
         return None

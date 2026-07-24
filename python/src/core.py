@@ -304,25 +304,40 @@ Condition = COMPILE_DOC | _NoValueType         # Expression yielding boolean
 Statement = COMPILE_DOC | _NoValueType         # Statement, returning any value
 
 # core.py (or wherever feels like the right shared home — maybe alongside Diagnostic/Error in template.py)
+@dataclass
+class ErrorStatement(JFTLError, Evaluator):
+    statement: COMPILE_DOC = None
 
-class Compiler(ABC):
+    def eval(self, frame: Frame) -> JFTLError:
+        return self
+class StatementCompiler(ABC):
 
     @abstractmethod
-    def compile(self, source: JSON_DOC, where: str = "", **kwards) -> COMPILE_DOC: ...
+    def compile_str(self, source: str, where: str = "" ) -> COMPILE_DOC : ...
+
+    def compile(self, source: JSON_DOC, where: str = "") -> COMPILE_DOC:
+        if isinstance(source, str):
+            return self.compile_str(source, where)
+        return JFTLError(code="UNEXPECTED-BODY", message=f"Plugin {type(self)} expecting str, but got '{type(source)}'")
+
+
+class DocCompiler(StatementCompiler):
+
+    @abstractmethod
+    def compile(self, source: JSON_DOC, where: str = "") -> COMPILE_DOC: ...
 
     # evaluated via the eval_condition
-    def condition(self, source: JSON_DOC, where: str = "", **kwargs ) -> Condition:
-        return self.compile(source, where, *kwargs)
+    def condition(self, source: JSON_DOC, where: str = "") -> Condition:
+        return self.compile(source, where)
 
     # Evaluated via eval
-    def statement(self, source: JSON_DOC, where: str = "", **kwargs) -> Statement:
-        return self.compile(source, where, *kwargs)
+    def statement(self, source: JSON_DOC, where: str = "") -> Statement:
+        return self.compile(source, where)
 
     # Evaluated via eval
-    def expression(self, source: str, where: str = "", **kwargs) -> Expression:
-        return self.compile(source, where, *kwargs)
-
-
+    def expression(self, source: str, where: str = "") -> Expression:
+        return self.compile(source, where)
+    
 class CompileError(Exception):
     """Raised for any defect discovered while compiling a template.
     Carries the actual Error to report — no separate/duplicate fields.

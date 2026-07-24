@@ -2,7 +2,7 @@ from types import NoneType
 from typing import Any, Callable, ClassVar, Literal, Optional, cast
 from dataclasses import dataclass, replace
 
-from core import SKIP_VALUE, CompileError, Condition, Expression, JFTLError, Missing, Frame, Evaluator, Compiler
+from core import SKIP_VALUE, CompileError, Condition, DocCompiler, Expression, JFTLError, Missing, Frame, Evaluator, StatementCompiler
 
 """ {
     "$": true,
@@ -65,7 +65,7 @@ class LogicStatement(Evaluator):
     transformers: ClassVar[dict[str, Callable]] = {}  # just a type annotation here, no value yet
 
     @classmethod
-    def compile_object(cls, compiler: Compiler, args: dict[str, Any]):
+    def compile_object(cls, compiler: DocCompiler, args: dict[str, Any]):
 
         source = ""
         v_defines = [

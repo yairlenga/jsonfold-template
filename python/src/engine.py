@@ -9,7 +9,7 @@ import re
 
 from logic import LogicStatement
 from template import Severity, Template, RenderStatus, JFTLError, Engine, Missing
-from core import SKIP_VALUE, CompileError, Condition, Environment, Evaluator, Expression, JFTLConfig, RenderError, Frame, Compiler, JFTLTemplate, Statement
+from core import SKIP_VALUE, CompileError, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, RenderError, Frame, StatementCompiler, JFTLTemplate, Statement
 from navigation import NAV_RE_STR, NavigationPlugin
 
 from typing import Any, Union
@@ -24,7 +24,7 @@ from typing import Any, Union
 
 
 @dataclass
-class JFTLCompiler(Compiler):
+class JFTLCompiler(DocCompiler):
     config: JFTLConfig
     plugins: dict[str, Any] = field(default_factory=dict)
 
@@ -67,7 +67,6 @@ class JFTLCompiler(Compiler):
         if keep_msg:
             self._errors.append(error)
 
-
     def record_error(self, error: JFTLError) -> JFTLError:
         self._add_error(error)
         return error
@@ -77,9 +76,8 @@ class JFTLCompiler(Compiler):
             self.record_error(value)
         return value
 
-    def _check_results(self, values: Iterable[JFTLError | Any]) -> None:
-        for e in (v for v in values if isinstance(v, JFTLError)):
-            self._add_error(e)
+
+
 
     # Call to natigation: 
     _NAV_RE = re.compile('^' + NAV_RE_STR + "$", re.VERBOSE)
@@ -98,7 +96,7 @@ class JFTLCompiler(Compiler):
     INTERPOLATE_RE = re.compile(r"\$\$\{|\$\{([^}]*)\}")
 
     # Compile single ex
-    def _compile_str(self, source: Any, where: str = "") -> Expression:
+    def _compile_simple_str(self, source: Any, where: str = "") -> Expression:
 
         m = self._NAV_RE.match(source)
         if m:
@@ -111,8 +109,8 @@ class JFTLCompiler(Compiler):
         if m:
             plugin_id = m.group("plugin") or self.config.default_expr_engine
             plugin = self.plugins.get(plugin_id, None)
-            if isinstance(plugin, Compiler):
-                expr = plugin.expression(m.group("expr"))
+            if isinstance(plugin, StatementCompiler):
+                expr = plugin.compile_str(m.group("expr"))
                 return expr
 
         return JFTLError(
@@ -227,6 +225,23 @@ class JFTLCompiler(Compiler):
 
         return StringJoinStatement(segments)
 
+    def _compile_str(self, source: str, where: str = "") -> Statement:
+        # Check if this is potential interpolation:
+        if "${" in source:
+            interpolated = self._compile_interpolated(source, where)
+            if interpolated:
+                return interpolated
+
+        # Anything NOT starting with '$' is literal
+        if not source.startswith("$"):
+            return source
+        
+        # Anything starting with '$$' is considered as a literal removing the first $.
+        if source.startswith('$$'):
+            return source[1:]
+
+        return self._compile_simple_str(source, where)
+
     def _compile(self, source: Any, where: str = "") -> Statement :
 
         # Simple Literal returned here
@@ -238,37 +253,29 @@ class JFTLCompiler(Compiler):
 
             action = source.get("$", None)
             if action is True:
-                return LogicStatement.compile_object(self, source)
+                error_count = self._error_count
+                expr = LogicStatement.compile_object(self, source)
+                if self._error_count > error_count and not isinstance(expr, JFTLError):
+                    return ErrorStatement(code="BAD-LOGIC", message="Logic Element did not compile", statement=expr)
+                return expr
+            
             elif action is False:
                 return LiteralStatement(source)
     
             entries = {k: self._compile(v, where=f"{where}.{k}") for k, v in source.items()}            
-            self._check_results(entries.values())
+            for err in ( e for e in entries.values() if isinstance(e, JFTLError)):
+                self._add_error(err)
             return ObjectStatement(entries)
 
 
         if isinstance(source, list):
             items = [self._compile(v, where=f"{where}[{i}]") for i, v in enumerate(source)]
-            self._check_results(items)
+            for err in ( e for e in items if isinstance(e, JFTLError)):
+                self._add_error(err)
             return ArrayStatement(items)
 
         # Scalar Cases - string
         if isinstance(source, str):
-
-            # Check if this is potential interpolation:
-            if "${" in source:
-                interpolated = self._compile_interpolated(source, where)
-                if interpolated:
-                    return interpolated
-
-            # Anything NOT starting with '$' is literal
-            if not source.startswith("$"):
-                return source
-            
-            # Anything starting with '$$' is considered as a literal removing the first $.
-            if source.startswith('$$'):
-                return source[1:]
-
             return self._compile_str(source, where)
         
         # Non string source
@@ -277,9 +284,11 @@ class JFTLCompiler(Compiler):
             message=f"Unknown node {source!r}",
             )
    
-
     # Compile is called from plugins that need generic compilation.
     # It also capture exceptions, and convert them to error
+    def compile_str(self, source: str, where: str = "", record: bool = False) -> Statement:
+        return self._compile_str(source, where)
+
     def compile(self, source: Any, where: str = "", record: bool = False) -> Statement:
         compiled = None
         try:
