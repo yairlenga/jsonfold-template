@@ -17,7 +17,7 @@ import ast
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, cast
 
-from core import Compiler, Condition, Evaluator, Expression, Frame, CompileError
+from core import COMPILE_DOC, Compiler, Condition, Evaluator, Expression, Frame, CompileError
 from template import JFTLError, Missing, MISSING_VALUE
 
 def _build_env(frame: Frame) -> dict[str, Any]:
@@ -71,26 +71,26 @@ class PyEvalPlugin(Compiler):
     template compilation, and returns a PyRunEvaluator."""
 
 
-    def _compile(self, source_text: str, where: Optional[str] = None) -> tuple[Evaluator | Any, Optional[JFTLError]]:
+    def _compile(self, source_text: str, where: Optional[str] = None) -> COMPILE_DOC:
         try:
             tree = ast.parse(source_text, mode="eval")
         except SyntaxError as e:
-            return None, JFTLError(
+            return JFTLError(
                 code="INVALID_PYTHON", severity="ERROR", where=where, location=None,
                 message=f"invalid Python expression {source_text!r}: {e}",
             )
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Lambda):
-                return None, JFTLError(
+                return JFTLError(
                     code="INVALID_PYTHON", severity="ERROR", where=where, location=None,
                     message=f"lambda expressions are not allowed in {source_text!r}",
                 )
 
         code = compile(tree, filename="<jftl-pyrun-expr>", mode="eval")
-        return PyEvalEvaluator(code, source_text, where), None
+        return PyEvalEvaluator(code, source_text, where)
 
-    def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator | Any, Optional[JFTLError]]:
+    def compile(self, source: Any | str, where: str = "") -> COMPILE_DOC:
         return self._compile(cast(str, source))
 
 
@@ -205,8 +205,8 @@ class PyRunPlugin(Compiler):
         return PyRunEvaluator(func_call, build_locals.get(FUNC_NAME), eval_globals.copy(), where = where )
 
         
-    def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator | Any, Optional[JFTLError]]:
-        return self._compile(cast(str, source)), None
+    def compile(self, source: Any | str, where: str = "") -> COMPILE_DOC:
+        return self._compile(cast(str, source))
 
 
 

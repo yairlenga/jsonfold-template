@@ -5,7 +5,7 @@ Evaluate Expressions using
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from core import Compiler, Condition, Evaluator, Expression, Frame
+from core import COMPILE_DOC, Compiler, Condition, Evaluator, Expression, Frame
 from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes
 
 from template import JFTLError, Missing
@@ -91,7 +91,7 @@ class SimpleEvalPlugin(Compiler):
         }
         return se
 
-    def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator | Any, Optional[JFTLError]]:
+    def compile(self, source: Any | str, where: str = "") -> COMPILE_DOC:
         assert isinstance(source, str)
         compiled = self._se.parse(source)
-        return SimpleEvalEvaluator(self._se, source, compiled=compiled), None
+        return SimpleEvalEvaluator(self._se, source, compiled=compiled)

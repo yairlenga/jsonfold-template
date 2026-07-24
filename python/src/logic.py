@@ -69,13 +69,13 @@ class LogicStatement(Evaluator):
 
         source = ""
         v_defines = [
-            DefineVar(_name = name, _expr = compiler.expression(expr, source)[0])
+            DefineVar(_name = name, _expr = compiler.expression(expr, source))
             for name, expr in v.items()
             ] if ( v := args.get("set", None)) else None
 
-        v_if, _ = compiler.condition(v, source) if (v := args.get("if", None))  else (None, None)
+        v_if = compiler.condition(v, source) if (v := args.get("if", None))  else None
 
-        v_data, _ = compiler.expression(v, source) if ( v:= args.get("data", None)) else (None, None)
+        v_data = compiler.expression(v, source) if ( v:= args.get("data", None)) else None
         
         v_loop = args.get("foreach", None)
         v_foreach = None
@@ -87,11 +87,11 @@ class LogicStatement(Evaluator):
             v_foreach_index = v_loop.get("index", None)
             v_foreach_shape = v_loop.get("shape", None)
             # Runtime expressions
-            v_foreach_in, _ = compiler.expression(v, source) if ( v:= v_loop.get("in", None)) else (None, None)
-            v_foreach_cond, _ = compiler.condition(v, source) if ( v := v_loop.get("if", None)) else (None, None)
-            v_foreach_start, _ = compiler.expression(v, source) if ( v := v_loop.get("start", None)) else (None, None)
-            v_foreach_stop, _ = compiler.expression(v, source) if ( v := v_loop.get("stop", None)) else (None, None)
-            v_foreach_limit, _ = compiler.expression(v, source) if ( v := v_loop.get("limit", None)) else (None, None)
+            v_foreach_in = compiler.expression(v, source) if ( v:= v_loop.get("in", None)) else None
+            v_foreach_cond = compiler.condition(v, source) if ( v := v_loop.get("if", None)) else None
+            v_foreach_start = compiler.expression(v, source) if ( v := v_loop.get("start", None)) else None
+            v_foreach_stop = compiler.expression(v, source) if ( v := v_loop.get("stop", None)) else None
+            v_foreach_limit = compiler.expression(v, source) if ( v := v_loop.get("limit", None)) else None
             v_foreach = ForeachStatement(
                 key = v_foreach_key,
                 value = v_foreach_value,
@@ -105,20 +105,20 @@ class LogicStatement(Evaluator):
             )
 
         v_cases = [
-            Case( _cond = compiler.condition( case["when"], source )[0], _body = compiler.expression( case[ "then" ], source )[0])
+            Case( _cond = compiler.condition( case["when"], source ), _body = compiler.expression( case[ "then" ], source ))
             for case in cases
             ] if (cases := args.get("case", None)) else None
 
-        v_body, _ = compiler.expression(v, source) if ( v := args.get("body", None)) is not None else (None, None)
-        v_default, _ = compiler.expression(v, source) if ( v := args.get("default", None)) is not None else (None, None)
-        v_error, _ = compiler.expression(v, source) if ( v := args.get("error", None)) is not None else (None, None)
+        v_body = compiler.expression(v, source) if ( v := args.get("body", None)) is not None else None
+        v_default = compiler.expression(v, source) if ( v := args.get("default", None)) is not None else None
+        v_error = compiler.expression(v, source) if ( v := args.get("error", None)) is not None else None
         v_transform = None
 
         if ( transform := args.get("transform", None)):
             v_transform = cls.transformers.get(transform, None)
             if not v_transform:
                 raise CompileError(JFTLError(
-                        code="BAD_TRANSFORM", severity="ERROR",
+                        code="BAD_TRANSFORM",
                         message=f"Unknown transformation {transform}",
                 ))
 
@@ -147,7 +147,7 @@ class LogicStatement(Evaluator):
         if shape == "range":
             if foreach.items:
                 return JFTLError(
-                    code="NOT_ITERABLE", severity="ERROR",
+                    code="NOT_ITERABLE",
                     message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
                     )
 
@@ -156,7 +156,7 @@ class LogicStatement(Evaluator):
                 return None
             if not isinstance(items, dict):
                 return JFTLError(
-                    code="NOT_OBJECT", severity="ERROR",
+                    code="NOT_OBJECT",
                     message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
                     )
             do_dict = True
@@ -168,7 +168,7 @@ class LogicStatement(Evaluator):
                 return None
             if not isinstance(items, list):
                 return JFTLError(
-                    code="NOT_ARRAY", severity="ERROR",
+                    code="NOT_ARRAY",
                     message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
                     )
 
@@ -180,27 +180,27 @@ class LogicStatement(Evaluator):
                 return items
             
             return JFTLError(
-                code="NOT_ITERABLE", severity="ERROR",
+                code="NOT_ITERABLE",
                 message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
             )
 
         ix_start = frame.eval_value(foreach.start)
         if ix_start is not None and not isinstance(ix_start, int):
             return JFTLError(
-                    code="BAD_START", severity="ERROR",
+                    code="BAD_START",
                     message=f"foreach 'start' must be an integer value",
                 ) 
         ix_stop = frame.eval_value(foreach.stop)
         if ix_stop is not None and not isinstance(ix_stop, int):
             return JFTLError(
-                    code="BAD_STOP", severity="ERROR",
+                    code="BAD_STOP",
                     message=f"foreach 'stop' must be an integer value",
                 ) 
 
         ix_limit = frame.eval_value(foreach.limit)
         if ix_limit is not None and not isinstance(ix_limit, int):
             return JFTLError(
-                    code="BAD_STOP", severity="ERROR",
+                    code="BAD_STOP",
                     message=f"foreach 'stop' must be an integer value",
                 ) 
 
@@ -228,7 +228,7 @@ class LogicStatement(Evaluator):
         if foreach.shape == "range":
             if stop_index is None:
                 return JFTLError(
-                    code="MISSING_STOP", severity="ERROR",
+                    code="MISSING_STOP",
                     message=f"foreach 'stop' must is required when shape='range'",
                 )
 
@@ -292,7 +292,7 @@ class LogicStatement(Evaluator):
     def _flatten_transform(self, frame: Frame, input: list[list | None] | Any ) -> list | None | JFTLError:
         if not isinstance(input, list):
             return JFTLError(
-                    code="FLATTEN_INPUT", severity="ERROR",
+                    code="FLATTEN_INPUT",
                     message=f"The 'flatten' transform input is array of array, got non-list",
                 )
 
@@ -301,7 +301,7 @@ class LogicStatement(Evaluator):
                 continue
             if not isinstance(item, list):
                 return JFTLError(
-                    code="FLATTEN_ITEM", severity="ERROR",
+                    code="FLATTEN_ITEM",
                     message=f"The 'flatten' transformation input is array of array, got non list items in position {pos}",
                 )
 
@@ -311,7 +311,7 @@ class LogicStatement(Evaluator):
     def _merge_transform(self, frame: Frame, input: list[dict | None] | Any) -> dict | None | JFTLError:
         if not isinstance(input, list):
             return JFTLError(
-                    code="MERGE_INPUT", severity="ERROR",
+                    code="MERGE_INPUT",
                     message=f"The 'merge' transformation input is array of objects, got non-list input",
                 )
 
@@ -320,7 +320,7 @@ class LogicStatement(Evaluator):
                 continue
             if not isinstance(item, dict):
                 return JFTLError(
-                    code="MERGE_ITEM", severity="ERROR",
+                    code="MERGE_ITEM",
                     message=f"The 'merge' transformation input is array of objects, got non list items in position {pos}",
                 )
 
@@ -362,7 +362,7 @@ class LogicStatement(Evaluator):
         for pos, item in enumerate(input):
             if not isinstance(item, list) or len(item) != 2:
                 return JFTLError(
-                    code="FROM_PAIRS_DATA", severity="ERROR",
+                    code="FROM_PAIRS_DATA",
                     message=f"The 'from_pairs' transformation input is array of pairs, got non pair in position {pos} {input}",
                 )
 
@@ -378,7 +378,7 @@ class LogicStatement(Evaluator):
             # Validate key is string.
             if not isinstance(key, str):
                 return JFTLError(
-                    code="FROM_PAIRS_BAD_KEY", severity="ERROR",
+                    code="FROM_PAIRS_BAD_KEY",
                     message=f"Invalid key type {type(item[0])} for missing item in 'from_pairs' pairs position {pos}, {input}",
                 )
 
@@ -392,7 +392,7 @@ class LogicStatement(Evaluator):
             elif isinstance(item, (bool, int, str, float)):
                 item_str = str(item)
             else:
-                return JFTLError(severity = 'ERROR', code='JOIN-STR-TYPE', message=f"Result contained unknown type {type(item)}")
+                return JFTLError(code='JOIN-STR-TYPE', message=f"Result contained unknown type {type(item)}")
 
             result.append(item_str)
         return "".join(result)

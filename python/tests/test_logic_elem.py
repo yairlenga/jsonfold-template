@@ -11,9 +11,11 @@ Adjust the import below if LogicStatement/Case live in a different module.
 Run with:  python -m unittest test_logic_compile.py -v
 """
 from dataclasses import asdict
+from typing import Any
 import unittest
 
-from logic import LogicStatement, Case
+from core import Compiler
+from logic import ForeachStatement, LogicStatement, Case
 
 
 class Tagged:
@@ -31,12 +33,16 @@ class Tagged:
         return f"Tagged({self.kind!r}, {self.raw!r})"
 
 
-class FakeCompiler:
+class FakeCompiler(Compiler):
+
+    def compile(self, source: Any, where: str = "", **kwards) -> None:
+        return None
+
     def expression(self, raw, source):
-        return Tagged("expression", raw), None
+        return Tagged("expression", raw)
 
     def condition(self, raw, source):
-        return Tagged("condition", raw), None
+        return Tagged("condition", raw)
 
 
 
@@ -112,7 +118,7 @@ class TestForeach(unittest.TestCase):
         stmt = compile_logic({
             "foreach": {"key": "idx", "value": "item", "in": "$.items", "if": "$.item.active"}
         })
-        self.assertTrue(stmt._foreach)
+        assert isinstance(stmt._foreach, ForeachStatement)
         self.assertEqual(stmt._foreach.key, "idx")
         self.assertEqual(stmt._foreach.value, "item")
         self.assertEqual(stmt._foreach.items, Tagged("expression", "$.items"))
@@ -120,12 +126,12 @@ class TestForeach(unittest.TestCase):
 
     def test_foreach_without_optional_if(self):
         stmt = compile_logic({"foreach": {"key": "idx", "value": "item", "in": "$.items"}})
-        self.assertTrue(stmt._foreach)
+        assert isinstance(stmt._foreach, ForeachStatement)
         self.assertIsNone(stmt._foreach.cond)
 
     def test_foreach_without_key(self):
         stmt = compile_logic({"foreach": {"value": "item", "in": "$.items"}})
-        self.assertTrue(stmt._foreach)
+        assert isinstance(stmt._foreach, ForeachStatement)
         self.assertIsNone(stmt._foreach.key)
         self.assertEqual(stmt._foreach.value, "item")
 
@@ -143,6 +149,8 @@ class TestCases(unittest.TestCase):
 
     def test_single_case(self):
         stmt = compile_logic({"case": [{"when": "$.a", "then": "$.b"}]})
+        assert isinstance(stmt._cases, list)
+
         self.assertEqual(len(stmt._cases), 1)
         self.assertEqual(stmt._cases[0]._cond, Tagged("condition", "$.a"))
         self.assertEqual(stmt._cases[0]._body, Tagged("expression", "$.b"))
@@ -155,6 +163,8 @@ class TestCases(unittest.TestCase):
                 {"when": "$.c", "then": "$.z"},
             ]
         })
+        assert isinstance(stmt._cases, list)
+
         self.assertEqual(len(stmt._cases), 3)
         self.assertEqual(stmt._cases[0]._cond, Tagged("condition", "$.a"))
         self.assertEqual(stmt._cases[1]._cond, Tagged("condition", "$.b"))
@@ -224,10 +234,11 @@ class TestFullRealisticBlock(unittest.TestCase):
         self.assertEqual(asdict(stmt)["_defines"],
                          [{"_name": "total", "_expr": Tagged("expression", "$.price")}])
         self.assertEqual(stmt._if, Tagged("condition", "$.enabled"))
-        self.assertTrue(stmt._foreach)
+        assert isinstance(stmt._foreach, ForeachStatement)
         self.assertEqual(stmt._foreach.key, "idx")
         self.assertEqual(stmt._foreach.value, "row")
         self.assertEqual(stmt._foreach.items, Tagged("expression", "$.rows"))
+        assert isinstance(stmt._cases, list)
         self.assertEqual(len(stmt._cases), 1)
         self.assertEqual(stmt._body, Tagged("expression", "$.output"))
         self.assertEqual(stmt._transform,LogicStatement._merge_transform)

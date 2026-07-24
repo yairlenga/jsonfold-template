@@ -2,14 +2,14 @@ from __future__ import annotations
 from ast import TypeAlias
 from collections.abc import Mapping
 from types import NoneType
-from typing import Any, ClassVar, Literal, Optional, Sequence, TextIO, cast
+from typing import Any, ClassVar, Iterable, Literal, Optional, Sequence, TextIO, cast
 from pathlib import Path
 from dataclasses import dataclass, field
 import re
 
 from logic import LogicStatement
-from template import Template, JFTLStatus, JFTLError, Engine, Missing
-from core import SKIP_VALUE, CompileError, Condition, Environment, Evaluator, Expression, JFTLConfig, RenderError, Frame, Compiler, JFTLTemplate, StringExpr
+from template import Severity, Template, RenderStatus, JFTLError, Engine, Missing
+from core import SKIP_VALUE, CompileError, Condition, Environment, Evaluator, Expression, JFTLConfig, RenderError, Frame, Compiler, JFTLTemplate, Statement
 from navigation import NAV_RE_STR, NavigationPlugin
 
 from typing import Any, Union
@@ -41,33 +41,45 @@ class JFTLCompiler(Compiler):
     _max_warn = 20
     _max_debug = 0
 
-    def add_error(self, error: JFTLError) -> JFTLError:
+    def _add_error(self, error: JFTLError) -> None:
         keep_msg = False
-        keep_going = True
+        stop_now = False
         match error.severity:
-            case "DEBUG":
+            case Severity.ERROR:
                 self._debug_count += 1
                 keep_msg = self._debug_count < self._max_debug
-            case "INFO":
+            case Severity.INFO:
                 self._info_count += 1
                 keep_msg = self._info_count < self._max_info
-            case "WARNING":
+            case Severity.WARNING:
                 self._warn_count += 1
                 keep_msg = self._warn_count < self._max_warn
+            # Everything else is considered ERROR, including FATAL
             case _:
-#            case "ERROR":
                 self._fail = True
                 self._error_count += 1
                 keep_msg = self._error_count < self._max_errors
-                keep_going = keep_msg
+                stop_now = not keep_msg or error.severity == Severity.FATAL
 
-        if not keep_going:
+        if stop_now:
             self._fail = True
             raise CompileError(error)
         if keep_msg:
             self._errors.append(error)
 
+
+    def record_error(self, error: JFTLError) -> JFTLError:
+        self._add_error(error)
         return error
+
+    def _check_result(self, value: JFTLError | Any) -> Any:
+        if isinstance(value, JFTLError):
+            self.record_error(value)
+        return value
+
+    def _check_results(self, values: Iterable[JFTLError | Any]) -> None:
+        for e in (v for v in values if isinstance(v, JFTLError)):
+            self._add_error(e)
 
     # Call to natigation: 
     _NAV_RE = re.compile('^' + NAV_RE_STR + "$", re.VERBOSE)
@@ -85,11 +97,13 @@ class JFTLCompiler(Compiler):
 
     INTERPOLATE_RE = re.compile(r"\$\$\{|\$\{([^}]*)\}")
 
-    def _compile_str(self, source: Any, where: str = "") -> StringExpr:
+    # Compile single ex
+    def _compile_str(self, source: Any, where: str = "") -> Expression:
 
         m = self._NAV_RE.match(source)
         if m:
-            return self._nav_plugin.parse_nav(m, where)
+            expr  = self._nav_plugin.parse_nav(m, where)
+            return expr
 
         # Consider python expression engines (hardcoded for now)
 
@@ -98,18 +112,13 @@ class JFTLCompiler(Compiler):
             plugin_id = m.group("plugin") or self.config.default_expr_engine
             plugin = self.plugins.get(plugin_id, None)
             if isinstance(plugin, Compiler):
-                expr, _ = plugin.expression(m.group("expr"))
+                expr = plugin.expression(m.group("expr"))
                 return expr
 
-        self.add_error(JFTLError(
-            code="BAD_EXPRESSION", severity="ERROR", where=where, location=None,
+        return JFTLError(
+            code="BAD_EXPRESSION", where=where, location=None,
             message=f"Unknown Expression {source!r}",
-            ))
-
-#        raise CompileError(JFTLError(
-#            code="BAD_EXPRESSION", severity="ERROR", where=where, location=None,
-#            message=f"Unknown Expression {source!r}",
-#            ))
+            )
 
 # --- navigation grammar, mirrors Navigation.md ---
     # Interpolation only supports navigation expressions this round —
@@ -145,7 +154,7 @@ class JFTLCompiler(Compiler):
         r"|\$\{(?P<inner>[^}]*)\}",
     )
 
-    def _compile_interpolated(self, source: str, where) -> StringExpr | str | JFTLError:
+    def _compile_interpolated(self, source: str, where) -> Expression:
         """Splits `source` into literal and expression segments.
 
         Returns None if `source` contains no interpolation at all (caller
@@ -167,7 +176,7 @@ class JFTLCompiler(Compiler):
                 chunk = source[pos:m.start()]
                 if "${" in chunk:
                     return JFTLError(
-                        code="BAD_INTERPOLATION", severity="ERROR", where=where,
+                        code="BAD_INTERPOLATION", where=where,
                         message=f"nested or unclosed interpolation before position {m.start()}",
                     )
                 literal += chunk
@@ -179,12 +188,12 @@ class JFTLCompiler(Compiler):
                 inner = m.group("inner")
                 if "${" in inner:
                     return JFTLError(
-                        code="BAD_INTERPOLATION", severity="ERROR", where=where,
+                        code="BAD_INTERPOLATION", where=where,
                         message=f"nested or unclosed interpolation: {inner!r}",
                     )
                 if not self._NAV_ONLY_RE.match(inner):
                     return JFTLError(
-                        code="BAD_INTERPOLATION", severity="ERROR", where=where,
+                        code="BAD_INTERPOLATION", where=where,
                         message=f"interpolation only supports navigation expressions, "
                                 f"got: {inner!r} (compute complex values via 'set' first)",
                     )
@@ -205,7 +214,7 @@ class JFTLCompiler(Compiler):
             tail = source[pos:]
             if "${" in tail:
                 return JFTLError(
-                    code="BAD_INTERPOLATION", severity="ERROR", where=where,
+                    code="BAD_INTERPOLATION", where=where,
                     message=f"nested or unclosed interpolation at end of string: {tail!r}",
                 )
             segments.append(tail)
@@ -218,10 +227,10 @@ class JFTLCompiler(Compiler):
 
         return StringJoinStatement(segments)
 
-    def _compile(self, source: Any, where: str = "") -> Evaluator | Any :
+    def _compile(self, source: Any, where: str = "") -> Statement :
 
         # Simple Literal returned here
-        if isinstance(source, (int, float, bool, type(None))):
+        if isinstance(source, (int, float, bool, NoneType)):
             return source
                                    
         # Handle Dictionary objects. Use '$' attribute to classify into logic, literal, macro or other.
@@ -233,12 +242,14 @@ class JFTLCompiler(Compiler):
             elif action is False:
                 return LiteralStatement(source)
     
-            entries = {k: self._compile(v, where=f"{where}.{k}") for k, v in source.items()}
+            entries = {k: self._compile(v, where=f"{where}.{k}") for k, v in source.items()}            
+            self._check_results(entries.values())
             return ObjectStatement(entries)
 
 
         if isinstance(source, list):
             items = [self._compile(v, where=f"{where}[{i}]") for i, v in enumerate(source)]
+            self._check_results(items)
             return ArrayStatement(items)
 
         # Scalar Cases - string
@@ -262,29 +273,29 @@ class JFTLCompiler(Compiler):
         
         # Non string source
         return JFTLError(
-            code="BAD_NODE", severity="ERROR", where=where, location=None,
+            code="BAD_NODE", where=where, location=None,
             message=f"Unknown node {source!r}",
             )
    
 
-    def compile(self, source: Any, where: str = "") -> tuple[Any, Optional[JFTLError]]:
-        error = None
+    # Compile is called from plugins that need generic compilation.
+    # It also capture exceptions, and convert them to error
+    def compile(self, source: Any, where: str = "", record: bool = False) -> Statement:
         compiled = None
         try:
             compiled = self._compile(source, where)
-            if isinstance(compiled, JFTLError):
-                error = compiled
-                compiled = None
+            if isinstance(compiled, JFTLError) and record:
+                self._add_error(compiled)
         except CompileError as ex:
             self._fail = True
             self._errors.append(ex.error)
             self._error_count += 1
             error = ex.error
-        return compiled, error
+        return compiled
 
     def compile_root(self, source: Any, where: str = "") -> tuple[Any, bool, list[JFTLError]]:
         self._fail = False
-        compiled, _ = self.compile(source, where)
+        compiled = self.compile(source, where)
 
         return compiled, not self._fail and self._error_count == 0, self._errors
 
@@ -352,7 +363,7 @@ class JFTLRenderer():
             return [ self._materialize(v) for v in value ]
         if isinstance(value, ( NoneType, bool, int, float, str)):
             return value
-        return RenderError(JFTLError(severity = 'ERROR', code='BAD-RESULT', message=f"Result contained unknown type {type(value)}"))
+        return RenderError(JFTLError(code='BAD-RESULT', message=f"Result contained unknown type {type(value)}"))
 
 @dataclass
 class JFTLEngine(Engine):
@@ -373,15 +384,15 @@ class JFTLEngine(Engine):
 
         if not isinstance((datasets := top.get("datasets", {}) or {}) , dict):
             raise CompileError(
-                JFTLError(severity = 'ERROR', code='BAD-DATASET', message=f"Dataset must be dictionary, got {type(datasets)}")
+                JFTLError(code='BAD-DATASET', message=f"Dataset must be dictionary, got {type(datasets)}")
                 )
         return JFTLTemplate(main_entry=compiled, config=config, datasets=datasets, valid=valid ), errors
     
     def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[JFTLError]]: ...
 
-    def _render_top(self, renderer: JFTLRenderer, input: Any, body: Optional[Evaluator], datasets: Optional[dict] = None) -> tuple[Any, JFTLStatus]:
+    def _render_top(self, renderer: JFTLRenderer, input: Any, body: Optional[Evaluator], datasets: Optional[dict] = None) -> tuple[Any, RenderStatus]:
         if not body:
-            return None, JFTLStatus(False, JFTLError(severity='ERROR', code="NO-MAIN", message="Template does not have main"))
+            return None, RenderStatus(False, JFTLError(code="NO-MAIN", message="Template does not have main"))
        
         datasets = { **(renderer.template.datasets), **(self._datasets), **(datasets or {})}
 
@@ -390,17 +401,17 @@ class JFTLEngine(Engine):
         result, render_error = renderer.render(body, frame)
         frame.reset()
         if render_error:
-            status = JFTLStatus(False, render_error)
+            status = RenderStatus(False, render_error)
         else:
-            status = JFTLStatus(ok=True)
+            status = RenderStatus(ok=True)
         return result, status
 
-    def render_raw(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict] = None) -> tuple[Any, JFTLStatus]:
+    def render_raw(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict] = None) -> tuple[Any, RenderStatus]:
         renderer = JFTLRenderer(template)
         result, status = self._render_top(renderer, input, template.main_entry, datasets)       
         return result, status
 
-    def render(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None,  datasets: Optional[dict] = None) -> tuple[Any, JFTLStatus]:
+    def render(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None,  datasets: Optional[dict] = None) -> tuple[Any, RenderStatus]:
         result = None
         try:
             renderer = JFTLRenderer(template)
@@ -408,10 +419,10 @@ class JFTLEngine(Engine):
             result = renderer.materialize(result)
 
         except RenderError as re:
-            status = JFTLStatus(False, re.error)
+            status = RenderStatus(False, re.error)
         return result, status
         
-    def render_to(self, output: TextIO | Path | str, template: Template, input: Any, *, entry: Optional[str]= None) -> JFTLStatus: ...
+    def render_to(self, output: TextIO | Path | str, template: Template, input: Any, *, entry: Optional[str]= None) -> RenderStatus: ...
 
     def materialize(self, result: Any, template: Optional[Template] = None) -> Any:
         if not template:
@@ -473,7 +484,7 @@ class ValueFormatStatement(Evaluator):
         if isinstance(value, Missing):
             return "null"
         if not isinstance(value, (NoneType, bool, int, float, str)):
-            return RenderError(JFTLError(severity = 'ERROR', code='CANT-STRINGIFY', message=f"Result contained unknown type {type(value)}"))
+            return RenderError(JFTLError(code='CANT-STRINGIFY', message=f"Result contained unknown type {type(value)}"))
         formatted = format(value, self.format_spec) if self.format_spec else str(value)
         return formatted
 
@@ -496,7 +507,7 @@ class StringJoinStatement(Evaluator):
                 value = ["false", "true"][value]
 
             if not isinstance(value, str):
-                return RenderError(JFTLError(severity = 'ERROR', code='JOIN-STR-VALUE', message=f"Expecting string got {type(value)}"))
+                return RenderError(JFTLError(code='JOIN-STR-VALUE', message=f"Expecting string got {type(value)}"))
 
             result.append(value)
         return "".join(result)

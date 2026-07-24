@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Optional, Sequence, Union, cast
 
-from core import Compiler, Condition, Evaluator, Expression, Frame, CompileError
+from core import COMPILE_DOC, Compiler, Condition, Evaluator, Expression, Frame, CompileError
 from template import MISSING_VALUE, JFTLError, Missing
 
 @dataclass
@@ -49,7 +49,7 @@ class NavigationStatement(Evaluator):
         for m in _SEGMENT_RE.finditer(path_text):
             if m.start() != pos:
                 raise CompileError(JFTLError(
-                    code="INVALID_PATH", severity="ERROR", where=self.where, location=None,
+                    code="INVALID_PATH", where=self.where, location=None,
                     message=f"unexpected text at position {pos} in {path_text!r}"))
             pos = m.end()
 
@@ -66,7 +66,7 @@ class NavigationStatement(Evaluator):
 
         if pos != len(path_text):
             raise CompileError(JFTLError(
-                code="INVALID_PATH", severity="ERROR", where=self.where, location=None,
+                code="INVALID_PATH",where=self.where, location=None,
                 message=f"trailing unparsed text at position {pos} in {path_text!r}"))
 
         return segments
@@ -148,7 +148,7 @@ class NavigationPlugin(Compiler):
             start = vars
 
         if not start:
-            return JFTLError(severity="ERROR", code="BAD-NAV-SYNTAX", message=f"Unknown start: '${head}", where=where)
+            return JFTLError(code="BAD-NAV-SYNTAX", message=f"Unknown start: '${head}", where=where)
         
         expr = NavigationStatement(segments, start=start, where=where)
         return expr
@@ -157,17 +157,17 @@ class NavigationPlugin(Compiler):
 
         m = self._NAV_RE.match(source)
         if not m:
-            return JFTLError(severity="ERROR", code="BAD-NAV-SYNTAX", message=f"Unknown navigation: '${source}", where=where)
+            return JFTLError(code="BAD-NAV-SYNTAX", message=f"Unknown navigation: '${source}", where=where)
         
         expr = self.parse_nav(m, where)
         if not expr:
-            return JFTLError(severity="ERROR", code="BAD-NAV-EXPR", message=f"Unknown navigation: '${source}", where=where)
+            return JFTLError(code="BAD-NAV-EXPR", message=f"Unknown navigation: '${source}", where=where)
         
         return expr
 
-    def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator | Any, Optional[JFTLError]]:
+    def compile(self, source: Any | str, where: str = "") -> COMPILE_DOC:
         assert isinstance(source, str)
         expr = self.parse(source, where)
-        return (None, expr) if isinstance(expr, JFTLError) else (expr, None)
+        return expr
     
 

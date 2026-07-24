@@ -1,33 +1,29 @@
-from typing import Any, Optional, TextIO, Literal, Union
+from enum import StrEnum
+from typing import Any, Optional, TextIO, Literal, TypeAlias, TypeVar, Union
 from abc import ABC, abstractmethod
 from pathlib import Path
 from dataclasses import dataclass, field
 import json
 
-JSONValue = Union[
-    None, bool, int, float, str,
-    list["JSONValue"],
-    dict[str, "JSONValue"],
-]
-
-class _NoValueType:
-    def __repr__(self) -> str:
-        return "NO_VALUE"
-
-NO_VALUE = _NoValueType()
+class Severity(StrEnum):
+    ERROR = "ERROR"
+    WARNING = "WARNING"
+    INFO = "INFO"
+    DEBUG = "DEBUG"
+    MISSING = "MISSING"
+    FATAL = "FATAL"
 
 @dataclass(kw_only=True)
 class JFTLError():
-    severity: Literal["ERROR", "WARNING", "INFO", "DEBUG"] = "ERROR"
+    severity: Severity = Severity.ERROR
     phase: Optional[Literal["COMPILE", "RENDER"]] = None
     code: str
     message: str
     where: Optional[str] = None                  # Location in the template
     location: Optional[str] = None               # Location in the data tree
     details: Optional[list["JFTLError"]] = None
-    value: Any = NO_VALUE
 
-ERROR_VALUE = JFTLError(severity='ERROR', code='GENERIC-ERROR', message="Template Error")
+ERROR_VALUE = JFTLError(code='GENERIC-ERROR', message="Unspecific Error")
 
 class JFTLException(Exception):
     def __init__(self, error: JFTLError):
@@ -50,15 +46,16 @@ SKIP_VALUE = Missing(code="SKIP", message= "Skip entry sentinel")
 
 
 @dataclass
-class JFTLStatus:
+class RenderStatus:
     ok: bool
     # Most severe error (first error, or first Warning or first info)
-    errors: Optional[JFTLError] = None
+    error: Optional[JFTLError] = None
     # TODO: Add statistics, runtime, ...
 
 class Template(ABC):
     valid: bool
     error: Optional[JFTLError]
+
 
 @dataclass
 class Engine(ABC):
@@ -79,10 +76,10 @@ class Engine(ABC):
         return self.compile(body, *kwargs)
 
     @abstractmethod
-    def render(self, template: Template, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict[str, Any]] = None) -> tuple[Any, JFTLStatus]: ...
+    def render(self, template: Template, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict[str, Any]] = None) -> tuple[Any, RenderStatus]: ...
         
     @abstractmethod
-    def render_to(self, output: TextIO, template: Template, input: Any, **kwargs) -> JFTLStatus:
+    def render_to(self, output: TextIO, template: Template, input: Any, **kwargs) -> RenderStatus:
         result, status = self.render(template, input, **kwargs)
         if not status:
             if isinstance(output, TextIO):
@@ -99,13 +96,13 @@ class Engine(ABC):
     def add_plugin(self, prefix: str, plugin: Any): ...
 
     # Execute a simple template (potentially, not wrapped in macros) as a top level item
-    def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Any, JFTLStatus, list[JFTLError]]:
+    def compile_and_render(self, source: dict | Any, input: Any, *, main_only: bool = False) -> tuple[Any, RenderStatus, list[JFTLError]]:
         template, compile_errors = self.compile(source, main_only = main_only)
         result = None
         if template and template.valid:
             result, render_status = self.render(template, input)
         else:
-            render_status = JFTLStatus(False, JFTLError(code="COMPILE_ERRORS", message="Error compiling template"))
+            render_status = RenderStatus(False, JFTLError(code="COMPILE_ERRORS", message="Error compiling template"))
 
         return result, render_status, compile_errors
 

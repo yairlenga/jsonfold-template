@@ -2,22 +2,33 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from types import NoneType
-from typing import Any, Optional, TextIO, Union
+from typing import Any, Optional, TextIO, TypeAlias, Union
 from abc import ABC, abstractmethod
 
 from template import SKIP_VALUE, Engine, JFTLException, Template, JFTLError, Missing, ERROR_VALUE, MISSING_VALUE
 
-JSON_SCALAR = str | bool | int | float
-JSON_KEY = str
-JSON_CONTAINER = dict[JSON_KEY, "JSON_ANY"] |  list["JSON_ANY"]
-JSON_NULL = NoneType | Missing
-JSON_SIMPLE = JSON_SCALAR | JSON_NULL | JFTLError
-JSON_ANY = JSON_SIMPLE | JSON_CONTAINER
+from typing import TypeAlias, TypeVar
 
-JSON_OBJECT_TYPES = (dict,)
-JSON_ARRAY_TYPES = (list,)
-JSON_CONTAINER_TYPES = (dict, list)
-JSON_ANY_TYPES = (str, bool, int, float, NoneType, Missing, JFTLError, dict, list)  # keep in sync with JSON_ANY
+T = TypeVar("T")
+
+Tree: TypeAlias = (
+    T
+    | list["Tree[T]"]
+    | dict[str, "Tree[T]"]
+)
+
+class _NoValueType:
+    def __repr__(self) -> str:
+        return "NO_VALUE"
+
+NO_VALUE = _NoValueType()
+
+
+JSON_LEAFS : TypeAlias = NoneType | bool | int | float | str
+JSON_DOC = Tree[JSON_LEAFS]
+
+RUNTIME_LEAFS : TypeAlias = JSON_LEAFS | Missing | JFTLError | Missing
+RUNTIME_DOC = Tree[RUNTIME_LEAFS]
 
 # Template Class - represent compiled templates
 
@@ -238,7 +249,7 @@ class Evaluator(ABC):
         if isinstance(result, (NoneType, Missing)):
             if on_null is _RAISE or on_null is _ERROR:
                 error = JFTLError(
-                    severity="ERROR", code="MISSING_VALUE",
+                    code="MISSING_VALUE",
                     where=self._location(context),
                     message="value is missing or null",
                 )
@@ -263,7 +274,7 @@ class Evaluator(ABC):
         if isinstance(result, (NoneType, Missing)):
             if on_null is _RAISE or on_null is _ERROR:
                 error = JFTLError(
-                    severity="ERROR", code="MISSING_VALUE",
+                    code="MISSING_VALUE",
                     where=self._location(context),
                     message="value is missing or null",
                 )
@@ -279,29 +290,38 @@ class Evaluator(ABC):
             return str(result)
 
         error = JFTLError(
-            severity="ERROR", code="NON_SCALAR_VALUE",
+            code="NON_SCALAR_VALUE",
             where=self._location(context),
             message=f"cannot stringify {type(result).__name__} value",
         )
         return self._resolve(error, on_error)
-    
-Condition = Evaluator | JFTLError | JSON_ANY
-StringExpr = Evaluator | JFTLError | JSON_ANY
-Expression = Evaluator | JFTLError | JSON_ANY
+
+COMPILE_LEAFS : TypeAlias = Evaluator | JSON_LEAFS | Missing | JFTLError | Missing
+COMPILE_DOC = Tree[COMPILE_LEAFS]
+
+Expression = COMPILE_DOC | _NoValueType        # Expression returning any value
+Condition = COMPILE_DOC | _NoValueType         # Expression yielding boolean
+Statement = COMPILE_DOC | _NoValueType         # Statement, returning any value
 
 # core.py (or wherever feels like the right shared home — maybe alongside Diagnostic/Error in template.py)
 
 class Compiler(ABC):
 
     @abstractmethod
-    def compile(self, source: Any | str, where: str = "") -> tuple[Evaluator | Any, Optional[JFTLError]]: ...
+    def compile(self, source: JSON_DOC, where: str = "", **kwards) -> COMPILE_DOC: ...
 
-    def condition(self, source: Any | str, where: str = "" ) -> tuple[Condition, Optional[JFTLError]]:
-        return self.compile(source, where)
+    # evaluated via the eval_condition
+    def condition(self, source: JSON_DOC, where: str = "", **kwargs ) -> Condition:
+        return self.compile(source, where, *kwargs)
 
-    def expression(self, source: Any | str, where: str = "") -> tuple[Expression, Optional[JFTLError]]:
-        return self.compile(source, where)
-    
+    # Evaluated via eval
+    def statement(self, source: JSON_DOC, where: str = "", **kwargs) -> Statement:
+        return self.compile(source, where, *kwargs)
+
+    # Evaluated via eval
+    def expression(self, source: str, where: str = "", **kwargs) -> Expression:
+        return self.compile(source, where, *kwargs)
+
 
 class CompileError(Exception):
     """Raised for any defect discovered while compiling a template.
