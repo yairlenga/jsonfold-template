@@ -1,8 +1,6 @@
 from __future__ import annotations
-from ast import TypeAlias
-from collections.abc import Mapping
 from types import NoneType
-from typing import Any, ClassVar, Iterable, Literal, Optional, Sequence, TextIO, cast
+from typing import Any, Optional, TextIO, cast
 from pathlib import Path
 from dataclasses import dataclass, field
 import re

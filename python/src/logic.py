@@ -2,7 +2,7 @@ from types import NoneType
 from typing import Any, Callable, ClassVar, Literal, Optional, cast
 from dataclasses import dataclass, replace
 
-from core import SKIP_VALUE, CompileError, Condition, DocCompiler, Expression, JFTLError, Missing, Frame, Evaluator, StatementCompiler
+from core import RUNTIME_DOC, SKIP_VALUE, CompileError, Condition, DocCompiler, Expression, JFTLError, Missing, Frame, Evaluator, Transformer
 
 """ {
     "$": true,
@@ -49,7 +49,135 @@ class ForeachStatement():
     stop: Optional[Expression] = None
     limit: Optional[Expression] = None
 
-@dataclass
+    # List[list] -> List
+class _FlattenningTransformer(Transformer):
+    def transform(self, input: RUNTIME_DOC ) -> list[RUNTIME_DOC] | JFTLError:
+        if not isinstance(input, list):
+            return JFTLError(
+                    code="FLATTEN_INPUT",
+                    message=f"The 'flatten' transform input is array of array, got non-list",
+                )
+
+        for pos, item in enumerate(input):
+            if item is None:
+                continue
+            if not isinstance(item, list):
+                return JFTLError(
+                    code="FLATTEN_ITEM",
+                    message=f"The 'flatten' transformation input is array of array, got non list items in position {pos}",
+                )
+            
+        valid_input = cast(list[list], input)
+
+        result = [x for sub in valid_input if sub is not None for x in sub]
+        return result
+
+    
+    # list[dict] -> dict
+class _MergeTransformer(Transformer):
+    def transform(self, input: RUNTIME_DOC) -> dict[str, RUNTIME_DOC] | JFTLError:
+        if not isinstance(input, list):
+            return JFTLError(
+                    code="MERGE_INPUT",
+                    message=f"The 'merge' transformation input is array of objects, got non-list input",
+                )
+
+        for pos, item in enumerate(input):
+            if item is None:
+                continue
+            if not isinstance(item, dict):
+                return JFTLError(
+                    code="MERGE_ITEM",
+                    message=f"The 'merge' transformation input is array of objects, got non list items in position {pos}",
+                )
+        valid_input = cast(list[dict], input)
+
+        result = {k: v for d in valid_input if d for k, v in d.items()}
+        return result
+    
+    # dict -> list[Pairs]
+class _ToPairsTransformer(Transformer):
+    def transform(self, input: RUNTIME_DOC) -> list[tuple[str, RUNTIME_DOC]] | JFTLError:
+        if not isinstance(input, dict):
+            return JFTLError(
+                    code="TO_PAIRS_INPUT",
+                    message=f"The 'to_pairs' transformation input is array of objects, got non-list input",
+                )
+
+        return list(input.items())
+    
+
+    # List->List, Dict->Dict
+class _DropMissingTransformer (Transformer):
+    def transform(self,input: RUNTIME_DOC) -> list[RUNTIME_DOC] | dict[str, RUNTIME_DOC] | RUNTIME_DOC :
+        if input is None or isinstance(input, Missing):
+            return None
+        if isinstance(input, dict):
+            return { k:v for k, v in input.items() if not isinstance(v, Missing) }
+        elif isinstance(input, list):
+            return [x for x in input if not isinstance(x, Missing)]
+        else:
+            return JFTLError(
+                    code="DROP_MISSING_INPUT",
+                    message=f"The 'drop_missing' transformation input ",
+                )
+
+        return list(input.items())
+
+
+    # List[Pairs] -> Dict
+class _FromPairsTransformer (Transformer):
+    def transform(self, input: RUNTIME_DOC) -> dict[str, RUNTIME_DOC] | JFTLError :
+        if not isinstance(input, list):
+            return JFTLError(
+                    code="FROM_PAIRS_INPUT",
+                    message=f"The 'from_pairs' transformation input is array of objects, got non-list input",
+                )
+
+        for pos, item in enumerate(input):
+            if not isinstance(item, list) or len(item) != 2:
+                return JFTLError(
+                    code="FROM_PAIRS_DATA",
+                    message=f"The 'from_pairs' transformation input is array of pairs, got non pair in position {pos} {input}",
+                )
+
+            key = item[0]
+            value = item[1]
+
+            # Skiped entries: [ null, null], and [false, null]
+            if value in [None, False] and not key:
+                continue
+            elif isinstance(value, Missing):
+                continue
+
+            # Validate key is string.
+            if not isinstance(key, str):
+                return JFTLError(
+                    code="FROM_PAIRS_BAD_KEY",
+                    message=f"Invalid key type {type(item[0])} for missing item in 'from_pairs' pairs position {pos}, {input}",
+                )
+            
+        valid_input = cast(list[tuple], input)
+
+        return dict(item for item in valid_input if item[0])
+    
+    # List[str] -> Str
+class _JoinStrTransformer(Transformer):
+    def transform(self, input: list[str | None | Missing], sep: str = "") -> str | JFTLError :
+        result = []
+        for item in input:
+            if isinstance(item, (NoneType)):
+                item_str = "null"
+            elif isinstance(item, (bool, int, str, float)):
+                item_str = str(item)
+            else:
+                return JFTLError(code='JOIN-STR-TYPE', message=f"Result contained unknown type {type(item)}")
+
+            result.append(item_str)
+        return "".join(result)
+
+
+@dataclass(slots=True)
 class LogicStatement(Evaluator):
 
     _defines: Optional[list[DefineVar]] = None
@@ -58,11 +186,11 @@ class LogicStatement(Evaluator):
     _cases: Optional[list[Case]] = None
     _body: Optional[Expression] = None
     _foreach: Optional[ForeachStatement] = None
-    _transform: Optional[Callable] = None
+    _transformer: Optional[Transformer] = None
     _default_val: Optional[Expression] = None
     _error_val: Optional[Expression] = None
 
-    transformers: ClassVar[dict[str, Callable]] = {}  # just a type annotation here, no value yet
+    _transformers: ClassVar[dict[str, type[Transformer]]] = {}  # just a type annotation here, no value yet
 
     @classmethod
     def compile_object(cls, compiler: DocCompiler, args: dict[str, Any]):
@@ -112,15 +240,16 @@ class LogicStatement(Evaluator):
         v_body = compiler.expression(v, source) if ( v := args.get("body", None)) is not None else None
         v_default = compiler.expression(v, source) if ( v := args.get("default", None)) is not None else None
         v_error = compiler.expression(v, source) if ( v := args.get("error", None)) is not None else None
-        v_transform = None
+        v_transformer = None
 
         if ( transform := args.get("transform", None)):
-            v_transform = cls.transformers.get(transform, None)
-            if not v_transform:
+            transform_class = cls._transformers.get(transform, None)
+            if not transform_class:
                 raise CompileError(JFTLError(
                         code="BAD_TRANSFORM",
                         message=f"Unknown transformation {transform}",
                 ))
+            v_transformer = transform_class()
 
 
         self = cls(
@@ -132,7 +261,7 @@ class LogicStatement(Evaluator):
             _body = v_body,
             _default_val = v_default,
             _error_val = v_error,
-            _transform = v_transform,
+            _transformer = v_transformer,
         )
         return self
 
@@ -289,113 +418,7 @@ class LogicStatement(Evaluator):
 
         return v_body
     
-    def _flatten_transform(self, frame: Frame, input: list[list | None] | Any ) -> list | None | JFTLError:
-        if not isinstance(input, list):
-            return JFTLError(
-                    code="FLATTEN_INPUT",
-                    message=f"The 'flatten' transform input is array of array, got non-list",
-                )
 
-        for pos, item in enumerate(input):
-            if item is None:
-                continue
-            if not isinstance(item, list):
-                return JFTLError(
-                    code="FLATTEN_ITEM",
-                    message=f"The 'flatten' transformation input is array of array, got non list items in position {pos}",
-                )
-
-        result = [x for sub in input if sub is not None for x in sub]
-        return result
-    
-    def _merge_transform(self, frame: Frame, input: list[dict | None] | Any) -> dict | None | JFTLError:
-        if not isinstance(input, list):
-            return JFTLError(
-                    code="MERGE_INPUT",
-                    message=f"The 'merge' transformation input is array of objects, got non-list input",
-                )
-
-        for pos, item in enumerate(input):
-            if item is None:
-                continue
-            if not isinstance(item, dict):
-                return JFTLError(
-                    code="MERGE_ITEM",
-                    message=f"The 'merge' transformation input is array of objects, got non list items in position {pos}",
-                )
-
-        result = {k: v for d in input if d for k, v in d.items()}
-        return result
-
-    def _to_pairs_transform(self, frame: Frame, input: dict) -> list[tuple[str, Any]] | JFTLError:
-        if not isinstance(input, dict):
-            return JFTLError(
-                    code="TO_PAIRS_INPUT", severity="ERROR",
-                    message=f"The 'to_pairs' transformation input is array of objects, got non-list input",
-                )
-
-        return list(input.items())
-    
-    def _drop_missing_transform(self, frame: Frame, input: dict) -> dict | list | None | JFTLError:
-        if input is None or isinstance(input, Missing):
-            return None
-        if isinstance(input, dict):
-            return { k:v for k, v in input.items() if not isinstance(v, Missing) }
-        elif isinstance(input, list):
-            return [x for x in input if not isinstance(x, Missing)]
-        else:
-            return JFTLError(
-                    code="DROP_MISSING_INPUT", severity="ERROR",
-                    message=f"The 'drop_missing' transformation input ",
-                )
-
-        return list(input.items())
-
-
-    def _from_pairs_transform(self, frame: Frame, input: list[tuple[str, Any]]) -> dict | JFTLError :
-        if not isinstance(input, list):
-            return JFTLError(
-                    code="FROM_PAIRS_INPUT", severity="ERROR",
-                    message=f"The 'from_pairs' transformation input is array of objects, got non-list input",
-                )
-
-        for pos, item in enumerate(input):
-            if not isinstance(item, list) or len(item) != 2:
-                return JFTLError(
-                    code="FROM_PAIRS_DATA",
-                    message=f"The 'from_pairs' transformation input is array of pairs, got non pair in position {pos} {input}",
-                )
-
-            key = item[0]
-            value = item[1]
-
-            # Skiped entries: [ null, null], and [false, null]
-            if value in [None, False] and not key:
-                continue
-            elif isinstance(value, Missing):
-                continue
-
-            # Validate key is string.
-            if not isinstance(key, str):
-                return JFTLError(
-                    code="FROM_PAIRS_BAD_KEY",
-                    message=f"Invalid key type {type(item[0])} for missing item in 'from_pairs' pairs position {pos}, {input}",
-                )
-
-        return dict(item for item in input if item[0])
-    
-    def _join_str_transform(self, frame: Frame, input: list[str | None | Missing], sep: str = "") -> str | JFTLError :
-        result = []
-        for item in input:
-            if isinstance(item, (NoneType)):
-                item_str = "null"
-            elif isinstance(item, (bool, int, str, float)):
-                item_str = str(item)
-            else:
-                return JFTLError(code='JOIN-STR-TYPE', message=f"Result contained unknown type {type(item)}")
-
-            result.append(item_str)
-        return "".join(result)
 
     def eval(self, prev_frame: Frame) -> Any | JFTLError | Missing:
 
@@ -441,8 +464,8 @@ class LogicStatement(Evaluator):
             if isinstance(result, Missing):
                 return new_frame.eval_value(self._default_val)
 
-        if self._transform is not None and result is not None and not isinstance(result, JFTLError):
-            result = self._transform(self, new_frame, result)
+        if not isinstance(result, (NoneType, JFTLError, Missing)) and self._transformer:
+            result = self._transformer.transform(result)
              
         # Error handler
         if isinstance(result, JFTLError):
@@ -453,13 +476,13 @@ class LogicStatement(Evaluator):
     
     @classmethod
     def class_init(cls):
-        cls.transformers = {
-            "flatten": cls._flatten_transform,
-            "merge": cls._merge_transform,
-            "to_pairs": cls._to_pairs_transform,
-            "from_pairs": cls._from_pairs_transform,
-            "drop_missing": cls._drop_missing_transform,
-            "join_str": cls._join_str_transform,
+        cls._transformers = {
+            "flatten": _FlattenningTransformer,
+            "merge": _MergeTransformer,
+            "to_pairs": _ToPairsTransformer,
+            "from_pairs": _FromPairsTransformer,
+            "drop_missing": _DropMissingTransformer,
+            "join_str": _JoinStrTransformer,
         }
 
 LogicStatement.class_init()

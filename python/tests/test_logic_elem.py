@@ -15,7 +15,7 @@ from typing import Any
 import unittest
 
 from core import DocCompiler, StatementCompiler
-from logic import ForeachStatement, LogicStatement, Case
+from logic import _FlattenningTransformer, _MergeTransformer, ForeachStatement, LogicStatement, Case
 
 
 class Tagged:
@@ -209,15 +209,15 @@ class TestTransform(unittest.TestCase):
 
     def test_transform_merge(self):
         stmt = compile_logic({"transform": "merge"})
-        self.assertEqual(stmt._transform, LogicStatement._merge_transform)
+        self.assertIsInstance(stmt._transformer, _MergeTransformer)
 
     def test_transform_flatten(self):
         stmt = compile_logic({"transform": "flatten"})
-        self.assertEqual(stmt._transform, LogicStatement._flatten_transform)
+        self.assertIsInstance(stmt._transformer, _FlattenningTransformer)
 
     def test_missing_transform_is_none(self):
         stmt = compile_logic({})
-        self.assertIsNone(stmt._transform)
+        self.assertIsNone(stmt._transformer)
 
 
 class TestFullRealisticBlock(unittest.TestCase):
@@ -244,7 +244,7 @@ class TestFullRealisticBlock(unittest.TestCase):
         assert isinstance(stmt._cases, list)
         self.assertEqual(len(stmt._cases), 1)
         self.assertEqual(stmt._body, Tagged("expression", "$.output"))
-        self.assertEqual(stmt._transform,LogicStatement._merge_transform)
+        self.assertIsInstance(stmt._transformer, _MergeTransformer)
         self.assertEqual(stmt._error_val, Tagged("expression", "$.onError"))
         self.assertIsNone(stmt._set_current)
         self.assertIsNone(stmt._default_val)

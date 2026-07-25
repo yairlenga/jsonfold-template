@@ -5,7 +5,7 @@ Evaluate Expressions using
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from core import COMPILE_DOC, StatementCompiler, Condition, Evaluator, Expression, Frame
+from core import COMPILE_DOC, StatementCompiler, Evaluator, Frame
 from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes
 
 from template import JFTLError, Missing

@@ -17,7 +17,7 @@ import ast
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, cast
 
-from core import COMPILE_DOC, StatementCompiler, Condition, Evaluator, Expression, Frame, CompileError
+from core import COMPILE_DOC, StatementCompiler, Evaluator, Frame
 from template import JFTLError, Missing, MISSING_VALUE
 
 def _build_env(frame: Frame) -> dict[str, Any]:

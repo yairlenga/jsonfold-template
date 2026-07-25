@@ -5,7 +5,7 @@ from types import NoneType
 from typing import Any, Optional, TextIO, TypeAlias, Union
 from abc import ABC, abstractmethod
 
-from template import SKIP_VALUE, Engine, JFTLException, Template, JFTLError, Missing, ERROR_VALUE, MISSING_VALUE
+from template import SKIP_VALUE, JFTLException, Template, JFTLError, Missing, ERROR_VALUE, MISSING_VALUE
 
 from typing import TypeAlias, TypeVar
 
@@ -27,7 +27,7 @@ NO_VALUE = _NoValueType()
 JSON_LEAFS : TypeAlias = NoneType | bool | int | float | str
 JSON_DOC = Tree[JSON_LEAFS]
 
-RUNTIME_LEAFS : TypeAlias = JSON_LEAFS | Missing | JFTLError | Missing
+RUNTIME_LEAFS : TypeAlias = JSON_LEAFS | Missing | JFTLError
 RUNTIME_DOC = Tree[RUNTIME_LEAFS]
 
 # Template Class - represent compiled templates
@@ -295,6 +295,12 @@ class Evaluator(ABC):
             message=f"cannot stringify {type(result).__name__} value",
         )
         return self._resolve(error, on_error)
+
+class Transformer(ABC):
+
+    @abstractmethod
+    def transform(self, value: RUNTIME_DOC) -> RUNTIME_DOC: ...
+
 
 COMPILE_LEAFS : TypeAlias = Evaluator | JSON_LEAFS | Missing | JFTLError | Missing
 COMPILE_DOC = Tree[COMPILE_LEAFS]

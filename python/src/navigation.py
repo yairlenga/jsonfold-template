@@ -2,9 +2,9 @@
 # runtime.py
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Literal, Optional, Sequence, Union, cast
+from typing import Any, Literal, Union, cast
 
-from core import COMPILE_DOC, StatementCompiler, Condition, Evaluator, Expression, Frame, CompileError
+from core import COMPILE_DOC, Evaluator, Frame, CompileError, StatementCompiler
 from template import MISSING_VALUE, JFTLError, Missing
 
 @dataclass
@@ -72,12 +72,15 @@ class NavigationStatement(Evaluator):
         return segments
 
     def eval(self, frame: Frame) -> Any | JFTLError | Missing:
-        value: Any = frame.current
-        if self._start == "_current":
+        value = None
+        start = self._start
+        if start == "_current":
             value = frame.current
+        elif start == "_frame":
+            value = frame
         elif self._start == "_input":
             value = frame.env.input
-        elif self._start == "_parent.current":
+        elif self._start == "_parent._current":
             value = cast(Frame, frame.parent).current
         else:
             value = frame.lookup_var(self._start)
@@ -125,7 +128,7 @@ class NavigationStatement(Evaluator):
 
 import re
 NAV_RE_STR = r"""
-    (?P<start> \$ | \$\^ | \$< | \$(?P<vars>\w+ ) )
+    (?P<start> \$ | \$\^ | \$< | \$% | \$(?P<vars>\w+ ) )
     (?P<segments> (\[.* | \..* )? )
 """
 class NavigationPlugin(StatementCompiler):
@@ -141,8 +144,10 @@ class NavigationPlugin(StatementCompiler):
             start = "_current"
         elif head == "$^":
             start = "_input"
+        elif head == "$%":
+            start = "_frame"
         elif head == "$<":
-            start = "_parent.current"
+            start = "_parent._current"
         elif (vars := m.group("vars")) != "":
             # Convert $foo.bar to .foo.bar, starting with implied "_.vars"
             start = vars
