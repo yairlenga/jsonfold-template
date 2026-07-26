@@ -234,6 +234,10 @@ class JFTLCompiler(DocCompiler):
 
         return self._compile_simple_str(source, where)
 
+    @staticmethod
+    def _unliteral(x):
+        return x.value if isinstance(x, LiteralStatement) else x
+
     def _compile(self, source: Any, where: str = "") -> Statement :
 
         # Simple Literal returned here
@@ -254,16 +258,35 @@ class JFTLCompiler(DocCompiler):
             elif action is False:
                 return LiteralStatement(source)
     
+            # If the all dict is constant, just use the original
+            if all(isinstance(x, (NoneType, bool, int, float)) for x in source.values()):
+                return LiteralStatement(source)
+
             entries = {k: self._compile(v, where=f"{where}.{k}") for k, v in source.items()}            
             for err in ( e for e in entries.values() if isinstance(e, JFTLNotice)):
                 self._add_error(err)
-            return ObjectStatement(entries)
+
+            # If it's all literals, unwrap and return a new literal.
+            if all(isinstance(x, (NoneType, bool, int, float, str, LiteralStatement)) for x in entries.values()):
+                return LiteralStatement( dict({ k: self._unliteral(v) for k,v in source.items() }) )
+
+            return ObjectStatement(dict(entries))
 
 
         if isinstance(source, list):
+
+            # Unnested tree can be converted to literal quickly
+            if all(isinstance(x, (NoneType, bool, int, float)) for x in source):
+                return LiteralStatement(source)
+
             items = [self._compile(v, where=f"{where}[{i}]") for i, v in enumerate(source)]
             for err in ( e for e in items if isinstance(e, JFTLNotice)):
                 self._add_error(err)
+
+            # If it's all literals, unwrap and return a new literal.
+            if all(isinstance(x, (NoneType, bool, int, float, str, LiteralStatement)) for x in items):
+                return LiteralStatement(list(self._unliteral(x) for x in items))
+
             return ArrayStatement(items)
 
         # Scalar Cases - string
@@ -401,9 +424,9 @@ class JFTLEngine(Engine):
         result, render_error = renderer.render(body, frame)
         frame.reset()
         if render_error:
-            status = RenderStatus(False, render_error)
+            status = RenderStatus(False, render_error, eval_count = env.eval_count)
         else:
-            status = RenderStatus(ok=True)
+            status = RenderStatus(ok=True, eval_count=env.eval_count)
         return result, status
 
     def render_raw(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict] = None) -> tuple[Any, RenderStatus]:

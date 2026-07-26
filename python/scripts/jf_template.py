@@ -161,7 +161,7 @@ def _process_record(args, engine, compiled, record: Any, dest: TextIO, *, input_
         raise ProcessingException(ExitCode.PY_EXCEPTION) from ex
 
     if not status.ok:
-        err = status.error
+        err = status.notice
         msg = f"[{err.severity}] {err.code}: {err.message}" if err else "render failed"
         error(f"{input_label}: {msg}")
         return False, None
@@ -227,7 +227,7 @@ def _process_single_doc(args, engine, compiled, input, input_desc, input_label: 
 
     all_ok, manifest = _process_record(args, engine, compiled, input, dest, input_label=input_label, input_desc=input_desc, output_label=dest_label)
     elapsed = time.perf_counter() - t1
-    out_count = len(manifest) if isinstance(manifest, list) else manifest.get("doc_count", 1)
+    out_count = len(manifest) if isinstance(manifest, list) else manifest.get("doc_count", 1) if manifest else 0
     elapsed = time.perf_counter() - t1
     if args.target:
         if args.split:

@@ -12,7 +12,7 @@
 			"join_str": {
 				"$": true,
 				"body": [ "hello ", "$name", " you won ", "$count", " ", "$prize", ", ", "tax=", "$tax" ],
-				"transform": "join_str"
+				"transform": "concat"
 			},
 			"escape": "Hello ${name}, you won $${count} ${prize}, tax=${tax}",
 			"all-escape": "Hello $${name}, you won $${count} $${prize}, tax=$${tax}"

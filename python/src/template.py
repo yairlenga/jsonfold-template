@@ -52,6 +52,8 @@ class RenderStatus:
     notice: Optional[JFTLNotice] = None
     # TODO: Add statistics, runtime, ...
     error_count: int = 0
+    # Number of evaluation
+    eval_count : int = 0
 
 class Template(ABC):
     valid: bool

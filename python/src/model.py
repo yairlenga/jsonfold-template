@@ -81,6 +81,8 @@ class Environment:
     # Reference to top frame. Set later, as top frame and top environment point to each other.
     top: RuntimeState | None = None
 
+    eval_count = 0
+
 
 @dataclass
 class RuntimeState (Mapping):
@@ -101,8 +103,6 @@ class RuntimeState (Mapping):
     global_frame: Optional[RuntimeState] = None
     # From parent.level + 1, root = 0
     level: int = 0
-    # Number of errors reported against self/childrens
-    error_count : int = 0
 
     # User defined variables in the CURRENT frame    
     vars: dict[str, Any] = field(default_factory=dict)
@@ -126,7 +126,6 @@ class RuntimeState (Mapping):
             return error
         return on
 
-
     def eval_value(
         self,
         stmt : Statement,
@@ -137,6 +136,7 @@ class RuntimeState (Mapping):
         on_unset: Any = _RAISE,
     ) -> RUNTIME_DOC:
         
+        self.env.eval_count += 1
         result = stmt.eval(self) if isinstance(stmt, Evaluator) else cast(RUNTIME_DOC, stmt)
 
         if isinstance(result, JFTLNotice):
@@ -178,6 +178,7 @@ class RuntimeState (Mapping):
         to instead treat a missing/null result as a failure in this
         context. Override for engine-specific truthiness."""
 
+        self.env.eval_count += 1
         result = cond.eval(self) if isinstance(cond, Evaluator) else cond
 
         if isinstance(result, JFTLNotice):
