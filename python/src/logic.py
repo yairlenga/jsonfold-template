@@ -46,7 +46,6 @@ class ForeachStatement():
     index: Optional[str] = None
     items: Optional[Statement] = None
     cond: Optional[Condition] = None
-    shape: Literal["array", "range", "object", None] = None
     start: Optional[Expression] = None
     stop: Optional[Expression] = None
     limit: Optional[Expression] = None
@@ -213,7 +212,6 @@ class LogicStatement(Evaluator):
             v_foreach_key = v_loop.get("key", None)
             v_foreach_value = v_loop.get("value", None)
             v_foreach_index = v_loop.get("index", None)
-            v_foreach_shape = v_loop.get("shape", None)
             # Runtime expressions
             v_foreach_in = compiler.expression(v, source) if ( v:= v_loop.get("in", None)) else None
             v_foreach_cond = compiler.condition(v, source) if ( v := v_loop.get("if", None)) else True
@@ -229,8 +227,12 @@ class LogicStatement(Evaluator):
                 start = v_foreach_start,
                 stop = v_foreach_stop,
                 limit = v_foreach_limit,
-                shape = v_foreach_shape,
             )
+        elif v_loop is not None:
+            compiler.record_notice(JFTLNotice(
+                    code="BAD_FOREACH",
+                    message=f"foreach should be an object, got {type(v_loop)}",
+            ))
 
         v_cases = [
             Case( _cond = compiler.condition( case["when"], source ), _body = compiler.expression( case[ "then" ], source ))
@@ -275,50 +277,6 @@ class LogicStatement(Evaluator):
     def _eval_foreach(self, frame: RuntimeState, body: Expression) -> list[RUNTIME_DOC] | dict[str, RUNTIME_DOC] | JFTLNotice | Missing | None:
         foreach = cast(ForeachStatement, self._foreach)
         items = frame.eval_value(foreach.items) if foreach.items else frame.current
-        loop_iter = None
-        count = None
-        shape = foreach.shape if foreach.shape else "object" if isinstance(items, dict) else "array" if isinstance(items, list) else None
-
-        do_dict = False
-        if shape == "range":
-            if foreach.items:
-                return JFTLNotice(
-                    code="NOT_ITERABLE",
-                    message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
-                    )
-
-        elif shape == "object":
-            if items == None:
-                return None
-            if not isinstance(items, dict):
-                return JFTLNotice(
-                    code="NOT_OBJECT",
-                    message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
-                    )
-            do_dict = True
-            count = len(items)
-            loop_iter = iter(items.items())
-            
-        elif isinstance(items, list):
-            if items == None:
-                return None
-            if not isinstance(items, list):
-                return JFTLNotice(
-                    code="NOT_ARRAY",
-                    message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
-                    )
-
-            count = len(items)
-            loop_iter = enumerate(items)
-
-        else:
-            if items == None or isinstance(items, Missing) or isinstance(items, JFTLNotice):
-                return items
-            
-            return JFTLNotice(
-                code="NOT_ITERABLE",
-                message=f"foreach 'in' expression produced a {type(items).__name__}, which cannot be iterated (expected an array or object)",
-            )
 
         ix_start = frame.eval_value(foreach.start)
         if ix_start is not None and not isinstance(ix_start, int):
@@ -340,8 +298,30 @@ class LogicStatement(Evaluator):
                     message=f"foreach 'stop' must be an integer value",
                 ) 
 
-        # Support negative indexes if count is known.
         start_index = ix_start if ix_start is not None else 0
+        loop_iter = None
+        count = None
+
+        do_dict = False
+        if isinstance(items, list):
+            if items == None:
+                return None
+
+            count = len(items)
+            loop_iter = enumerate(items)
+
+        elif isinstance(items, dict):
+            do_dict = True
+            count = len(items)
+            loop_iter = iter(items.items())
+
+        elif isinstance(items, int) and not isinstance(items, bool):
+            count = items - start_index
+            loop_iter = enumerate(range(start_index, items))
+            ix_stop = ix_stop - start_index if ix_stop else None
+            start_index = 0
+
+        # Support negative indexes if count is known.
         stop_index = ix_stop
         if count is not None:
             # Make sure start_index has value
@@ -361,17 +341,6 @@ class LogicStatement(Evaluator):
         v_index = foreach.index
         dict_result : dict[str, Any]= {}
         list_result = []
-        if foreach.shape == "range":
-            if stop_index is None:
-                return JFTLNotice(
-                    code="MISSING_STOP",
-                    message=f"foreach 'stop' must is required when shape='range'",
-                )
-
-            count = stop_index - start_index
-            loop_iter = enumerate(range(start_index, stop_index))
-            start_index = 0
-            stop_index = None
 
         result = dict_result if do_dict else list_result
         if ix_limit == 0 or not loop_iter:
@@ -424,8 +393,6 @@ class LogicStatement(Evaluator):
                     break
 
         return v_body
-    
-
 
     def eval(self, prev_frame: Frame) -> RUNTIME_DOC:
 

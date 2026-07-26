@@ -2,15 +2,13 @@
     "main": {
         "$": true,
         "foreach": {
-            "shape": "range",
-            "stop": 10,
+            "in": 10,
             "value": "x"
         },
         "body": {
       		"$": true,
             "foreach": {
-                "shape": "range",
-                "stop": 10,
+                "in": 10,
                 "value": "y"
             },
             "body": "$py= x * y"
