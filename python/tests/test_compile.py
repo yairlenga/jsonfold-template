@@ -11,7 +11,7 @@ from engine import JFTLEngine, LiteralStatement, ObjectStatement, ArrayStatement
 
 
 def template_of(source, where = ""):
-    template, _ = JFTLEngine().compile(source, where, main_only=True)
+    template, _ = JFTLEngine().compile(source, where=where, main_only=True)
     return template
 
 def compile(source, where: str = ""):

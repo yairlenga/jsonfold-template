@@ -89,7 +89,7 @@ class Frame (RuntimeState):
         frame._update_current()
         return frame
 
-    def child_state(self, part_path) -> Frame:
+    def child_state(self, name: str) -> Frame:
         child_vars : dict[str, Any] = {
             "_parent" : self,
         }
@@ -98,9 +98,9 @@ class Frame (RuntimeState):
             parent = self,
             level = self.level+1,
             vars = child_vars,
-            part_path = part_path,
+            part_path = name,
             _cache = {},
-            _full_path = self._full_path + " " + part_path
+            _full_path = self._full_path + " " + name
         )
         frame._update_current()
         child_vars["_local"] = child_vars
@@ -121,7 +121,7 @@ class Frame (RuntimeState):
     def __contains__(self, key: object) -> bool:
         return key in self.vars
 
-    def lookup_var(self, name: str, cache_value: bool = False) -> Any:
+    def lookup_var(self, name: str, *, cache_value: bool = False) -> Any:
         """Search this frame, then parent, then parent's parent, ...
         for `name` in `vars`. Caches the result (or MISSING) at every
         frame walked through, so a repeated lookup from the same frame

@@ -5,23 +5,23 @@ Evaluate Expressions using
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from core import Evaluator, Frame
+from core import RUNTIME_DOC, Evaluator, Frame
 from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes
 
 from model import COMPILE_DOC, RuntimeState, StatementCompiler
 from template import JFTLNotice, Missing
 
-@dataclass
+@dataclass(kw_only=True)
 class SimpleEvalEvaluator(Evaluator):
     se: SimpleEval
     source: str
     compiled: Any
 
-    def _build_env(self, frame: Frame) -> dict[str, Any]:
+    def _build_env(self, state: RuntimeState) -> dict[str, Any]:
         """Walk the frame chain, closest scope wins: '_' + locals + parent vars."""
         env: dict[str, Any] = DEFAULT_NAMES.copy()
         chain: list[RuntimeState] = []
-        f: Optional[RuntimeState] = frame
+        f: Optional[RuntimeState] = state
         seen: set[int] = set()
         while f is not None and id(f) not in seen:
             chain.append(f)
@@ -31,13 +31,13 @@ class SimpleEvalEvaluator(Evaluator):
             f = f.parent
         for ancestor in reversed(chain):  # farthest ancestor first, closer scopes overwrite
             env.update(ancestor.vars)
-        env["_"] = frame.current
-        env["_input"] = frame.env.input
+        env["_"] = state.current
+        env["_input"] = state.env.input
         return env
 
-    def eval(self, frame: Frame) -> Any | JFTLNotice | Missing:
+    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
         se = self.se
-        se.names = self._build_env(frame)
+        se.names = self._build_env(state)
         return se.eval(self.source, self.compiled)
     
         # Using Python rules for falsyness. Can still return Missing, Error
@@ -95,4 +95,4 @@ class SimpleEvalPlugin(StatementCompiler):
     def compile_str(self, source: Any | str, where: str = "") -> COMPILE_DOC:
         assert isinstance(source, str)
         compiled = self._se.parse(source)
-        return SimpleEvalEvaluator(self._se, source, compiled=compiled)
+        return SimpleEvalEvaluator(se=self._se, source=source, compiled=compiled)

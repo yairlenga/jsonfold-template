@@ -19,7 +19,7 @@ class JFTLNotice():
     phase: Optional[Literal["COMPILE", "RENDER"]] = None
     code: str
     message: str
-    where: Optional[str] = None                  # Location in the template
+    where: str = ""                              # Location in the template
     location: Optional[str] = None               # Location in the data tree
     details: Optional[list["JFTLNotice"]] = None
 
@@ -57,16 +57,15 @@ class RenderStatus:
 
 class Template(ABC):
     valid: bool
-
+    config_data: dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class Engine(ABC):
     _datasets: dict[str, Any] = field(default_factory=dict)
 
     @abstractmethod
-    def compile(self, source: str | dict, *, main_only: bool = False, **kwargs) -> tuple[Template, list[JFTLNotice]]: ...
+    def compile(self, source: str | dict, *, main_only: bool = False, where: str = "", **kwargs) -> tuple[Template, list[JFTLNotice]]: ...
 
-    @abstractmethod
     def compile_from(self, source: str | Path | TextIO, **kwargs ) -> tuple[Template, list[JFTLNotice]]:
         if isinstance(source, TextIO):
             body = json.load(source)
@@ -78,9 +77,8 @@ class Engine(ABC):
         return self.compile(body, *kwargs)
 
     @abstractmethod
-    def render(self, template: Template, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict[str, Any]] = None) -> tuple[Any, RenderStatus]: ...
+    def render(self, template: Template, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict[str, Any]] = None, **kwargs) -> tuple[Any, RenderStatus]: ...
         
-    @abstractmethod
     def render_to(self, output: TextIO, template: Template, input: Any, **kwargs) -> RenderStatus:
         result, status = self.render(template, input, **kwargs)
         if not status:

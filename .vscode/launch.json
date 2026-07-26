@@ -10,7 +10,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/python/scripts/jf_template.py",
             "console": "integratedTerminal",
-            "args": [ "-v", "--all-plugins", "python/z2.jftl"],
+            "cwd": "${workspaceFolder}/python",
+            "args": [ "-v", "--all-plugins", "data/country10.jftl.json.json" ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
             }
@@ -22,7 +23,7 @@
             "program": "${workspaceFolder}/python/scripts/jf_template.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/tests/basic",
-            "args": [ "-v", "--all-plugins", "from_pairs.jftl.json" ],
+            "args": [ "-v", "--all-plugins", "../basic/multiply.jftl.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
             }
@@ -32,7 +33,7 @@
             "name": "Python: test",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/python/tests/test_pyrun.py",
+            "program": "${workspaceFolder}/python/tests/test_nav_node.py",
             "console": "integratedTerminal",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"

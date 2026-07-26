@@ -223,7 +223,7 @@ class RuntimeState (Mapping):
     @classmethod
     def root_state(cls, env: Environment) -> RuntimeState: ...
 
-    def child_state(self) -> RuntimeState: ...
+    def child_state(self, name: str) -> RuntimeState: ...
     
     def  __getitem__(self, key):
         return self.lookup_var(key)
@@ -258,6 +258,8 @@ class RuntimeState (Mapping):
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
+
+@dataclass
 class Evaluator(ABC):
     where: str = ""
     source_code: Optional[str] = None           # Source code, if known
@@ -269,20 +271,18 @@ class Evaluator(ABC):
     def eval_bool(
         self,
         state: RuntimeState,
-        *,
-        on_null: bool | None = False ,
-    ) -> bool | None :
+    ) -> RUNTIME_DOC :
         """Default: JFTL's strict falsiness — False | null | Missing are
         falsy, everything else truthy. Pass on_null=_RAISE (or _ERROR)
         to instead treat a missing/null result as a failure in this
         context. Override for engine-specific truthiness."""
         result = self.eval(state)
-        return on_null if isinstance(result, (NoneType, Missing)) else True if result else False
+        return None if isinstance(result, (NoneType, Missing)) else True if result else False
 
 class Transformer(ABC):
 
     @abstractmethod
-    def transform(self, value: RUNTIME_DOC) -> RUNTIME_DOC: ...
+    def transform(self, input: RUNTIME_DOC) -> RUNTIME_DOC: ...
 
 
 COMPILE_LEAFS : TypeAlias = Evaluator | JSON_LEAFS | Missing | JFTLNotice | Missing

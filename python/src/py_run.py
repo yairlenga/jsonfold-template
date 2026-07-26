@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Optional, cast
 
 from core import Evaluator, Frame
-from model import COMPILE_DOC, RuntimeState, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_DOC, RuntimeState, StatementCompiler
 from template import JFTLNotice, Missing, MISSING_VALUE
 
 def _build_env(frame: RuntimeState) -> dict[str, Any]:
@@ -40,16 +40,16 @@ def _build_env(frame: RuntimeState) -> dict[str, Any]:
     return env
 
 
-class PyEvalEvaluator(Evaluator ):
+class PyEvalEvaluator(Evaluator):
     """One compiled '$pyrun:' expression."""
 
-    def __init__(self, code: Any, source_text: str, where: Optional[str]):
+    def __init__(self, code: Any, source_text: str, where: str = ""):
         self._code = code
         self._source = source_text
         self._where = where
 
-    def eval(self, frame: Frame) -> Any | JFTLNotice | Missing:
-        env = _build_env(frame)
+    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
+        env = _build_env(state)
         try:
             return eval(self._code, {"__builtins__": __builtins__}, env)
         except Exception as e:
@@ -59,8 +59,8 @@ class PyEvalEvaluator(Evaluator ):
                 message=f"error evaluating {self._source!r}: {e}",
             )
 
-    def eval_bool(self, frame: Frame) -> bool | JFTLNotice | Missing:
-        result = self.eval(frame)
+    def eval_bool(self, state: RuntimeState) -> RUNTIME_DOC:
+        result = self.eval(state)
         if isinstance(result, (JFTLNotice, Missing)):
             return result
         return bool(result)  # native Python truthiness — not JFTL's falsy rule
@@ -72,7 +72,7 @@ class PyEvalPlugin(StatementCompiler):
     template compilation, and returns a PyRunEvaluator."""
 
 
-    def _compile(self, source_text: str, where: Optional[str] = None) -> COMPILE_DOC:
+    def _compile(self, source_text: str, where: str = "") -> COMPILE_DOC:
         try:
             tree = ast.parse(source_text, mode="eval")
         except SyntaxError as e:
@@ -102,16 +102,15 @@ from types import CodeType, FunctionType
 from typing import Any
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PyRunEvaluator(Evaluator):
     func_call: CodeType
     func_def: Callable | Any
     glob_env: dict[str, Any]
-    where: Optional[str] = None
     source: Optional[str] = None
 
-    def eval(self, frame: Frame) -> Any | JFTLNotice | Missing:
-        names = _build_env(frame)
+    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
+        names = _build_env(state)
 
         # Global Object
         g = self.func_def.__globals__
@@ -128,8 +127,8 @@ class PyRunEvaluator(Evaluator):
                 message=f"error evaluating {self.source!r}: {e}",
             )
 
-    def eval_bool(self, frame: Frame) -> bool | JFTLNotice | Missing:
-        result = self.eval(frame)
+    def eval_bool(self, state: RuntimeState) -> bool | JFTLNotice | Missing:
+        result = self.eval(state)
         if isinstance(result, (JFTLNotice, Missing)):
             return result
         return bool(result)  # native Python truthiness — not JFTL's falsy rule
@@ -140,7 +139,7 @@ class PyRunPlugin(StatementCompiler):
     Stateless — compile() is called once per '$pyrun:' expression found during
     template compilation, and returns a PyRunEvaluator."""
 
-    def _compile(self, source_text: str, where: Optional[str] = None) -> PyRunEvaluator:
+    def _compile(self, source_text: str, where:str = "") -> PyRunEvaluator:
         # Parse the user's text as ordinary Python statements.
         filename = where if where else "<pyrun>"
         FUNC_NAME = "pyrun_func"
@@ -203,7 +202,7 @@ class PyRunPlugin(StatementCompiler):
         func_call = compile(FUNC_NAME + "()", filename, "eval")
         eval_globals[FUNC_NAME] = build_locals[FUNC_NAME]
 
-        return PyRunEvaluator(func_call, build_locals.get(FUNC_NAME), eval_globals.copy(), where = where )
+        return PyRunEvaluator(func_call=func_call, func_def=build_locals.get(FUNC_NAME), glob_env=eval_globals.copy(), where = where )
 
         
     def compile_str(self, source: Any | str, where: str = "") -> COMPILE_DOC:

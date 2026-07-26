@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Literal, Union, cast
 
 from core import Evaluator, Frame
-from model import COMPILE_DOC, CompileError, StatementCompiler
+from model import COMPILE_DOC, CompileError, RuntimeState, StatementCompiler
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 @dataclass
@@ -72,19 +72,19 @@ class NavigationStatement(Evaluator):
 
         return segments
 
-    def eval(self, frame: Frame) -> Any | JFTLNotice | Missing:
+    def eval(self, state: RuntimeState) -> Any | JFTLNotice | Missing:
         value = None
         start = self._start
         if start == "_current":
-            value = frame.current
+            value = state.current
         elif start == "_frame":
-            value = frame
+            value = state
         elif self._start == "_input":
-            value = frame.env.input
+            value = state.env.input
         elif self._start == "_parent._current":
-            value = cast(Frame, frame.parent).current
+            value = cast(RuntimeState, state.parent).current
         else:
-            value = frame.lookup_var(self._start)
+            value = state.lookup_var(self._start)
 
         traveled = "_"  # builds up the "location" string as we walk, for diagnostics
 
@@ -107,7 +107,7 @@ class NavigationStatement(Evaluator):
                 traveled += f"[{seg.i}]"
 
             elif isinstance(seg, Var):
-                key = frame.lookup_var(seg.name)
+                key = state.lookup_var(seg.name)
                 if isinstance(key, Missing):
                     return key
                 elif isinstance(key, str) and isinstance(value, dict) and key in value:
@@ -119,12 +119,6 @@ class NavigationStatement(Evaluator):
                 traveled += f".{key}"
 
         return value
-
-    def eval_bool(self, frame: Frame) -> bool | JFTLNotice | Missing:
-        result = self.eval(frame)
-        if isinstance(result, (JFTLNotice, Missing)):
-            return result
-        return result not in (False, None)
 
 
 import re

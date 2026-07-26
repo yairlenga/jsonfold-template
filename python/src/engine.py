@@ -9,7 +9,7 @@ from core import RUNTIME_DOC, Frame, JFTLConfig, JFTLTemplate
 from logic import LogicStatement
 from template import SKIP_VALUE, Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import CompileError, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, RenderError, RuntimeState, Statement, StatementCompiler
+from model import COMPILE_DOC, CompileError, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, RenderError, RuntimeState, Statement, StatementCompiler
 from navigation import NAV_RE_STR, NavigationPlugin
 
 from typing import Any
@@ -88,7 +88,7 @@ class JFTLCompiler(DocCompiler):
     INTERPOLATE_RE = re.compile(r"\$\$\{|\$\{([^}]*)\}")
 
     # Compile single ex
-    def _compile_simple_str(self, source: Any, where: str = "") -> Expression:
+    def _compile_simple_str(self, source: Any, where: str = "") -> COMPILE_DOC:
 
         m = self._NAV_RE.match(source)
         if m:
@@ -144,7 +144,7 @@ class JFTLCompiler(DocCompiler):
         r"|\$\{(?P<inner>[^}]*)\}",
     )
 
-    def _compile_interpolated(self, source: str, where) -> Expression:
+    def _compile_interpolated(self, source: str, where) -> COMPILE_DOC:
         """Splits `source` into literal and expression segments.
 
         Returns None if `source` contains no interpolation at all (caller
@@ -215,9 +215,9 @@ class JFTLCompiler(DocCompiler):
         if all(isinstance(item, str) for item in segments):
             return "".join(segments)
 
-        return StringJoinStatement(segments)
+        return StringJoinStatement(items=segments)
 
-    def _compile_str(self, source: str, where: str = "") -> Statement:
+    def _compile_str(self, source: str, where: str = "") -> COMPILE_DOC:
         # Check if this is potential interpolation:
         if "${" in source:
             interpolated = self._compile_interpolated(source, where)
@@ -238,7 +238,7 @@ class JFTLCompiler(DocCompiler):
     def _unliteral(x):
         return x.value if isinstance(x, LiteralStatement) else x
 
-    def _compile(self, source: Any, where: str = "") -> Statement :
+    def _compile(self, source: Any, where: str = "") -> COMPILE_DOC :
 
         # Simple Literal returned here
         if isinstance(source, (int, float, bool, NoneType)):
@@ -256,11 +256,11 @@ class JFTLCompiler(DocCompiler):
                 return expr
             
             elif action is False:
-                return LiteralStatement(source)
+                return LiteralStatement(value=source)
     
             # If the all dict is constant, just use the original
             if all(isinstance(x, (NoneType, bool, int, float)) for x in source.values()):
-                return LiteralStatement(source)
+                return LiteralStatement(value=source)
 
             entries = {k: self._compile(v, where=f"{where}.{k}") for k, v in source.items()}            
             for err in ( e for e in entries.values() if isinstance(e, JFTLNotice)):
@@ -268,16 +268,16 @@ class JFTLCompiler(DocCompiler):
 
             # If it's all literals, unwrap and return a new literal.
             if all(isinstance(x, (NoneType, bool, int, float, str, LiteralStatement)) for x in entries.values()):
-                return LiteralStatement( dict({ k: self._unliteral(v) for k,v in source.items() }) )
+                return LiteralStatement( value= dict({ k: self._unliteral(v) for k,v in source.items() }) )
 
-            return ObjectStatement(dict(entries))
+            return ObjectStatement(entries=dict(entries))
 
 
         if isinstance(source, list):
 
             # Unnested tree can be converted to literal quickly
             if all(isinstance(x, (NoneType, bool, int, float)) for x in source):
-                return LiteralStatement(source)
+                return LiteralStatement(value=source)
 
             items = [self._compile(v, where=f"{where}[{i}]") for i, v in enumerate(source)]
             for err in ( e for e in items if isinstance(e, JFTLNotice)):
@@ -285,9 +285,9 @@ class JFTLCompiler(DocCompiler):
 
             # If it's all literals, unwrap and return a new literal.
             if all(isinstance(x, (NoneType, bool, int, float, str, LiteralStatement)) for x in items):
-                return LiteralStatement(list(self._unliteral(x) for x in items))
+                return LiteralStatement(value=list(self._unliteral(x) for x in items))
 
-            return ArrayStatement(items)
+            return ArrayStatement(items=items)
 
         # Scalar Cases - string
         if isinstance(source, str):
@@ -301,10 +301,10 @@ class JFTLCompiler(DocCompiler):
    
     # Compile is called from plugins that need generic compilation.
     # It also capture exceptions, and convert them to error
-    def compile_str(self, source: str, where: str = "", record: bool = False) -> Statement:
+    def compile_str(self, source: str, where: str = "") -> COMPILE_DOC:
         return self._compile_str(source, where)
 
-    def compile(self, source: Any, where: str = "", record: bool = False) -> Statement:
+    def compile(self, source: Any, where: str = "", record: bool = False) -> COMPILE_DOC:
         compiled = None
         try:
             compiled = self._compile(source, where)
@@ -327,11 +327,12 @@ class JFTLCompiler(DocCompiler):
    
 @dataclass
 class JFTLRenderer():
-    template: JFTLTemplate
+    template: Template
     _drop_null_attributes: bool = False
 
     def __post_init__(self):
-        self._drop_null_attributes = self.template.config.drop_null_attributes
+        if isinstance(self.template, JFTLTemplate) and (config := self.template.config):
+            self._drop_null_attributes = config.drop_null_attributes
 
     def render(self, source: Any | Evaluator, frame: Frame) -> tuple[Any, Optional[JFTLNotice]]:
         result, error = self._render(source, frame)
@@ -376,7 +377,7 @@ class JFTLRenderer():
         if isinstance(value, (Missing, Frame)):
             return None
         if isinstance(value, dict):
-            drop_nulls = self.template.config.drop_null_attributes
+            drop_nulls = self._drop_null_attributes
             return {
                 k: mv
                 for k, v in value.items()
@@ -397,7 +398,7 @@ class JFTLEngine(Engine):
     def add_plugin(self, prefix: str, plugin: Any) -> None:
         self._plugins[prefix] = plugin
 
-    def compile(self, source: str | dict | list, where: str = "", *, main_only: bool = False) -> tuple[JFTLTemplate, list[JFTLNotice]]:
+    def compile(self, source: str | dict | list, *, main_only: bool = False, where: str = "",  **kwargs) -> tuple[JFTLTemplate, list[JFTLNotice]]:
         top = cast(dict, { "main": source } if main_only else source)
         config = JFTLConfig(**top.get("config", {}))
 
@@ -411,13 +412,12 @@ class JFTLEngine(Engine):
                 )
         return JFTLTemplate(main_entry=compiled, config=config, datasets=datasets, valid=valid ), errors
     
-    def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[JFTLNotice]]: ...
-
     def _render_top(self, renderer: JFTLRenderer, input: Any, body: Optional[Evaluator], datasets: Optional[dict] = None) -> tuple[Any, RenderStatus]:
         if not body:
             return None, RenderStatus(False, JFTLNotice(code="NO-MAIN", message="Template does not have main"))
        
-        datasets = { **(renderer.template.datasets), **(self._datasets), **(datasets or {})}
+        template_datasets = renderer.template.datasets if isinstance(renderer.template, JFTLTemplate) else None
+        datasets = { **(template_datasets or {}), **(self._datasets), **(datasets or {})}
 
         env = Environment(renderer.template, input, datasets=datasets)
         frame = Frame.root_state(env)
@@ -434,19 +434,19 @@ class JFTLEngine(Engine):
         result, status = self._render_top(renderer, input, template.main_entry, datasets)       
         return result, status
 
-    def render(self, template: JFTLTemplate, input: Any, *, entry: Optional[str] = None,  datasets: Optional[dict] = None) -> tuple[Any, RenderStatus]:
+    def render(self, template: Template | JFTLTemplate, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict[str, Any]] = None, **kwargs) -> tuple[Any, RenderStatus]:
+
         result = None
         try:
             renderer = JFTLRenderer(template)
-            result, status = self._render_top(renderer, input, template.main_entry, datasets=datasets)
+            main_entry = None if entry else template.main_entry if isinstance(template, JFTLTemplate) else None
+            result, status = self._render_top(renderer, input, main_entry, datasets=datasets)
             result = renderer.materialize(result)
 
         except RenderError as re:
             status = RenderStatus(False, re.notice)
         return result, status
         
-    def render_to(self, output: TextIO | Path | str, template: Template, input: Any, *, entry: Optional[str]= None) -> RenderStatus: ...
-
     def materialize(self, result: Any, template: Optional[Template] = None) -> Any:
         if not template:
             template = JFTLTemplate(main_entry=None, config=JFTLConfig(), valid=True)
@@ -456,21 +456,21 @@ class JFTLEngine(Engine):
 
            
 
-@dataclass
+@dataclass(kw_only=True)
 class LiteralStatement(Evaluator):
     value: Any
 
-    def eval(self, frame: Frame) -> Any | JFTLNotice | Missing:
+    def eval(self, state: RuntimeState) -> Any | JFTLNotice | Missing:
         return self.value
 
-@dataclass
+@dataclass(kw_only=True)
 class ObjectStatement(Evaluator):
     entries: dict[str, Expression]
 
-    def eval(self, frame: Frame) -> Any | JFTLNotice | Missing:
+    def eval(self, state: RuntimeState) -> Any | JFTLNotice | Missing:
         result = {}
         for key, item in self.entries.items():
-            value = item.eval(frame) if isinstance(item, Evaluator) else item
+            value = item.eval(state) if isinstance(item, Evaluator) else item
             if isinstance(value, JFTLNotice):
                 return value
             if value == SKIP_VALUE:
@@ -479,14 +479,14 @@ class ObjectStatement(Evaluator):
         return result
 
 
-@dataclass
+@dataclass(kw_only=True)
 class ArrayStatement(Evaluator):
     items: list[Expression | Any]
 
-    def eval(self, frame: Frame) -> Any | JFTLNotice | Missing:
+    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
         result = []
         for item in self.items:
-            value = item.eval(frame) if isinstance(item, Evaluator) else item
+            value = item.eval(state) if isinstance(item, Evaluator) else item
             if isinstance(value, JFTLNotice):
                 return value
             elif value == SKIP_VALUE:
@@ -494,7 +494,7 @@ class ArrayStatement(Evaluator):
             result.append(value)
         return result
 
-@dataclass
+@dataclass(kw_only=True)
 class ValueFormatStatement(Evaluator):
     expr: Any
     format_spec: Optional[str]
@@ -511,15 +511,15 @@ class ValueFormatStatement(Evaluator):
         formatted = format(value, self.format_spec) if self.format_spec else str(value)
         return formatted
 
-@dataclass
+@dataclass(kw_only=True)
 class StringJoinStatement(Evaluator):
     items: list[Expression]
     separator: str = ""
 
-    def eval(self, frame: Frame) -> RUNTIME_DOC:
+    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
         result = []
         for item in self.items:
-            value = item.eval(frame) if isinstance(item, Evaluator) else item
+            value = item.eval(state) if isinstance(item, Evaluator) else item
             if isinstance(value, str):
                 pass
             elif isinstance(value, (NoneType, Missing)):

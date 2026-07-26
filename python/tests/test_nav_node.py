@@ -106,7 +106,7 @@ class TestEvalBool(unittest.TestCase):
 
     def test_eval_bool_false_for_missing(self):
         root = make_root({})
-        result = nav(".flag").eval_bool(root)
+        result = nav(".flag").eval(root)
         # eval_bool currently propagates Missing rather than coercing to bool —
         # confirm this is the intended contract (Missing IS falsy, but is not `False`).
         self.assertIsInstance(result, Missing)

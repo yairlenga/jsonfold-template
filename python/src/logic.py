@@ -1,6 +1,6 @@
 from types import NoneType
-from typing import Any, Callable, ClassVar, Literal, Optional, cast
-from dataclasses import dataclass, replace
+from typing import Any, ClassVar, Optional, cast
+from dataclasses import dataclass
 
 from core import RUNTIME_DOC, Frame
 from model import Evaluator, RuntimeState, CompileError, Condition, DocCompiler, Statement, Transformer
@@ -96,17 +96,20 @@ class _MergeTransformer(Transformer):
         result = {k: v for d in valid_input if d for k, v in d.items()}
         return result
     
-    # dict -> list[Pairs]
+    # dict -> list[tuple[str, RUNTIME_DOC]]
 class _ToPairsTransformer(Transformer):
-    def transform(self, input: RUNTIME_DOC) -> list[tuple[str, RUNTIME_DOC]] | JFTLNotice:
+    def _transform(self, input: dict[str, RUNTIME_DOC]) -> list[RUNTIME_DOC]:
+        return [[key, value] for key, value in input.items()]
+    
+    def transform(self, input: RUNTIME_DOC) -> RUNTIME_DOC:
         if not isinstance(input, dict):
             return JFTLNotice(
                     code="TO_PAIRS_INPUT",
                     message=f"The 'to_pairs' transformation input is array of objects, got non-list input",
                 )
 
-        return list(input.items())
-    
+        return self._transform(input)
+
 
     # List->List, Dict->Dict
 class _DropMissingTransformer (Transformer):
@@ -162,7 +165,8 @@ class _FromPairsTransformer (Transformer):
     
     # List[str] -> Str
 class _JoinStrTransformer(Transformer):
-    def transform(self, input: list[str | None | Missing]) -> str | JFTLNotice :
+
+    def _transform(self, input: list[str | None | Missing]) -> str | JFTLNotice :
         result = []
         for item in input:
             if isinstance(item, (NoneType)):
@@ -174,6 +178,9 @@ class _JoinStrTransformer(Transformer):
 
             result.append(item_str)
         return "".join(result)
+
+    def transform(self, input: RUNTIME_DOC) -> RUNTIME_DOC:
+        return self._transform(cast(list[str | None | Missing], input))
 
 
 @dataclass(slots=True)
@@ -384,20 +391,20 @@ class LogicStatement(Evaluator):
 
         return dict_result if do_dict else list_result
         
-    def _choose_body(self, frame: Frame) -> Statement | None:
+    def _choose_body(self, state: RuntimeState) -> Statement | None:
         v_body = self._body
         if (cases := self._cases):
             for case in cases:
-                if frame.eval_bool(case._cond):
+                if state.eval_bool(case._cond):
                     v_body = case._body
                     break
 
         return v_body
 
-    def eval(self, prev_frame: Frame) -> RUNTIME_DOC:
+    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
 
         # Create a new frame to use
-        new_frame = prev_frame.child_state("logic")
+        new_frame = state.child_state("logic")
         new_vars = new_frame.vars
         # Build local vars, inside the new frame.
         if (set_vars := self._defines):
