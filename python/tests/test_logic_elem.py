@@ -46,6 +46,11 @@ class FakeCompiler(DocCompiler):
 
     def condition(self, raw, source):
         return Tagged("condition", raw)
+    
+    def statement(self, raw, source):
+        if isinstance(raw, str):
+            return self.expression(raw, source)
+        return Tagged("statement", raw)
 
 
 
@@ -125,7 +130,7 @@ class TestForeach(unittest.TestCase):
         self.assertEqual(stmt._foreach.key, "idx")
         self.assertEqual(stmt._foreach.value, "item")
         self.assertEqual(stmt._foreach.items, Tagged("expression", "$.items"))
-        self.assertEqual(stmt._foreach.cond, Tagged("condition", "$.item.active"))
+        self.assertEqual(stmt._foreach.cond, Tagged("expression", "$.item.active"))
 
     def test_foreach_without_optional_if(self):
         stmt = compile_logic({"foreach": {"key": "idx", "value": "item", "in": "$.items"}})

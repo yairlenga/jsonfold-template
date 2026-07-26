@@ -7,7 +7,7 @@ Run with:  python -m unittest test_compile.py -v
 import unittest
 
 from navigation import NavigationStatement
-from engine import JFTLEngine, ObjectStatement, ArrayStatement
+from engine import JFTLEngine, LiteralStatement, ObjectStatement, ArrayStatement
 
 
 def template_of(source, where = ""):
@@ -74,15 +74,15 @@ class TestObjectStatements(unittest.TestCase):
 
     def test_empty_dict(self):
         stmt = compile({})
-        assert isinstance(stmt, ObjectStatement)
-        self.assertEqual(stmt.entries, {})
+        assert isinstance(stmt, LiteralStatement)
+        self.assertEqual(stmt.value, {})
 
     def test_flat_dict_keys_compiled(self):
         stmt = compile({"a": "x", "b": 1})
-        assert isinstance(stmt, ObjectStatement)
-        self.assertEqual(set(stmt.entries.keys()), {"a", "b"})
-        self.assertIsInstance(stmt.entries["a"], str)
-        self.assertIsInstance(stmt.entries["b"], int)
+        assert isinstance(stmt, LiteralStatement)
+        self.assertEqual(set(stmt.value.keys()), {"a", "b"})
+        self.assertIsInstance(stmt.value["a"], str)
+        self.assertIsInstance(stmt.value["b"], int)
 
     def test_dict_value_with_path_expression(self):
         stmt = compile({"name": "$.user.name"})
@@ -112,8 +112,8 @@ class TestArrayStatements(unittest.TestCase):
 
     def test_empty_list(self):
         stmt = compile([])
-        assert isinstance(stmt, ArrayStatement)
-        self.assertEqual(stmt.items, [])
+        assert isinstance(stmt, LiteralStatement)
+        self.assertEqual(stmt.value, [])
 
     def test_flat_list(self):
         stmt = compile([1, "x", "$.y"])
