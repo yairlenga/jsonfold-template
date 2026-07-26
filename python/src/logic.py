@@ -3,7 +3,7 @@ from typing import Any, Callable, ClassVar, Literal, Optional, cast
 from dataclasses import dataclass, replace
 
 from core import RUNTIME_DOC, Frame
-from model import Evaluator, RuntimeState, CompileError, Condition, DocCompiler, Expression, Statement, Transformer
+from model import Evaluator, RuntimeState, CompileError, Condition, DocCompiler, Statement, Transformer
 from template import SKIP_VALUE, JFTLNotice, Missing
 
 """ {
@@ -25,19 +25,19 @@ from template import SKIP_VALUE, JFTLNotice, Missing
         { "when": "COND-2", "then": "EXPR-2" },
     ],
     "body": "EXPR",
-    "transform": "flatten" | "merge" | "to_pairs" | "from_pairs" | "drop_missing" | "join_str" | None,
+    "transform": "flatten" | "merge" | "to_pairs" | "from_pairs" | "drop_missing" | "concat" | None,
     "error": "EXPR",
 } """
 
 @dataclass
 class Case:
     _cond: Condition
-    _body: Expression
+    _body: Statement
 
 @dataclass
 class DefineVar:
     _name: str
-    _expr: Expression
+    _expr: Statement
 
 @dataclass
 class ForeachStatement():
@@ -46,9 +46,9 @@ class ForeachStatement():
     index: Optional[str] = None
     items: Optional[Statement] = None
     cond: Optional[Condition] = None
-    start: Optional[Expression] = None
-    stop: Optional[Expression] = None
-    limit: Optional[Expression] = None
+    start: Optional[Statement] = None
+    stop: Optional[Statement] = None
+    limit: Optional[Statement] = None
 
     # List[list] -> List
 class _FlattenningTransformer(Transformer):
@@ -181,13 +181,13 @@ class LogicStatement(Evaluator):
 
     _defines: Optional[list[DefineVar]] = None
     _if: Optional[Condition] = None
-    _set_current: Optional[Expression] = None
+    _set_current: Optional[Statement] = None
     _cases: Optional[list[Case]] = None
-    _body: Optional[Expression] = None
+    _body: Optional[Statement] = None
     _foreach: Optional[ForeachStatement] = None
     _transformer: Optional[Transformer] = None
-    _default_val: Optional[Expression] = None
-    _error_val: Optional[Expression] = None
+    _default_val: Optional[Statement] = None
+    _error_val: Optional[Statement] = None
 
     _transformers: ClassVar[dict[str, type[Transformer]]] = {}  # just a type annotation here, no value yet
 
@@ -196,13 +196,13 @@ class LogicStatement(Evaluator):
 
         source = ""
         v_defines = [
-            DefineVar(_name = name, _expr = compiler.expression(expr, source))
+            DefineVar(_name = name, _expr = compiler.statement(expr, source))
             for name, expr in v.items()
             ] if ( v := args.get("set", None)) else None
 
         v_if = compiler.condition(v, source) if (v := args.get("if", True)) else False
 
-        v_data = compiler.expression(v, source) if ( v:= args.get("data", None)) else None
+        v_data = compiler.statement(v, source) if ( v:= args.get("data", None)) else None
         
         v_loop = args.get("foreach", None)
         v_foreach = None
@@ -213,11 +213,11 @@ class LogicStatement(Evaluator):
             v_foreach_value = v_loop.get("value", None)
             v_foreach_index = v_loop.get("index", None)
             # Runtime expressions
-            v_foreach_in = compiler.expression(v, source) if ( v:= v_loop.get("in", None)) else None
-            v_foreach_cond = compiler.condition(v, source) if ( v := v_loop.get("if", None)) else True
-            v_foreach_start = compiler.expression(v, source) if ( v := v_loop.get("start", None)) else None
-            v_foreach_stop = compiler.expression(v, source) if ( v := v_loop.get("stop", None)) else None
-            v_foreach_limit = compiler.expression(v, source) if ( v := v_loop.get("limit", None)) else None
+            v_foreach_in = compiler.statement(v, source) if ( v:= v_loop.get("in", None)) else None
+            v_foreach_cond = compiler.statement(v, source) if ( v := v_loop.get("if", None)) else True
+            v_foreach_start = compiler.statement(v, source) if ( v := v_loop.get("start", None)) else None
+            v_foreach_stop = compiler.statement(v, source) if ( v := v_loop.get("stop", None)) else None
+            v_foreach_limit = compiler.statement(v, source) if ( v := v_loop.get("limit", None)) else None
             v_foreach = ForeachStatement(
                 key = v_foreach_key,
                 value = v_foreach_value,
@@ -235,13 +235,13 @@ class LogicStatement(Evaluator):
             ))
 
         v_cases = [
-            Case( _cond = compiler.condition( case["when"], source ), _body = compiler.expression( case[ "then" ], source ))
+            Case( _cond = compiler.condition( case["when"], source ), _body = compiler.statement( case[ "then" ], source ))
             for case in cases
             ] if (cases := args.get("case", None)) else None
 
-        v_body = compiler.expression(v, source) if ( v := args.get("body", None)) is not None else None
-        v_default = compiler.expression(v, source) if ( v := args.get("default", None)) is not None else None
-        v_error = compiler.expression(v, source) if ( v := args.get("error", None)) is not None else None
+        v_body = compiler.statement(v, source) if ( v := args.get("body", None)) is not None else None
+        v_default = compiler.statement(v, source) if ( v := args.get("default", None)) is not None else None
+        v_error = compiler.statement(v, source) if ( v := args.get("error", None)) is not None else None
 
         v_transformer = None
         if ( transform := args.get("transform", None)):
@@ -274,7 +274,7 @@ class LogicStatement(Evaluator):
         )
         return self
 
-    def _eval_foreach(self, frame: RuntimeState, body: Expression) -> list[RUNTIME_DOC] | dict[str, RUNTIME_DOC] | JFTLNotice | Missing | None:
+    def _eval_foreach(self, frame: RuntimeState, body: Statement) -> list[RUNTIME_DOC] | dict[str, RUNTIME_DOC] | JFTLNotice | Missing | None:
         foreach = cast(ForeachStatement, self._foreach)
         items = frame.eval_value(foreach.items) if foreach.items else frame.current
 
@@ -384,7 +384,7 @@ class LogicStatement(Evaluator):
 
         return dict_result if do_dict else list_result
         
-    def _choose_body(self, frame: Frame) -> Expression | None:
+    def _choose_body(self, frame: Frame) -> Statement | None:
         v_body = self._body
         if (cases := self._cases):
             for case in cases:
@@ -456,7 +456,7 @@ class LogicStatement(Evaluator):
             "to_pairs": _ToPairsTransformer,
             "from_pairs": _FromPairsTransformer,
             "drop_missing": _DropMissingTransformer,
-            "join_str": _JoinStrTransformer,
+            "concat": _JoinStrTransformer,
         }
 
 LogicStatement.class_init()
