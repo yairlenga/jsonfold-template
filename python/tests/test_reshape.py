@@ -20,11 +20,12 @@ constants at every level.
 Run with:  python -m unittest test_reshape.py -v
 """
 import json
-from typing import cast
+from typing import Any, cast
 import unittest
 
 from core import Frame, Environment
 from engine import JFTLEngine
+from model import _NULL_TEMPLATE
 
 
 # ---------------------------------------------------------------------------
@@ -141,8 +142,8 @@ EXPECTED_OUTPUT = {
 
 def make_root(current):
     """Root Frame: self-referencing parent, per the locked design."""
-    env = Environment(template=None, input=current, to=None, top=None)
-    root = Frame(env=env, current=current, parent=None, level=0)
+    env = Environment(template=_NULL_TEMPLATE, input=current, to=None, top=None)
+    root = Frame(env=env, current=current, parent=None, level=0, part_path="root")
     root.parent = root
     env.top = root
     return root
@@ -192,14 +193,16 @@ class TestReshape(unittest.TestCase):
         check_provenance(self.result)
 
     def test_summary_mixes_input_and_template_values(self):
-        summary = self.result["summary"]
+        assert(isinstance(self.result, dict))
+        summary : Any = self.result["summary"]
         self.assertEqual(summary["label"], "_summary_label")     # template
         self.assertEqual(summary["firstTag"], "@tag1")            # input
         self.assertEqual(summary["appleCount"], 3)                # input, positive
         self.assertEqual(summary["bonus"], -10)                   # template, negative
 
     def test_array_of_objects_reshaped_correctly(self):
-        items = self.result["itemsReshaped"]
+        assert(isinstance(self.result, dict))
+        items : Any = self.result["itemsReshaped"]
         self.assertEqual(len(items), 2)
         self.assertEqual(items[0]["itemName"], "@itemA")
         self.assertEqual(items[0]["adjustment"], -1)
@@ -207,16 +210,19 @@ class TestReshape(unittest.TestCase):
         self.assertEqual(items[1]["note"], "_note_static_b")
 
     def test_object_of_arrays_reshaped_with_appended_constant(self):
-        groups = self.result["groupsReshaped"]
+        assert(isinstance(self.result, dict))
+        groups : Any = self.result["groupsReshaped"]
         self.assertEqual(groups["fruitList"], ["@apple", "@banana", "_extra_fruit"])
         self.assertEqual(groups["vegList"], ["@carrot", "_extra_veg"])
 
     def test_array_of_arrays_navigation(self):
         # matrix[1][0] -> second row, first column -> 3
+        assert(isinstance(self.result, dict))
         self.assertEqual(self.result["matrixCell"], 3)
 
     def test_nested_object_of_objects(self):
-        owner_info = self.result["ownerInfo"]
+        assert(isinstance(self.result, dict))
+        owner_info : Any = self.result["ownerInfo"]
         self.assertEqual(owner_info["owner"], "@ownerName")
         self.assertEqual(owner_info["id"], 42)
         self.assertEqual(owner_info["flag"], "_flagged")

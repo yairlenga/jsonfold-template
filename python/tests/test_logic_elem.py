@@ -14,8 +14,8 @@ from dataclasses import asdict
 from typing import Any
 import unittest
 
-from core import DocCompiler, StatementCompiler
-from logic import _FlattenningTransformer, _MergeTransformer, ForeachStatement, LogicStatement, Case
+from model import DocCompiler
+from logic import _FlattenningTransformer, _MergeTransformer, ForeachStatement, LogicStatement
 
 
 class Tagged:
@@ -58,7 +58,7 @@ class TestEmptyInput(unittest.TestCase):
     def test_empty_dict_all_fields_none(self):
         stmt = compile_logic({})
         self.assertIsNone(stmt._defines)
-        self.assertIsNone(stmt._if)
+        self.assertEqual(stmt._if, Tagged("condition", True))
         self.assertIsNone(stmt._set_current)
         self.assertIsNone(stmt._cases)
         self.assertFalse(stmt._foreach)
@@ -101,7 +101,7 @@ class TestIf(unittest.TestCase):
 
     def test_missing_if_is_none(self):
         stmt = compile_logic({})
-        self.assertIsNone(stmt._if)
+        self.assertEqual(stmt._if, Tagged("condition", True))
 
 
 class TestData(unittest.TestCase):
@@ -130,7 +130,7 @@ class TestForeach(unittest.TestCase):
     def test_foreach_without_optional_if(self):
         stmt = compile_logic({"foreach": {"key": "idx", "value": "item", "in": "$.items"}})
         assert isinstance(stmt._foreach, ForeachStatement)
-        self.assertIsNone(stmt._foreach.cond)
+        self.assertTrue(stmt._foreach.cond)
 
     def test_foreach_without_key(self):
         stmt = compile_logic({"foreach": {"value": "item", "in": "$.items"}})

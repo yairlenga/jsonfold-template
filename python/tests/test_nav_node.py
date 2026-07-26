@@ -13,24 +13,25 @@ Assumes the bug fixes discussed:
 """
 import unittest
 
-from core import Frame, Environment, CompileError
+from core import Frame, Environment
+from model import _NULL_TEMPLATE, CompileError
 from navigation import NavigationStatement
-from template import JFTLError, Missing
+from template import Missing
 
 
 def make_root(current):
     """Build a root Frame: self-referencing parent, per the locked design."""
-    env = Environment(template=None, input=current, to=None, top=None)
-    root = Frame(env=env, current=current, parent=None, level=0)
+    env = Environment(template=_NULL_TEMPLATE, input=current, to=None, top=None)
+    root = Frame(env=env, current=current, parent=None, level=0, part_path="root")
     env.top = root
     return root
 
 
 def make_child(parent: Frame, current):
-    return Frame(env=parent.env, current=current, parent=parent, level=parent.level + 1)
+    return Frame(env=parent.env, current=current, parent=parent, level=parent.level + 1, part_path="child")
 
 
-def nav(text: str, where=None) -> NavigationStatement:
+def nav(text: str, where="nav") -> NavigationStatement:
     return NavigationStatement(text, where=where)
 
 

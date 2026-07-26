@@ -5,10 +5,11 @@ Evaluate Expressions using
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from core import COMPILE_DOC, StatementCompiler, Evaluator, Frame
+from core import Evaluator, Frame
 from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes
 
-from template import JFTLError, Missing
+from model import COMPILE_DOC, RuntimeState, StatementCompiler
+from template import JFTLNotice, Missing
 
 @dataclass
 class SimpleEvalEvaluator(Evaluator):
@@ -19,8 +20,8 @@ class SimpleEvalEvaluator(Evaluator):
     def _build_env(self, frame: Frame) -> dict[str, Any]:
         """Walk the frame chain, closest scope wins: '_' + locals + parent vars."""
         env: dict[str, Any] = DEFAULT_NAMES.copy()
-        chain: list[Frame] = []
-        f: Optional[Frame] = frame
+        chain: list[RuntimeState] = []
+        f: Optional[RuntimeState] = frame
         seen: set[int] = set()
         while f is not None and id(f) not in seen:
             chain.append(f)
@@ -34,15 +35,15 @@ class SimpleEvalEvaluator(Evaluator):
         env["_input"] = frame.env.input
         return env
 
-    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
+    def eval(self, frame: Frame) -> Any | JFTLNotice | Missing:
         se = self.se
         se.names = self._build_env(frame)
         return se.eval(self.source, self.compiled)
     
         # Using Python rules for falsyness. Can still return Missing, Error
-    def eval_cond(self, frame: Frame) -> Any | JFTLError | Missing:
+    def eval_cond(self, frame: Frame) -> Any | JFTLNotice | Missing:
         result = self.se.eval(self.source, previously_parsed=self.compiled,)
-        if isinstance(result, (Missing, JFTLError)):
+        if isinstance(result, (Missing, JFTLNotice)):
             return result
         return bool(result)
    

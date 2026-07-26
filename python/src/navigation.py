@@ -4,8 +4,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Union, cast
 
-from core import COMPILE_DOC, Evaluator, Frame, CompileError, StatementCompiler
-from template import MISSING_VALUE, JFTLError, Missing
+from core import Evaluator, Frame
+from model import COMPILE_DOC, CompileError, StatementCompiler
+from template import MISSING_VALUE, JFTLNotice, Missing
 
 @dataclass
 class Key:
@@ -48,7 +49,7 @@ class NavigationStatement(Evaluator):
 
         for m in _SEGMENT_RE.finditer(path_text):
             if m.start() != pos:
-                raise CompileError(JFTLError(
+                raise CompileError(JFTLNotice(
                     code="INVALID_PATH", where=self.where, location=None,
                     message=f"unexpected text at position {pos} in {path_text!r}"))
             pos = m.end()
@@ -65,13 +66,13 @@ class NavigationStatement(Evaluator):
                 segments.append(Var(m.group("var")))
 
         if pos != len(path_text):
-            raise CompileError(JFTLError(
+            raise CompileError(JFTLNotice(
                 code="INVALID_PATH",where=self.where, location=None,
                 message=f"trailing unparsed text at position {pos} in {path_text!r}"))
 
         return segments
 
-    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
+    def eval(self, frame: Frame) -> Any | JFTLNotice | Missing:
         value = None
         start = self._start
         if start == "_current":
@@ -88,7 +89,7 @@ class NavigationStatement(Evaluator):
         traveled = "_"  # builds up the "location" string as we walk, for diagnostics
 
         for seg in self._segments:
-            if isinstance(value, (JFTLError, Missing)):
+            if isinstance(value, (JFTLNotice, Missing)):
                 return value  # already failed upstream — propagate, stop walking
 
             if isinstance(seg, Key):
@@ -119,9 +120,9 @@ class NavigationStatement(Evaluator):
 
         return value
 
-    def eval_bool(self, frame: Frame) -> bool | JFTLError | Missing:
+    def eval_bool(self, frame: Frame) -> bool | JFTLNotice | Missing:
         result = self.eval(frame)
-        if isinstance(result, (JFTLError, Missing)):
+        if isinstance(result, (JFTLNotice, Missing)):
             return result
         return result not in (False, None)
 
@@ -135,7 +136,7 @@ class NavigationPlugin(StatementCompiler):
 
     _NAV_RE = re.compile("^" + NAV_RE_STR + "$", re.VERBOSE)
 
-    def parse_nav(self, m: re.Match[str], where) -> NavigationStatement | JFTLError:
+    def parse_nav(self, m: re.Match[str], where) -> NavigationStatement | JFTLNotice:
 
         start = None
         head = m.group("start")
@@ -153,7 +154,7 @@ class NavigationPlugin(StatementCompiler):
             start = vars
 
         if not start:
-            return JFTLError(code="BAD-NAV-SYNTAX", message=f"Unknown start: '${head}", where=where)
+            return JFTLNotice(code="BAD-NAV-SYNTAX", message=f"Unknown start: '${head}", where=where)
         
         expr = NavigationStatement(segments, start=start, where=where)
         return expr
@@ -162,11 +163,11 @@ class NavigationPlugin(StatementCompiler):
 
         m = self._NAV_RE.match(source)
         if not m:
-            return JFTLError(code="BAD-NAV-SYNTAX", message=f"Unknown navigation: '${source}", where=where)
+            return JFTLNotice(code="BAD-NAV-SYNTAX", message=f"Unknown navigation: '${source}", where=where)
         
         expr = self.parse_nav(m, where)
         if not expr:
-            return JFTLError(code="BAD-NAV-EXPR", message=f"Unknown navigation: '${source}", where=where)
+            return JFTLNotice(code="BAD-NAV-EXPR", message=f"Unknown navigation: '${source}", where=where)
         
         return expr
 

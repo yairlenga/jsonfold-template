@@ -20,6 +20,7 @@ import unittest
 
 from core import Frame, Environment, JFTLTemplate
 from engine import JFTLEngine
+from model import _NULL_TEMPLATE
 
 
 # ---------------------------------------------------------------------------
@@ -65,8 +66,8 @@ INPUT_DOCUMENT = {
 
 def make_root(current):
     """Root Frame: self-referencing parent, per the locked design."""
-    env = Environment(template=None, input=current, to=None, top=None)
-    root = Frame(env=env, current=current, parent=None, level=0)
+    env = Environment(template=_NULL_TEMPLATE, input=current, to=None, top=None)
+    root = Frame(env=env, current=current, parent=None, level=0, part_path="root")
     root.parent = root
     env.top = root
     return root
@@ -79,7 +80,8 @@ def extract(path_expr: str):
     compiled, _ = JFTLEngine().compile(template)
     stmt = cast(JFTLTemplate, compiled).main_entry
     frame = make_root(INPUT_DOCUMENT)
-    result = stmt.eval(frame)
+    result = stmt.eval(frame) if stmt else None
+    assert(isinstance(result, dict))
     return result["result"]
 
 

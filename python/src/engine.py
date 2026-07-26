@@ -5,12 +5,14 @@ from pathlib import Path
 from dataclasses import dataclass, field
 import re
 
+from core import RUNTIME_DOC, Frame, JFTLConfig, JFTLTemplate
 from logic import LogicStatement
-from template import Severity, Template, RenderStatus, JFTLError, Engine, Missing
-from core import SKIP_VALUE, CompileError, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, RenderError, Frame, StatementCompiler, JFTLTemplate, Statement
+from template import SKIP_VALUE, Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
+
+from model import CompileError, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, RenderError, RuntimeState, Statement, StatementCompiler
 from navigation import NAV_RE_STR, NavigationPlugin
 
-from typing import Any, Union
+from typing import Any
 
 # --- Flat version (Any for container contents — simpler, less precise) ---
 
@@ -28,7 +30,7 @@ class JFTLCompiler(DocCompiler):
 
     # List of errors so far
     _fail: bool = False
-    _errors: list[JFTLError] = field(default_factory=list)
+    _errors: list[JFTLNotice] = field(default_factory=list)
     # Set when errors contain have severity of ERROR, or higher
     _info_count = 0
     _error_count = 0
@@ -39,7 +41,7 @@ class JFTLCompiler(DocCompiler):
     _max_warn = 20
     _max_debug = 0
 
-    def _add_error(self, error: JFTLError) -> None:
+    def _add_error(self, error: JFTLNotice) -> None:
         keep_msg = False
         stop_now = False
         match error.severity:
@@ -65,17 +67,9 @@ class JFTLCompiler(DocCompiler):
         if keep_msg:
             self._errors.append(error)
 
-    def record_error(self, error: JFTLError) -> JFTLError:
+    def record_notice(self, error: JFTLNotice) -> JFTLNotice:
         self._add_error(error)
         return error
-
-    def _check_result(self, value: JFTLError | Any) -> Any:
-        if isinstance(value, JFTLError):
-            self.record_error(value)
-        return value
-
-
-
 
     # Call to natigation: 
     _NAV_RE = re.compile('^' + NAV_RE_STR + "$", re.VERBOSE)
@@ -111,7 +105,7 @@ class JFTLCompiler(DocCompiler):
                 expr = plugin.compile_str(m.group("expr"))
                 return expr
 
-        return JFTLError(
+        return JFTLNotice(
             code="BAD_EXPRESSION", where=where, location=None,
             message=f"Unknown Expression {source!r}",
             )
@@ -171,7 +165,7 @@ class JFTLCompiler(DocCompiler):
             if m.start() > pos:
                 chunk = source[pos:m.start()]
                 if "${" in chunk:
-                    return JFTLError(
+                    return JFTLNotice(
                         code="BAD_INTERPOLATION", where=where,
                         message=f"nested or unclosed interpolation before position {m.start()}",
                     )
@@ -183,12 +177,12 @@ class JFTLCompiler(DocCompiler):
             else:
                 inner = m.group("inner")
                 if "${" in inner:
-                    return JFTLError(
+                    return JFTLNotice(
                         code="BAD_INTERPOLATION", where=where,
                         message=f"nested or unclosed interpolation: {inner!r}",
                     )
                 if not self._NAV_ONLY_RE.match(inner):
-                    return JFTLError(
+                    return JFTLNotice(
                         code="BAD_INTERPOLATION", where=where,
                         message=f"interpolation only supports navigation expressions, "
                                 f"got: {inner!r} (compute complex values via 'set' first)",
@@ -209,7 +203,7 @@ class JFTLCompiler(DocCompiler):
         if pos < len(source):
             tail = source[pos:]
             if "${" in tail:
-                return JFTLError(
+                return JFTLNotice(
                     code="BAD_INTERPOLATION", where=where,
                     message=f"nested or unclosed interpolation at end of string: {tail!r}",
                 )
@@ -253,7 +247,7 @@ class JFTLCompiler(DocCompiler):
             if action is True:
                 error_count = self._error_count
                 expr = LogicStatement.compile_object(self, source)
-                if self._error_count > error_count and not isinstance(expr, JFTLError):
+                if self._error_count > error_count and not isinstance(expr, JFTLNotice):
                     return ErrorStatement(code="BAD-LOGIC", message="Logic Element did not compile", statement=expr)
                 return expr
             
@@ -261,14 +255,14 @@ class JFTLCompiler(DocCompiler):
                 return LiteralStatement(source)
     
             entries = {k: self._compile(v, where=f"{where}.{k}") for k, v in source.items()}            
-            for err in ( e for e in entries.values() if isinstance(e, JFTLError)):
+            for err in ( e for e in entries.values() if isinstance(e, JFTLNotice)):
                 self._add_error(err)
             return ObjectStatement(entries)
 
 
         if isinstance(source, list):
             items = [self._compile(v, where=f"{where}[{i}]") for i, v in enumerate(source)]
-            for err in ( e for e in items if isinstance(e, JFTLError)):
+            for err in ( e for e in items if isinstance(e, JFTLNotice)):
                 self._add_error(err)
             return ArrayStatement(items)
 
@@ -277,7 +271,7 @@ class JFTLCompiler(DocCompiler):
             return self._compile_str(source, where)
         
         # Non string source
-        return JFTLError(
+        return JFTLNotice(
             code="BAD_NODE", where=where, location=None,
             message=f"Unknown node {source!r}",
             )
@@ -291,7 +285,7 @@ class JFTLCompiler(DocCompiler):
         compiled = None
         try:
             compiled = self._compile(source, where)
-            if isinstance(compiled, JFTLError) and record:
+            if isinstance(compiled, JFTLNotice) and record:
                 self._add_error(compiled)
         except CompileError as ex:
             self._fail = True
@@ -300,7 +294,7 @@ class JFTLCompiler(DocCompiler):
             error = ex.error
         return compiled
 
-    def compile_root(self, source: Any, where: str = "") -> tuple[Any, bool, list[JFTLError]]:
+    def compile_root(self, source: Any, where: str = "") -> tuple[Any, bool, list[JFTLNotice]]:
         self._fail = False
         compiled = self.compile(source, where)
 
@@ -316,15 +310,15 @@ class JFTLRenderer():
     def __post_init__(self):
         self._drop_null_attributes = self.template.config.drop_null_attributes
 
-    def render(self, source: Any | Evaluator, frame: Frame) -> tuple[Any, Optional[JFTLError]]:
+    def render(self, source: Any | Evaluator, frame: Frame) -> tuple[Any, Optional[JFTLNotice]]:
         result, error = self._render(source, frame)
         # Possible that the document itself is an (unhandled) error
-        if not error and isinstance(result, JFTLError):
+        if not error and isinstance(result, JFTLNotice):
             error = result
             result = None
         return result, error
 
-    def _render(self, source: Any | Evaluator, frame: Frame) -> tuple[Any, Optional[JFTLError]]:
+    def _render(self, source: Any | Evaluator, frame: Frame) -> tuple[Any, Optional[JFTLNotice]]:
         if isinstance(source, Evaluator):
             return source.eval(frame), None
 
@@ -332,7 +326,7 @@ class JFTLRenderer():
             result = {}
             for k, v in source.items():
                 eval_v, _ = self._render(v, frame)
-                if isinstance(eval_v, JFTLError):
+                if isinstance(eval_v, JFTLNotice):
                     return eval_v, None
                 elif eval_v == SKIP_VALUE:
                     continue  # silently dropped from objects, per locked sentinel rules
@@ -343,7 +337,7 @@ class JFTLRenderer():
             result = []
             for v in source:
                 eval_v, _ = self._render(v, frame)
-                if isinstance(eval_v, JFTLError):
+                if isinstance(eval_v, JFTLNotice):
                     return eval_v, None
                 elif eval_v == SKIP_VALUE:
                     continue
@@ -370,18 +364,17 @@ class JFTLRenderer():
             return [ self._materialize(v) for v in value ]
         if isinstance(value, ( NoneType, bool, int, float, str)):
             return value
-        return RenderError(JFTLError(code='BAD-RESULT', message=f"Result contained unknown type {type(value)}"))
+        return JFTLNotice(code='BAD-RESULT', message=f"Result contained unknown type {type(value)}")
 
 @dataclass
 class JFTLEngine(Engine):
-
-
+    
     _plugins: dict[str, Any] = field(default_factory=dict)
 
     def add_plugin(self, prefix: str, plugin: Any) -> None:
         self._plugins[prefix] = plugin
 
-    def compile(self, source: str | dict | list, where: str = "", *, main_only: bool = False) -> tuple[JFTLTemplate, list[JFTLError]]:
+    def compile(self, source: str | dict | list, where: str = "", *, main_only: bool = False) -> tuple[JFTLTemplate, list[JFTLNotice]]:
         top = cast(dict, { "main": source } if main_only else source)
         config = JFTLConfig(**top.get("config", {}))
 
@@ -391,20 +384,20 @@ class JFTLEngine(Engine):
 
         if not isinstance((datasets := top.get("datasets", {}) or {}) , dict):
             raise CompileError(
-                JFTLError(code='BAD-DATASET', message=f"Dataset must be dictionary, got {type(datasets)}")
+                JFTLNotice(code='BAD-DATASET', message=f"Dataset must be dictionary, got {type(datasets)}")
                 )
         return JFTLTemplate(main_entry=compiled, config=config, datasets=datasets, valid=valid ), errors
     
-    def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[JFTLError]]: ...
+    def compile_from(self, source: str | Path | TextIO ) -> tuple[Template, list[JFTLNotice]]: ...
 
     def _render_top(self, renderer: JFTLRenderer, input: Any, body: Optional[Evaluator], datasets: Optional[dict] = None) -> tuple[Any, RenderStatus]:
         if not body:
-            return None, RenderStatus(False, JFTLError(code="NO-MAIN", message="Template does not have main"))
+            return None, RenderStatus(False, JFTLNotice(code="NO-MAIN", message="Template does not have main"))
        
         datasets = { **(renderer.template.datasets), **(self._datasets), **(datasets or {})}
 
         env = Environment(renderer.template, input, datasets=datasets)
-        frame = Frame.top_frame(env)
+        frame = Frame.root_state(env)
         result, render_error = renderer.render(body, frame)
         frame.reset()
         if render_error:
@@ -426,7 +419,7 @@ class JFTLEngine(Engine):
             result = renderer.materialize(result)
 
         except RenderError as re:
-            status = RenderStatus(False, re.error)
+            status = RenderStatus(False, re.notice)
         return result, status
         
     def render_to(self, output: TextIO | Path | str, template: Template, input: Any, *, entry: Optional[str]= None) -> RenderStatus: ...
@@ -444,18 +437,18 @@ class JFTLEngine(Engine):
 class LiteralStatement(Evaluator):
     value: Any
 
-    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
+    def eval(self, frame: Frame) -> Any | JFTLNotice | Missing:
         return self.value
 
 @dataclass
 class ObjectStatement(Evaluator):
     entries: dict[str, Expression]
 
-    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
+    def eval(self, frame: Frame) -> Any | JFTLNotice | Missing:
         result = {}
         for key, item in self.entries.items():
             value = item.eval(frame) if isinstance(item, Evaluator) else item
-            if isinstance(value, JFTLError):
+            if isinstance(value, JFTLNotice):
                 return value
             if value == SKIP_VALUE:
                 continue  # silently dropped from objects, per locked sentinel rules
@@ -467,11 +460,11 @@ class ObjectStatement(Evaluator):
 class ArrayStatement(Evaluator):
     items: list[Expression | Any]
 
-    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
+    def eval(self, frame: Frame) -> Any | JFTLNotice | Missing:
         result = []
         for item in self.items:
             value = item.eval(frame) if isinstance(item, Evaluator) else item
-            if isinstance(value, JFTLError):
+            if isinstance(value, JFTLNotice):
                 return value
             elif value == SKIP_VALUE:
                 continue
@@ -483,15 +476,15 @@ class ValueFormatStatement(Evaluator):
     expr: Any
     format_spec: Optional[str]
 
-    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
+    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
         item = self.expr
-        value = frame.eval_value(self.expr)
+        value = state.eval_value(self.expr)
         if isinstance(value, JFTLEngine):
             return value
         if isinstance(value, Missing):
             return "null"
         if not isinstance(value, (NoneType, bool, int, float, str)):
-            return RenderError(JFTLError(code='CANT-STRINGIFY', message=f"Result contained unknown type {type(value)}"))
+            return JFTLNotice(code='CANT-STRINGIFY', message=f"Result contained unknown type {type(value)}")
         formatted = format(value, self.format_spec) if self.format_spec else str(value)
         return formatted
 
@@ -500,7 +493,7 @@ class StringJoinStatement(Evaluator):
     items: list[Expression]
     separator: str = ""
 
-    def eval(self, frame: Frame) -> Any | JFTLError | Missing:
+    def eval(self, frame: Frame) -> RUNTIME_DOC:
         result = []
         for item in self.items:
             value = item.eval(frame) if isinstance(item, Evaluator) else item
@@ -514,7 +507,7 @@ class StringJoinStatement(Evaluator):
                 value = ["false", "true"][value]
 
             if not isinstance(value, str):
-                return RenderError(JFTLError(code='JOIN-STR-VALUE', message=f"Expecting string got {type(value)}"))
+                return JFTLNotice(code='JOIN-STR-VALUE', message=f"Expecting string got {type(value)}")
 
             result.append(value)
         return "".join(result)

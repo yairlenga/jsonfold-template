@@ -36,7 +36,7 @@ from typing import Any, Iterator, Optional, TextIO
 # --- make ../src importable when run directly from a sibling tests/ dir ---
 sys.path.insert(0, str((Path(__file__).resolve().parent / ".." / "src").resolve()))
 
-from core import CompileError, RenderError
+from model import CompileError, RenderError
 from template import Missing, create_engine, Engine  # noqa: E402
 
 class ExitCode(IntEnum):

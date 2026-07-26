@@ -6,7 +6,6 @@ Run with:  python -m unittest test_compile.py -v
 """
 import unittest
 
-from core import CompileError
 from navigation import NavigationStatement
 from engine import JFTLEngine, ObjectStatement, ArrayStatement
 
