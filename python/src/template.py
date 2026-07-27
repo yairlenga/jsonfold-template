@@ -69,7 +69,7 @@ class Engine(ABC):
     def compile_from(self, source: str | Path | TextIO, **kwargs ) -> tuple[Template, list[JFTLNotice]]:
         if isinstance(source, TextIO):
             body = json.load(source)
-        elif isinstance(source, (Path, str)):
+        elif isinstance(source, (Path, str)): # type: ignore
             with open(source, "r") as fp:
                 body = json.load(fp)
         else:
@@ -79,14 +79,14 @@ class Engine(ABC):
     @abstractmethod
     def render(self, template: Template, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict[str, Any]] = None, **kwargs) -> tuple[Any, RenderStatus]: ...
         
-    def render_to(self, output: TextIO, template: Template, input: Any, **kwargs) -> RenderStatus:
+    def render_to(self, output: TextIO | Path | str, template: Template, input: Any, **kwargs) -> RenderStatus:
         result, status = self.render(template, input, **kwargs)
         if not status:
             if isinstance(output, TextIO):
                 json.dump(result, output)
-            elif isinstance(output, (Path, str)):
+            elif isinstance(output, (Path, str)): # type: ignore
                 with open(output, "w") as fp:
-                    json.dump(result)
+                    json.dump(result, fp)
             else:
                 raise TypeError(f"expected string, Path of TextIO, got {type(value).name}")
 

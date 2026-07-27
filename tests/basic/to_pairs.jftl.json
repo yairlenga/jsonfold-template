@@ -4,7 +4,8 @@
       "null input": {
         "$": true,
         "body": null,
-        "transform": "to_pairs"
+        "transform": "to_pairs",
+	"error": "Error: null Input"
       },
       "empty object": {
         "$": true,

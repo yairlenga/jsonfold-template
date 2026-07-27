@@ -21,7 +21,6 @@ Output:
 Exit code: 0 if every input succeeded, 1 if any failed.
 """
 
-from collections.abc import Set
 from enum import IntEnum
 import sys
 import argparse
@@ -448,21 +447,17 @@ def main() -> int:
     parser.add_argument("-t", "--target", default=None, metavar="DIR",
                         help="Write each result to DIR/<basename>.out instead of stdout.")
     parser.add_argument("-s", "--sections", action="store_true",
-                        help="Prepend a '//' comment line before each result, with "
-                            "input/output size and timing info. Requires the result "
-                            "to be fully rendered first (disables streaming).")
+                        help="Add '//' comment line before each result, with input/output size and timing info.")
 
     # Logging
     parser.add_argument("-k", "--keep-going", action="store_true",
-                        help="Suppress informational stderr output. Error messages "
-                            "are still always printed.")
+                        help="Do not stop processing when an input file has errors/cannot be processed")
 
     parser.add_argument("-q", "--quiet", action="store_true",
-                        help="Suppress informational stderr output. Error messages "
-                            "are still always printed.")
+                        help="Suppress informational stderr output. Error messages are still always printed")
+
     parser.add_argument("-v", "--verbose", action="store_true",
-                        help="On error, print full exception details (traceback) "
-                            "instead of a minimal one-line summary.")
+                        help="Verbose logging, Error message will include exception details, addional progress reports will be emitted.")
 
     # Formatting
     parser.add_argument("--indent", type=int, default=2, metavar="N",

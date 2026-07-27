@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 import re
 
 from core import RUNTIME_DOC, Frame, JFTLConfig, JFTLTemplate
-from logic import LogicStatement
+from logic import LogicCompiler
 from template import SKIP_VALUE, Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
 from model import COMPILE_DOC, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, RenderError, RuntimeContext, StatementCompiler
@@ -43,7 +43,7 @@ class JFTLCompiler(DocCompiler):
         keep_msg = False
         stop_now = False
         match error.severity:
-            case Severity.ERROR:
+            case Severity.DEBUG:
                 self._debug_count += 1
                 keep_msg = self._debug_count < self._max_debug
             case Severity.INFO:
@@ -243,6 +243,8 @@ class JFTLCompiler(DocCompiler):
     @staticmethod
     def _unliteral(x):
         return x.value if isinstance(x, LiteralStatement) else x
+    
+    _logicCompiler : Optional[LogicCompiler] = None
 
     def _compile(self, source: Any, where: str = "") -> COMPILE_DOC :
 
@@ -256,7 +258,10 @@ class JFTLCompiler(DocCompiler):
             action = source.get("$", None)
             if action is True:
                 error_count = self._error_count
-                expr = LogicStatement.compile_object(self, source)
+                if self._logicCompiler is None:  
+                    self._logicCompiler = LogicCompiler(self)
+
+                expr = self._logicCompiler.compile(source, where)
                 if self._error_count > error_count and not isinstance(expr, JFTLNotice):
                     return ErrorStatement(code="BAD-LOGIC", message="Logic Element did not compile", statement=expr)
                 return expr
@@ -506,7 +511,7 @@ class ValueFormatStatement(Evaluator):
 
     def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
         value = ctx.eval_value(self.expr)
-        if isinstance(value, JFTLEngine):
+        if isinstance(value, JFTLNotice):
             return value
         if isinstance(value, Missing):
             return "null"

@@ -1,10 +1,11 @@
+import re
 from types import NoneType
 from typing import Any, ClassVar, Optional, cast
 from dataclasses import dataclass
 
-from core import RUNTIME_DOC
-from model import Evaluator, RuntimeContext, Condition, DocCompiler, Statement, Transformer
-from template import SKIP_VALUE, JFTLNotice, Missing
+from core import JSON_DOC, RUNTIME_DOC
+from model import COMPILE_DOC, JSON_UNSET, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
+from template import MISSING_VALUE, SKIP_VALUE, JFTLNotice, Missing
 
 """ {
     "$": true,
@@ -189,113 +190,34 @@ class LogicStatement(Evaluator):
     _defines: Optional[list[DefineVar]] = None
     _if: Optional[Condition] = None
     _set_current: Optional[Statement] = None
-    _cases: Optional[list[Case]] = None
+    _cases: Optional[list[Case | JFTLNotice ]] = None
     _body: Optional[Statement] = None
     _foreach: Optional[ForeachStatement] = None
     _transformer: Optional[Transformer] = None
     _default_val: Optional[Statement] = None
     _error_val: Optional[Statement] = None
 
-    _transformers: ClassVar[dict[str, type[Transformer]]] = {}  # just a type annotation here, no value yet
-
-    @classmethod
-    def compile_object(cls, compiler: DocCompiler, args: dict[str, Any]):
-
-        source = ""
-        v_defines = [
-            DefineVar(name = name, expr = compiler.statement(expr, source))
-            for name, expr in v.items()
-            ] if ( v := args.get("set", None)) else None
-
-        v_if = compiler.condition(v, source) if (v := args.get("if", True)) else False
-
-        v_data = compiler.statement(v, source) if ( v:= args.get("data", None)) else None
-        
-        v_loop = args.get("foreach", None)
-        v_foreach = None
-        if isinstance(v_loop, dict):
-            # Compile time constants
-            v_foreach_key = v_loop.get("key", None)
-            v_foreach_value = v_loop.get("value", None)
-            v_foreach_index = v_loop.get("index", None)
-            # Runtime expressions
-            v_foreach_in = compiler.statement(v, source) if ( v:= v_loop.get("in", None)) else None
-            v_foreach_cond = compiler.statement(v, source) if ( v := v_loop.get("if", None)) else True
-            v_foreach_start = compiler.statement(v, source) if ( v := v_loop.get("start", None)) else None
-            v_foreach_stop = compiler.statement(v, source) if ( v := v_loop.get("stop", None)) else None
-            v_foreach_limit = compiler.statement(v, source) if ( v := v_loop.get("limit", None)) else None
-            v_foreach = ForeachStatement(
-                key = v_foreach_key,
-                value = v_foreach_value,
-                index = v_foreach_index,
-                items = v_foreach_in,
-                cond = v_foreach_cond,
-                start = v_foreach_start,
-                stop = v_foreach_stop,
-                limit = v_foreach_limit,
-            )
-        elif v_loop is not None:
-            compiler.record_notice(JFTLNotice(
-                    code="BAD_FOREACH",
-                    message=f"foreach should be an object, got {type(v_loop)}",
-            ))
-
-        v_cases = [
-            Case( cond = compiler.condition( case["when"], source ), body = compiler.statement( case[ "then" ], source ))
-            for case in cases
-            ] if (cases := args.get("case", None)) else None
-
-        v_body = compiler.statement(v, source) if ( v := args.get("body", None)) is not None else None
-        v_default = compiler.statement(v, source) if ( v := args.get("default", None)) is not None else None
-        v_error = compiler.statement(v, source) if ( v := args.get("error", None)) is not None else None
-
-        v_transformer = None
-        if ( transform := args.get("transform", None)):
-            transform_class = cls._transformers.get(transform, None)
-            if not transform_class:
-                compiler.record_notice(JFTLNotice(
-                        code="BAD_TRANSFORM",
-                        message=f"Unknown transformation {transform}",
-                ))
-
-            else:
-                v_transformer = transform_class()
-
-
-        self = cls(
-            _defines = v_defines,
-            _if = v_if,
-            _set_current = v_data,
-            _foreach = v_foreach,
-            _cases = v_cases,
-            _body = v_body,
-            _default_val = v_default,
-            _error_val = v_error,
-            _transformer = v_transformer,
-        )
-        return self
-
-    def _eval_foreach(self, ctx: RuntimeContext, body: Statement) -> list[RUNTIME_DOC] | dict[str, RUNTIME_DOC] | JFTLNotice | Missing | None:
+    def _eval_foreach(self, ctx: RuntimeContext, body: Statement) -> list[RUNTIME_DOC] | dict[str, RUNTIME_DOC] | JFTLNotice | Missing:
         foreach = cast(ForeachStatement, self._foreach)
-        items = ctx.eval_value(foreach.items) if foreach.items else ctx.current
+        items = ctx.eval_value(foreach.items) if foreach.items is not JSON_UNSET else ctx.current
 
         ix_start = ctx.eval_value(foreach.start)
         if ix_start is not None and not isinstance(ix_start, int):
             return JFTLNotice(
-                    code="BAD_START",
+                    code="FOREACH_START",
                     message=f"foreach 'start' must be an integer value",
                 ) 
         ix_stop = ctx.eval_value(foreach.stop)
         if ix_stop is not None and not isinstance(ix_stop, int):
             return JFTLNotice(
-                    code="BAD_STOP",
+                    code="FOREACH_STOP",
                     message=f"foreach 'stop' must be an integer value",
                 ) 
 
         ix_limit = ctx.eval_value(foreach.limit)
         if ix_limit is not None and not isinstance(ix_limit, int):
             return JFTLNotice(
-                    code="BAD_STOP",
+                    code="FOREACH_LIMIT",
                     message=f"foreach 'stop' must be an integer value",
                 ) 
 
@@ -305,9 +227,6 @@ class LogicStatement(Evaluator):
 
         do_dict = False
         if isinstance(items, list):
-            if items == None:
-                return None
-
             count = len(items)
             loop_iter = enumerate(items)
 
@@ -321,6 +240,8 @@ class LogicStatement(Evaluator):
             loop_iter = enumerate(range(start_index, items))
             ix_stop = ix_stop - start_index if ix_stop else None
             start_index = 0
+        else:
+            return JFTLNotice(code="FOREACH_IN", message=f"foreach expecting list/dict/int, got {type(items)}")
 
         # Support negative indexes if count is known.
         stop_index = ix_stop
@@ -385,15 +306,26 @@ class LogicStatement(Evaluator):
 
         return dict_result if do_dict else list_result
         
-    def _choose_body(self, ctx: RuntimeContext) -> Statement | None:
-        v_body = self._body
+    def _choose_body(self, ctx: RuntimeContext) -> Statement:
         if (cases := self._cases):
             for case in cases:
+                if isinstance(case, JFTLNotice):
+                    return case
                 if ctx.eval_bool(case.cond):
-                    v_body = case.body
-                    break
+                    return case.body
 
-        return v_body
+        return self._body
+
+    def _return_result(self, ctx: RuntimeContext, result: RUNTIME_DOC) -> RUNTIME_DOC:
+        if isinstance(result, Missing):
+            if self._default_val is not JSON_UNSET:
+                result = ctx.eval_value(self._default_val)
+
+        if isinstance(result, JFTLNotice):
+            if self._error_val is not None:
+                result = ctx.eval_value(self._error_val)
+        
+        return result
 
     def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
 
@@ -412,43 +344,180 @@ class LogicStatement(Evaluator):
 
         # Check the condition
         if not new_frame.eval_bool(self._if):
-            return new_frame.eval_value(self._default_val)
+            return self._return_result(ctx, MISSING_VALUE)
             
         # Consider new data object.
-        if ( v_data := self._set_current):
+        if ( v_data := self._set_current) is not JSON_UNSET:
             new_frame.set_current(new_frame.eval_value(v_data))
         
         # Choose body to execute
         v_body = self._choose_body(new_frame)
 
-        if v_body is None:
-            return new_frame.eval_value(self._default_val)
+        if v_body is JSON_UNSET:
+            return self._return_result(new_frame, MISSING_VALUE)
 
         # Check if executing foreach loop
         result = None
+
         if self._foreach:
             result = self._eval_foreach(new_frame, v_body)
-            
-            if result is None or isinstance(result, Missing):
-                return new_frame.eval_value(self._default_val)
 
         # Process Single result
         else:
             result = new_frame.eval_value(v_body)
 
-            if isinstance(result, Missing):
-                return new_frame.eval_value(self._default_val)
-
-        if not isinstance(result, (NoneType, JFTLNotice, Missing)) and self._transformer:
+        # Transformation, as long as the value is "something"
+        if not isinstance(result, (JFTLNotice, Missing)) and self._transformer :
             result = self._transformer.transform(result)
-             
+
+        if isinstance(result, Missing):
+            if self._default_val is not JSON_UNSET:
+                result = new_frame.eval_value(self._default_val)
+
+            return result
+            
         # Error handler
         if isinstance(result, JFTLNotice):
-            if self._error_val is not None:
+            if self._error_val is not JSON_UNSET:
                 return new_frame.eval_value(self._error_val)
 
         return result
     
+
+
+@dataclass
+class LogicCompiler(StatementCompiler):
+
+    _transformers: ClassVar[dict[str, type[Transformer]]] = {}  # just a type annotation here, no value yet
+
+    def compile_str(self, source: str, where: str = "" ) -> COMPILE_DOC :
+        return JFTLNotice(code="LOGIC-NO-STR", message="Logic Plugin does not accept strings")
+
+    def _compile_expr(self, args: dict[str, JSON_DOC], tag: str, unset_value: Expression = JSON_UNSET ) -> Expression:
+        if not tag in args:
+            return unset_value
+        
+        expr = self.compiler.statement(args[tag], tag)
+        return expr
+    
+    def _compile_cond(self, args: dict[str, JSON_DOC], tag: str, unset_value: Expression = JSON_UNSET ) -> Condition:
+        if not tag in args:
+            return unset_value
+        
+        expr = self.compiler.condition(args[tag], tag)
+        return expr
+
+    TOKEN_RE = re.compile(r"^[A-Za-z]\w*$", re.ASCII)
+    def _get_named_var(self, args: dict[str, JSON_DOC], tag: str) -> str | None :
+        if not tag in args:
+            return None
+        var_name = args[tag]
+        if not isinstance(var_name, str):
+            self.compiler.record_notice(JFTLNotice(code="LOGIC-BAD-ID", message=f"Expecting variable name for '{tag}', got '{type(var_name)}'"))
+            return None
+        return var_name
+
+    def _compile_object(self, source: dict[str, JSON_DOC], where: str = "") -> LogicStatement:
+        compiler = self.compiler
+
+        v_defines = None
+        defines = source.get("set", {})
+        if isinstance( defines, dict ):
+            v_defines = [
+                DefineVar(
+                    name = name,
+                    expr = compiler.statement(expr, f"set({name})")
+                    )
+                for name, expr in defines.items()
+            ]
+        else:
+            compiler.record_notice(JFTLNotice(code="LOGIC-BAD-SET", message=f"Logic 'set' expecting dictionary, got {type(defines)}"))
+            
+        v_if = self._compile_cond(source, "if", True)
+
+        v_data = self._compile_expr(source, "data")
+        
+        v_loop = source.get("foreach", None)
+        v_foreach = None
+        if isinstance(v_loop, dict):
+            # Compile time constants
+            v_foreach_key = self._get_named_var(v_loop, "key")
+            v_foreach_value = self._get_named_var(v_loop, "value")
+            v_foreach_index = self._get_named_var(v_loop, "index")
+            # Runtime expressions
+            v_foreach_in = self._compile_expr(v_loop, "in")
+            v_foreach_cond = self._compile_cond(v_loop, "if", True)
+            v_foreach_start = self._compile_expr(v_loop, "start", 0)
+            v_foreach_stop = self._compile_expr(v_loop, "stop", None)
+            v_foreach_limit = self._compile_expr(v_loop, "limit", None)
+            v_foreach = ForeachStatement(
+                key = v_foreach_key,
+                value = v_foreach_value,
+                index = v_foreach_index,
+                items = v_foreach_in,
+                cond = v_foreach_cond,
+                start = v_foreach_start,
+                stop = v_foreach_stop,
+                limit = v_foreach_limit,
+            )
+        elif v_loop is not None:
+            compiler.record_notice(JFTLNotice(
+                    code="BAD_FOREACH",
+                    message=f"foreach should be an object, got {type(v_loop)}",
+            ))
+
+        v_cases = None
+        cases = source.get("case", [])
+        if isinstance(cases, list):
+            v_cases = [
+                Case(
+                    cond = self._compile_cond(case, "when"),
+                    body = self._compile_expr(case, "then"),
+                )
+                if isinstance(case, dict)
+                else JFTLNotice(code="LOGIC-BAD-CASE", message=f"Logic `case` expecting 'case, got {type(case)}")
+                for case in cases
+            ]
+        else:
+            compiler.record_notice(JFTLNotice(code="LOGIC-BAD-CASE", message=f"Logic 'case' expecting list[case], got {type(cases)}"))
+
+
+        v_body = self._compile_expr(source, "body")
+        v_default =  self._compile_expr(source, "default")
+        v_error =  self._compile_expr(source, "error")
+
+        v_transformer = None
+        if ( transform := self._get_named_var(source, "transform")):
+            transform_class = self._transformers.get(transform, None)
+            if not transform_class:
+                compiler.record_notice(JFTLNotice(
+                        code="BAD_TRANSFORM",
+                        message=f"Unknown transformation {transform}",
+                ))
+
+            else:
+                v_transformer = transform_class()
+
+
+        self = LogicStatement(
+            _defines = v_defines,
+            _if = v_if,
+            _set_current = v_data,
+            _foreach = v_foreach,
+            _cases = v_cases,
+            _body = v_body,
+            _default_val = v_default,
+            _error_val = v_error,
+            _transformer = v_transformer,
+        )
+        return self
+    
+    def compile(self, source: JSON_DOC, where: str = "") -> LogicStatement | JFTLNotice:
+        if not isinstance(source, dict):
+            return JFTLNotice(code="LOGIC-BAD-SOURCE", message=f"Logic expect object, got {type(source)}")
+
+        return self._compile_object(source, where)
+
     @classmethod
     def class_init(cls):
         cls._transformers = {
@@ -460,4 +529,5 @@ class LogicStatement(Evaluator):
             "concat": _JoinStrTransformer,
         }
 
-LogicStatement.class_init()
+
+LogicCompiler.class_init()

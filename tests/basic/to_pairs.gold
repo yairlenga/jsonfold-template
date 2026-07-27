@@ -1,6 +1,6 @@
 {
   "checks": {
-    "null input": null,
+    "null input": "Error: null Input",
     "empty object": [],
     "single entry": [
       [

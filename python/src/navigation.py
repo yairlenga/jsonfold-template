@@ -36,6 +36,7 @@ class NavigationStatement(Evaluator):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
     def __init__(self, path: str, start: Literal["_current", "_parent.current", "_input"] | str= "_current", where: str = "" ):
+        super().__init__(where, path)
         self._path = path
         self.where = where   # for diagnostics, e.g. "user.items[0].name"
         self._start = start
@@ -106,7 +107,7 @@ class NavigationStatement(Evaluator):
                     return MISSING_VALUE
                 traveled += f"[{seg.i}]"
 
-            elif isinstance(seg, Var):
+            elif isinstance(seg, Var): # pyright: ignore[reportUnnecessaryIsInstance]
                 key = ctx.lookup_var(seg.name)
                 if isinstance(key, Missing):
                     return key
@@ -121,7 +122,6 @@ class NavigationStatement(Evaluator):
         return value
 
 
-import re
 NAV_RE_STR = r"""
     (?P<start> \$ | \$\^ | \$< | \$% | \$(?P<vars>\w+ ) )
     (?P<segments> (\[.* | \..* )? )

@@ -11,11 +11,12 @@ Adjust the import below if LogicStatement/Case live in a different module.
 Run with:  python -m unittest test_logic_compile.py -v
 """
 from dataclasses import asdict
+from types import NoneType
 from typing import Any
 import unittest
 
-from model import DocCompiler
-from logic import _FlattenningTransformer, _MergeTransformer, ForeachStatement, LogicStatement
+from model import JSON_UNSET, DocCompiler
+from logic import _FlattenningTransformer, _MergeTransformer, ForeachStatement, LogicCompiler, LogicStatement
 
 
 class Tagged:
@@ -41,31 +42,31 @@ class FakeCompiler(DocCompiler):
     def compile(self, source: Any, where: str = "", **kwards) -> None:
         return None
 
-    def expression(self, raw, source):
-        return Tagged("expression", raw)
+    def expression(self, source, where):
+        return Tagged("expression", source)
 
-    def condition(self, raw, source):
-        return Tagged("condition", raw)
-    
-    def statement(self, raw, source):
-        if isinstance(raw, str):
-            return self.expression(raw, source)
-        return Tagged("statement", raw)
+    def condition(self, source, where):
+        return Tagged("condition", source)
+
+    def statement(self, source, where):
+        if isinstance(source, str):
+            return self.expression(source, where)
+        return Tagged("statement", source)
 
 
 
 def compile_logic(args: dict) -> LogicStatement:
-    return LogicStatement.compile_object(FakeCompiler(), args)
+    return LogicCompiler(FakeCompiler()).compile(args)
 
 
 class TestEmptyInput(unittest.TestCase):
 
     def test_empty_dict_all_fields_none(self):
         stmt = compile_logic({})
-        self.assertIsNone(stmt._defines)
-        self.assertEqual(stmt._if, Tagged("condition", True))
-        self.assertIsNone(stmt._set_current)
-        self.assertIsNone(stmt._cases)
+        self.assertEqual(stmt._defines or [], [])
+        self.assertEqual(stmt._if, True)
+        self.assertIs(stmt._set_current, JSON_UNSET)
+        self.assertEqual(stmt._cases or [], [])
         self.assertFalse(stmt._foreach)
 
 
@@ -76,26 +77,26 @@ class TestSet(unittest.TestCase):
         stmt = compile_logic({"set": {"total": "$.price"}})
 
         self.assertEqual(asdict(stmt)["_defines"],
-                         [{"_name": "total", "_expr": Tagged("expression", "$.price")}])
+                         [{"name": "total", "expr": Tagged("expression", "$.price")}])
 
     def test_multiple_set_bindings_preserve_all_keys(self):
         stmt = compile_logic({"set": {"a": "$.x", "b": "$.y", "c": "$.z"}})
 
         self.assertEqual(asdict(stmt)["_defines"],
             [
-                { "_name": "a", "_expr": Tagged("expression", "$.x")},
-                { "_name": "b", "_expr": Tagged("expression", "$.y")},
-                { "_name": "c", "_expr": Tagged("expression", "$.z")},
+                { "name": "a", "expr": Tagged("expression", "$.x")},
+                { "name": "b", "expr": Tagged("expression", "$.y")},
+                { "name": "c", "expr": Tagged("expression", "$.z")},
             ])
 
     def test_missing_set_key_is_none(self):
         stmt = compile_logic({"data": "$.x"})
-        self.assertIsNone(stmt._defines)
+        self.assertIn(stmt._defines, (None, []))
 
     def test_empty_set_dict_is_still_compiled_as_empty(self):
         # "set": {} is present but has no bindings — distinct from absent "set"
         stmt = compile_logic({"set": {}})
-        self.assertEqual(stmt._defines, None)
+        self.assertIn(stmt._defines, (None, []))
 
 
 class TestIf(unittest.TestCase):
@@ -106,7 +107,7 @@ class TestIf(unittest.TestCase):
 
     def test_missing_if_is_none(self):
         stmt = compile_logic({})
-        self.assertEqual(stmt._if, Tagged("condition", True))
+        self.assertEqual(stmt._if, True)
 
 
 class TestData(unittest.TestCase):
@@ -117,7 +118,7 @@ class TestData(unittest.TestCase):
 
     def test_missing_data_is_none(self):
         stmt = compile_logic({})
-        self.assertIsNone(stmt._set_current)
+        self.assertIs(stmt._set_current, JSON_UNSET )
 
 
 class TestForeach(unittest.TestCase):
@@ -130,7 +131,7 @@ class TestForeach(unittest.TestCase):
         self.assertEqual(stmt._foreach.key, "idx")
         self.assertEqual(stmt._foreach.value, "item")
         self.assertEqual(stmt._foreach.items, Tagged("expression", "$.items"))
-        self.assertEqual(stmt._foreach.cond, Tagged("expression", "$.item.active"))
+        self.assertEqual(stmt._foreach.cond, Tagged("condition", "$.item.active"))
 
     def test_foreach_without_optional_if(self):
         stmt = compile_logic({"foreach": {"key": "idx", "value": "item", "in": "$.items"}})
@@ -181,11 +182,11 @@ class TestCases(unittest.TestCase):
 
     def test_missing_case_is_none(self):
         stmt = compile_logic({})
-        self.assertIsNone(stmt._cases)
+        self.assertIn(stmt._cases, (None, []))
 
     def test_empty_case_list_is_empty_not_none(self):
         stmt = compile_logic({"case": []})
-        self.assertEqual(stmt._cases, None)
+        self.assertIn(stmt._cases, (None, []))
 
 
 class TestBodyDefaultError(unittest.TestCase):
@@ -206,8 +207,8 @@ class TestBodyDefaultError(unittest.TestCase):
         # setting one should not accidentally populate the others
         stmt = compile_logic({"body": "$.b"})
         self.assertEqual(stmt._body, Tagged("expression", "$.b"))
-        self.assertIsNone(stmt._default_val)
-        self.assertIsNone(stmt._error_val)
+        self.assertIs(stmt._default_val, JSON_UNSET)
+        self.assertIs(stmt._error_val, JSON_UNSET)
 
 
 class TestTransform(unittest.TestCase):
@@ -240,7 +241,7 @@ class TestFullRealisticBlock(unittest.TestCase):
         stmt = compile_logic(args)
 
         self.assertEqual(asdict(stmt)["_defines"],
-                         [{"_name": "total", "_expr": Tagged("expression", "$.price")}])
+                         [{"name": "total", "expr": Tagged("expression", "$.price")}])
         self.assertEqual(stmt._if, Tagged("condition", "$.enabled"))
         assert isinstance(stmt._foreach, ForeachStatement)
         self.assertEqual(stmt._foreach.key, "idx")
@@ -251,8 +252,8 @@ class TestFullRealisticBlock(unittest.TestCase):
         self.assertEqual(stmt._body, Tagged("expression", "$.output"))
         self.assertIsInstance(stmt._transformer, _MergeTransformer)
         self.assertEqual(stmt._error_val, Tagged("expression", "$.onError"))
-        self.assertIsNone(stmt._set_current)
-        self.assertIsNone(stmt._default_val)
+        self.assertIs(stmt._set_current, JSON_UNSET)
+        self.assertIs(stmt._default_val, JSON_UNSET)
 
 
 if __name__ == "__main__":

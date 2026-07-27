@@ -25,8 +25,11 @@ class _NoValueType:
 
     def __repr__(self) -> str:
         return self._label
+    
+    def __bool__(self):
+        raise TypeError(f"{self._label} cannot be used as boolean")
 
-JFTL_UNDEF : Final = _NoValueType("UNDEFINED")
+JSON_UNSET : Final = _NoValueType("JSON_UNSET")
 _RAISE : Final = _NoValueType("_RAISE")
 _ERROR : Final = _NoValueType("_ERROR")
 
@@ -134,7 +137,7 @@ class RuntimeContext (Mapping):
         stmt : Statement,
         *,
         context: Optional[str] = None,
-        on_null: Any = JFTL_UNDEF,
+        on_null: Any = JSON_UNSET,
         on_error: Any = _ERROR,
         on_unset: Any = _RAISE,
     ) -> RUNTIME_DOC:
@@ -163,7 +166,7 @@ class RuntimeContext (Mapping):
                     message="value is missing or null",
                 )
                 return self._resolve(error, on_null)
-            return result if on_null is JFTL_UNDEF else on_null
+            return result if on_null is JSON_UNSET else on_null
 
         return result        
 
@@ -187,7 +190,7 @@ class RuntimeContext (Mapping):
         if isinstance(result, JFTLNotice):
             return self._resolve(result, on_error)
 
-        elif result == JFTL_UNDEF:
+        elif result is JSON_UNSET:
             if on_unset is _RAISE or on_unset is _ERROR:
                 error = JFTLNotice(
                     code="UNSET_CONDITION",
@@ -286,7 +289,7 @@ COMPILE_LEAFS : TypeAlias = Evaluator | JSON_LEAFS | Missing | JFTLNotice | Miss
     # Tree of compiled object, may include values, Missing nodes, to-bd-evaluated nodes, and error notice nodes.
 COMPILE_DOC = Tree[COMPILE_LEAFS]
 
-Expression = COMPILE_DOC | _NoValueType        # Statement returning any value
+Expression = COMPILE_DOC | _NoValueType        # Expressoin returning any value
 Condition = COMPILE_DOC | _NoValueType         # Expression yielding boolean
 Statement = COMPILE_DOC | _NoValueType         # Statement, returning any value
 
