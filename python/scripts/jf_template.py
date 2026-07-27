@@ -18,7 +18,8 @@ Output:
     of stdout. (If the input came from stdin and -t is given, the output
     file is named 'stdin.out' — there's no real basename to derive.)
 
-Exit code: 0 if every input succeeded, 1 if any failed.
+Exit code: 0 if every input succeeded, non-zero if any failed. See online docs
+for detailed error codes
 """
 
 from enum import IntEnum
@@ -431,7 +432,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(prog="jf-template", description=__doc__,
                                       formatter_class=argparse.RawDescriptionHelpFormatter)
     # Input Options
-    parser.add_argument("-f", "--input-format", choices=["json", "stream", "jsonl", "yaml", "toml"], default="json",
+    # TODO: yaml, toml
+    parser.add_argument("-f", "--input-format", choices=["json", "stream", "jsonl"], default="json",
                         help="format of input records (default: json)")
 
     parser.add_argument("-D", "--data", dest="data", metavar="KEY=VALUE", action="append", default=[],
@@ -450,6 +452,7 @@ def main() -> int:
                         help="Add '//' comment line before each result, with input/output size and timing info.")
 
     # Logging
+    # TODO: -c / --check - compile only
     parser.add_argument("-k", "--keep-going", action="store_true",
                         help="Do not stop processing when an input file has errors/cannot be processed")
 
@@ -469,7 +472,7 @@ def main() -> int:
     parser.add_argument("--no-plugins", "-N", action="store_true",
                         help="Start with no registered plugins")
     parser.add_argument("--all-plugins", "-A", action="store_true",
-                        help="Start with no registered plugins")
+                        help="Start with All registered plugins enabled, INCLUDES PYEVAL, PYRUN !")
     parser.add_argument("--enable", action="append", default=[], metavar="PLUGIN",
                         choices=["pyrun", "pyeval", "cel", "simpleeval"],
                         help="Enable an optional plugin. May be specified multiple times.")

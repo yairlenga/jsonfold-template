@@ -286,7 +286,10 @@ class LogicStatement(Evaluator):
             else:
                 ctx.set_current(item)
 
-            if not ctx.eval_bool(v_cond):
+            cond_result = ctx.eval_bool(v_cond)
+            if isinstance(cond_result, JFTLNotice):
+                return cond_result
+            elif not cond_result:
                 continue
             new_val = ctx.eval_value(body)
             if isinstance(new_val, JFTLNotice):
@@ -311,7 +314,10 @@ class LogicStatement(Evaluator):
             for case in cases:
                 if isinstance(case, JFTLNotice):
                     return case
-                if ctx.eval_bool(case.cond):
+                cond_result = ctx.eval_bool(case.cond)
+                if isinstance(cond_result, JFTLNotice):
+                    return cond_result
+                elif cond_result:
                     return case.body
 
         return self._body
@@ -343,7 +349,10 @@ class LogicStatement(Evaluator):
                 new_vars["_global"] = new_frame
 
         # Check the condition
-        if not new_frame.eval_bool(self._if):
+        if_result = new_frame.eval_bool(self._if)
+        if isinstance(if_result, JFTLNotice):
+            return if_result
+        if not if_result:
             return self._return_result(ctx, MISSING_VALUE)
             
         # Consider new data object.

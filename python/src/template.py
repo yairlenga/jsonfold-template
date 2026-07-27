@@ -1,4 +1,5 @@
 from enum import StrEnum
+from io import TextIOBase
 from typing import Any, Final, Optional, TextIO, Literal
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -67,28 +68,28 @@ class Engine(ABC):
     def compile(self, source: str | dict, *, main_only: bool = False, where: str = "", **kwargs) -> tuple[Template, list[JFTLNotice]]: ...
 
     def compile_from(self, source: str | Path | TextIO, **kwargs ) -> tuple[Template, list[JFTLNotice]]:
-        if isinstance(source, TextIO):
+        if isinstance(source, TextIOBase):
             body = json.load(source)
-        elif isinstance(source, (Path, str)): # type: ignore
-            with open(source, "r") as fp:
+        elif isinstance(source, (Path, str)):
+            with open(source, "r", encoding="utf-8") as fp:
                 body = json.load(fp)
         else:
-            raise TypeError(f"expected string, Path of TextIO, got {type(value).name}")
-        return self.compile(body, *kwargs)
+            raise TypeError(f"expected string, Path of TextIO, got {type(source)}")
+        return self.compile(body, **kwargs)
 
     @abstractmethod
     def render(self, template: Template, input: Any, *, entry: Optional[str] = None, datasets: Optional[dict[str, Any]] = None, **kwargs) -> tuple[Any, RenderStatus]: ...
         
     def render_to(self, output: TextIO | Path | str, template: Template, input: Any, **kwargs) -> RenderStatus:
         result, status = self.render(template, input, **kwargs)
-        if not status:
-            if isinstance(output, TextIO):
+        if status.ok:
+            if isinstance(output, TextIOBase):
                 json.dump(result, output)
-            elif isinstance(output, (Path, str)): # type: ignore
+            elif isinstance(output, (Path, str)):
                 with open(output, "w") as fp:
                     json.dump(result, fp)
             else:
-                raise TypeError(f"expected string, Path of TextIO, got {type(value).name}")
+                raise TypeError(f"expected string, Path of TextIO, got {type(output)}")
 
         return status
 
