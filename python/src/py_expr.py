@@ -5,10 +5,10 @@ Evaluate Expressions using
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from core import RUNTIME_DOC, Evaluator, Frame
+from core import RUNTIME_DOC, Evaluator
 from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes
 
-from model import COMPILE_DOC, RuntimeState, StatementCompiler
+from model import COMPILE_DOC, CompilerPlugin, RuntimeContext, StatementCompiler
 from template import JFTLNotice, Missing
 
 @dataclass(kw_only=True)
@@ -17,11 +17,11 @@ class SimpleEvalEvaluator(Evaluator):
     source: str
     compiled: Any
 
-    def _build_env(self, state: RuntimeState) -> dict[str, Any]:
+    def _build_env(self, ctx: RuntimeContext) -> dict[str, Any]:
         """Walk the frame chain, closest scope wins: '_' + locals + parent vars."""
         env: dict[str, Any] = DEFAULT_NAMES.copy()
-        chain: list[RuntimeState] = []
-        f: Optional[RuntimeState] = state
+        chain: list[RuntimeContext] = []
+        f: Optional[RuntimeContext] = ctx
         seen: set[int] = set()
         while f is not None and id(f) not in seen:
             chain.append(f)
@@ -31,17 +31,17 @@ class SimpleEvalEvaluator(Evaluator):
             f = f.parent
         for ancestor in reversed(chain):  # farthest ancestor first, closer scopes overwrite
             env.update(ancestor.vars)
-        env["_"] = state.current
-        env["_input"] = state.env.input
+        env["_"] = ctx.current
+        env["_input"] = ctx.env.input
         return env
 
-    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
+    def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
         se = self.se
-        se.names = self._build_env(state)
+        se.names = self._build_env(ctx)
         return se.eval(self.source, self.compiled)
     
         # Using Python rules for falsyness. Can still return Missing, Error
-    def eval_cond(self, frame: Frame) -> Any | JFTLNotice | Missing:
+    def eval_cond(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
         result = self.se.eval(self.source, previously_parsed=self.compiled,)
         if isinstance(result, (Missing, JFTLNotice)):
             return result
@@ -49,7 +49,7 @@ class SimpleEvalEvaluator(Evaluator):
    
 
 @dataclass
-class SimpleEvalPlugin(StatementCompiler):
+class SimpleEvalCompiler(StatementCompiler):
     simple_eval : SimpleEval | None= None
     _se : SimpleEval = field(init=False)
 
@@ -96,3 +96,11 @@ class SimpleEvalPlugin(StatementCompiler):
         assert isinstance(source, str)
         compiled = self._se.parse(source)
         return SimpleEvalEvaluator(se=self._se, source=source, compiled=compiled)
+
+
+
+class SimpleEvalPlugin(CompilerPlugin):
+
+    def createCompiler(self, DocCompiler) -> StatementCompiler:
+        return SimpleEvalCompiler(DocCompiler)
+

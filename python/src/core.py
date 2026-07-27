@@ -3,7 +3,7 @@ from dataclasses import dataclass, field, replace
 from types import NoneType
 from typing import Any, Optional, TypeAlias
 
-from model import Environment, Evaluator, RuntimeState
+from model import Environment, Evaluator, RuntimeContext
 from template import SKIP_VALUE, Template, JFTLNotice, Missing, ERROR_VALUE, MISSING_VALUE
 
 from typing import TypeAlias, TypeVar
@@ -55,7 +55,7 @@ class JFTLTemplate(Template):
 
 
 @dataclass
-class Frame (RuntimeState):
+class Frame (RuntimeContext):
 
     # Cached value, including inherited, calculated, ...
     _cache:  dict[str, Any] = field(default_factory=dict)
@@ -69,7 +69,7 @@ class Frame (RuntimeState):
         self._update_current()
 
     @classmethod
-    def root_state(cls, env: Environment) -> Frame:
+    def root_context(cls, env: Environment) -> Frame:
         top_vars = {
             "_missing": MISSING_VALUE,
             "_error": ERROR_VALUE,

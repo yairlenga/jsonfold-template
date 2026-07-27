@@ -160,8 +160,8 @@ class TestCases(unittest.TestCase):
         assert isinstance(stmt._cases, list)
 
         self.assertEqual(len(stmt._cases), 1)
-        self.assertEqual(stmt._cases[0]._cond, Tagged("condition", "$.a"))
-        self.assertEqual(stmt._cases[0]._body, Tagged("expression", "$.b"))
+        self.assertEqual(stmt._cases[0].cond, Tagged("condition", "$.a"))
+        self.assertEqual(stmt._cases[0].body, Tagged("expression", "$.b"))
 
     def test_multiple_cases_preserve_order(self):
         stmt = compile_logic({
@@ -174,10 +174,10 @@ class TestCases(unittest.TestCase):
         assert isinstance(stmt._cases, list)
 
         self.assertEqual(len(stmt._cases), 3)
-        self.assertEqual(stmt._cases[0]._cond, Tagged("condition", "$.a"))
-        self.assertEqual(stmt._cases[1]._cond, Tagged("condition", "$.b"))
-        self.assertEqual(stmt._cases[2]._cond, Tagged("condition", "$.c"))
-        self.assertEqual(stmt._cases[2]._body, Tagged("expression", "$.z"))
+        self.assertEqual(stmt._cases[0].cond, Tagged("condition", "$.a"))
+        self.assertEqual(stmt._cases[1].cond, Tagged("condition", "$.b"))
+        self.assertEqual(stmt._cases[2].cond, Tagged("condition", "$.c"))
+        self.assertEqual(stmt._cases[2].body, Tagged("expression", "$.z"))
 
     def test_missing_case_is_none(self):
         stmt = compile_logic({})

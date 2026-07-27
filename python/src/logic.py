@@ -2,8 +2,8 @@ from types import NoneType
 from typing import Any, ClassVar, Optional, cast
 from dataclasses import dataclass
 
-from core import RUNTIME_DOC, Frame
-from model import Evaluator, RuntimeState, CompileError, Condition, DocCompiler, Statement, Transformer
+from core import RUNTIME_DOC
+from model import Evaluator, RuntimeContext, Condition, DocCompiler, Statement, Transformer
 from template import SKIP_VALUE, JFTLNotice, Missing
 
 """ {
@@ -31,13 +31,13 @@ from template import SKIP_VALUE, JFTLNotice, Missing
 
 @dataclass
 class Case:
-    _cond: Condition
-    _body: Statement
+    cond: Condition
+    body: Statement
 
 @dataclass
 class DefineVar:
-    _name: str
-    _expr: Statement
+    name: str
+    expr: Statement
 
 @dataclass
 class ForeachStatement():
@@ -203,7 +203,7 @@ class LogicStatement(Evaluator):
 
         source = ""
         v_defines = [
-            DefineVar(_name = name, _expr = compiler.statement(expr, source))
+            DefineVar(name = name, expr = compiler.statement(expr, source))
             for name, expr in v.items()
             ] if ( v := args.get("set", None)) else None
 
@@ -214,7 +214,6 @@ class LogicStatement(Evaluator):
         v_loop = args.get("foreach", None)
         v_foreach = None
         if isinstance(v_loop, dict):
-            v_foreach = isinstance(v_loop, dict)
             # Compile time constants
             v_foreach_key = v_loop.get("key", None)
             v_foreach_value = v_loop.get("value", None)
@@ -242,7 +241,7 @@ class LogicStatement(Evaluator):
             ))
 
         v_cases = [
-            Case( _cond = compiler.condition( case["when"], source ), _body = compiler.statement( case[ "then" ], source ))
+            Case( cond = compiler.condition( case["when"], source ), body = compiler.statement( case[ "then" ], source ))
             for case in cases
             ] if (cases := args.get("case", None)) else None
 
@@ -259,11 +258,6 @@ class LogicStatement(Evaluator):
                         message=f"Unknown transformation {transform}",
                 ))
 
-            elif not issubclass(transform_class, Transformer):
-                compiler.record_notice(JFTLNotice(
-                        code="BAD_TRANSFORM",
-                        message=f"Unknown transformation {transform}",
-                ))
             else:
                 v_transformer = transform_class()
 
@@ -281,24 +275,24 @@ class LogicStatement(Evaluator):
         )
         return self
 
-    def _eval_foreach(self, frame: RuntimeState, body: Statement) -> list[RUNTIME_DOC] | dict[str, RUNTIME_DOC] | JFTLNotice | Missing | None:
+    def _eval_foreach(self, ctx: RuntimeContext, body: Statement) -> list[RUNTIME_DOC] | dict[str, RUNTIME_DOC] | JFTLNotice | Missing | None:
         foreach = cast(ForeachStatement, self._foreach)
-        items = frame.eval_value(foreach.items) if foreach.items else frame.current
+        items = ctx.eval_value(foreach.items) if foreach.items else ctx.current
 
-        ix_start = frame.eval_value(foreach.start)
+        ix_start = ctx.eval_value(foreach.start)
         if ix_start is not None and not isinstance(ix_start, int):
             return JFTLNotice(
                     code="BAD_START",
                     message=f"foreach 'start' must be an integer value",
                 ) 
-        ix_stop = frame.eval_value(foreach.stop)
+        ix_stop = ctx.eval_value(foreach.stop)
         if ix_stop is not None and not isinstance(ix_stop, int):
             return JFTLNotice(
                     code="BAD_STOP",
                     message=f"foreach 'stop' must be an integer value",
                 ) 
 
-        ix_limit = frame.eval_value(foreach.limit)
+        ix_limit = ctx.eval_value(foreach.limit)
         if ix_limit is not None and not isinstance(ix_limit, int):
             return JFTLNotice(
                     code="BAD_STOP",
@@ -340,7 +334,7 @@ class LogicStatement(Evaluator):
             elif stop_index < 0:
                 stop_index = count + stop_index
 
-        new_vars = frame.vars
+        new_vars = ctx.vars
         # Process foreach loop
         v_value = foreach.value
         v_key = foreach.key
@@ -369,11 +363,11 @@ class LogicStatement(Evaluator):
             if v_value:
                 new_vars[v_value] = item
             else:
-                frame.set_current(item)
+                ctx.set_current(item)
 
-            if not frame.eval_bool(v_cond):
+            if not ctx.eval_bool(v_cond):
                 continue
-            new_val = frame.eval_value(body)
+            new_val = ctx.eval_value(body)
             if isinstance(new_val, JFTLNotice):
                 return new_val
             elif new_val == SKIP_VALUE:
@@ -391,29 +385,29 @@ class LogicStatement(Evaluator):
 
         return dict_result if do_dict else list_result
         
-    def _choose_body(self, state: RuntimeState) -> Statement | None:
+    def _choose_body(self, ctx: RuntimeContext) -> Statement | None:
         v_body = self._body
         if (cases := self._cases):
             for case in cases:
-                if state.eval_bool(case._cond):
-                    v_body = case._body
+                if ctx.eval_bool(case.cond):
+                    v_body = case.body
                     break
 
         return v_body
 
-    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
+    def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
 
         # Create a new frame to use
-        new_frame = state.child_state("logic")
+        new_frame = ctx.child_state("logic")
         new_vars = new_frame.vars
         # Build local vars, inside the new frame.
         if (set_vars := self._defines):
             for set_var in set_vars:
-                name = set_var._name
-                value = new_frame.eval_value(set_var._expr)
+                name = set_var.name
+                value = new_frame.eval_value(set_var.expr)
                 new_vars[name] = value
-            if not new_frame.global_frame:
-                new_frame.global_frame = new_frame
+            if not new_frame.global_ctx:
+                new_frame.global_ctx = new_frame
                 new_vars["_global"] = new_frame
 
         # Check the condition

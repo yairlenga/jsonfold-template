@@ -1,7 +1,6 @@
 from __future__ import annotations
 from types import NoneType
-from typing import Any, Optional, TextIO, cast
-from pathlib import Path
+from typing import Any, Optional, cast
 from dataclasses import dataclass, field
 import re
 
@@ -9,8 +8,8 @@ from core import RUNTIME_DOC, Frame, JFTLConfig, JFTLTemplate
 from logic import LogicStatement
 from template import SKIP_VALUE, Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, CompileError, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, RenderError, RuntimeState, Statement, StatementCompiler
-from navigation import NAV_RE_STR, NavigationPlugin
+from model import COMPILE_DOC, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, RenderError, RuntimeContext, StatementCompiler
+from navigation import NAV_RE_STR, NavigationCompiler
 
 from typing import Any
 
@@ -20,8 +19,6 @@ from typing import Any
 # Uncomment and use this instead of the flat version if you want type checkers
 # to verify JSON-shape all the way down (e.g. catch a non-JSON value nested
 # three levels deep inside a dict-of-lists-of-dicts).
-
-
 
 @dataclass
 class JFTLCompiler(DocCompiler):
@@ -40,6 +37,7 @@ class JFTLCompiler(DocCompiler):
     _max_errors = 20
     _max_warn = 20
     _max_debug = 0
+   
 
     def _add_error(self, error: JFTLNotice) -> None:
         keep_msg = False
@@ -73,7 +71,6 @@ class JFTLCompiler(DocCompiler):
 
     # Call to natigation: 
     _NAV_RE = re.compile('^' + NAV_RE_STR + "$", re.VERBOSE)
-    _nav_plugin : NavigationPlugin = field(default_factory=NavigationPlugin)
 
     # Call to expression engine: $prefix=expression
     EXPR_RE = re.compile(r"""
@@ -85,6 +82,9 @@ class JFTLCompiler(DocCompiler):
         $            
     """, re.VERBOSE)
 
+    _nav_compiler : Optional[NavigationCompiler] = None
+    _expr_compilers: dict[str, Optional[StatementCompiler]] = field(default_factory=dict)
+
     INTERPOLATE_RE = re.compile(r"\$\$\{|\$\{([^}]*)\}")
 
     # Compile single ex
@@ -92,7 +92,9 @@ class JFTLCompiler(DocCompiler):
 
         m = self._NAV_RE.match(source)
         if m:
-            expr  = self._nav_plugin.parse_nav(m, where)
+            if self._nav_compiler is None:
+                self._nav_compiler = NavigationCompiler(self)
+            expr  = self._nav_compiler.parse_nav(m, where)
             return expr
 
         # Consider python expression engines (hardcoded for now)
@@ -100,9 +102,14 @@ class JFTLCompiler(DocCompiler):
         m = self.EXPR_RE.match(source)
         if m:
             plugin_id = m.group("plugin") or self.config.default_expr_engine
-            plugin = self.plugins.get(plugin_id, None)
-            if isinstance(plugin, StatementCompiler):
-                expr = plugin.compile_str(m.group("expr"))
+            expr_compiler = self._expr_compilers.get(plugin_id, None)
+            if not expr_compiler:
+                plugin = self.plugins.get(plugin_id, None)
+                if isinstance(plugin, CompilerPlugin):
+                    expr_compiler = self._expr_compilers[plugin_id] = plugin.createCompiler(self)
+
+            if isinstance(expr_compiler, StatementCompiler):
+                expr = expr_compiler.compile_str(m.group("expr"))
                 return expr
 
         return JFTLNotice(
@@ -139,10 +146,10 @@ class JFTLCompiler(DocCompiler):
     # NOTE: [^}]*-style matching — a literal '}' inside a quoted nav segment
     # (e.g. ${foo["a}b"]}) is not yet supported; deferred.
 
-    _INTERP_RE = re.compile(
-        r"\$\$\{"
-        r"|\$\{(?P<inner>[^}]*)\}",
-    )
+    _INTERP_RE = re.compile(r"""
+    \$\$\{                        # literal "$${" — escaped/literal placeholder marker
+    | \$\{ (?P<inner>[^}]*) \}      # "${...}" — captures the inner expression
+    """, re.VERBOSE)
 
     def _compile_interpolated(self, source: str, where) -> COMPILE_DOC:
         """Splits `source` into literal and expression segments.
@@ -179,13 +186,12 @@ class JFTLCompiler(DocCompiler):
                 if "${" in inner:
                     return JFTLNotice(
                         code="BAD_INTERPOLATION", where=where,
-                        message=f"nested or unclosed interpolation: {inner!r}",
+                        message=f"nested or unclosed interpolation: '{inner!r}'",
                     )
                 if not self._NAV_ONLY_RE.match(inner):
                     return JFTLNotice(
                         code="BAD_INTERPOLATION", where=where,
-                        message=f"interpolation only supports navigation expressions, "
-                                f"got: {inner!r} (compute complex values via 'set' first)",
+                        message=f"Unrecognized interpolation '{inner!r}'",
                     )
                 inner_expr = self._compile_str("$" + inner, where)
 
@@ -314,7 +320,6 @@ class JFTLCompiler(DocCompiler):
             self._fail = True
             self._errors.append(ex.error)
             self._error_count += 1
-            error = ex.error
         return compiled
 
     def compile_root(self, source: Any, where: str = "") -> tuple[Any, bool, list[JFTLNotice]]:
@@ -420,7 +425,7 @@ class JFTLEngine(Engine):
         datasets = { **(template_datasets or {}), **(self._datasets), **(datasets or {})}
 
         env = Environment(renderer.template, input, datasets=datasets)
-        frame = Frame.root_state(env)
+        frame = Frame.root_context(env)
         result, render_error = renderer.render(body, frame)
         frame.reset()
         if render_error:
@@ -460,17 +465,17 @@ class JFTLEngine(Engine):
 class LiteralStatement(Evaluator):
     value: Any
 
-    def eval(self, state: RuntimeState) -> Any | JFTLNotice | Missing:
+    def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
         return self.value
 
 @dataclass(kw_only=True)
 class ObjectStatement(Evaluator):
     entries: dict[str, Expression]
 
-    def eval(self, state: RuntimeState) -> Any | JFTLNotice | Missing:
+    def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
         result = {}
         for key, item in self.entries.items():
-            value = item.eval(state) if isinstance(item, Evaluator) else item
+            value = item.eval(ctx) if isinstance(item, Evaluator) else item
             if isinstance(value, JFTLNotice):
                 return value
             if value == SKIP_VALUE:
@@ -483,10 +488,10 @@ class ObjectStatement(Evaluator):
 class ArrayStatement(Evaluator):
     items: list[Expression | Any]
 
-    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
+    def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
         result = []
         for item in self.items:
-            value = item.eval(state) if isinstance(item, Evaluator) else item
+            value = item.eval(ctx) if isinstance(item, Evaluator) else item
             if isinstance(value, JFTLNotice):
                 return value
             elif value == SKIP_VALUE:
@@ -499,9 +504,8 @@ class ValueFormatStatement(Evaluator):
     expr: Any
     format_spec: Optional[str]
 
-    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
-        item = self.expr
-        value = state.eval_value(self.expr)
+    def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
+        value = ctx.eval_value(self.expr)
         if isinstance(value, JFTLEngine):
             return value
         if isinstance(value, Missing):
@@ -516,18 +520,18 @@ class StringJoinStatement(Evaluator):
     items: list[Expression]
     separator: str = ""
 
-    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
+    def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
         result = []
         for item in self.items:
-            value = item.eval(state) if isinstance(item, Evaluator) else item
+            value = item.eval(ctx) if isinstance(item, Evaluator) else item
             if isinstance(value, str):
                 pass
             elif isinstance(value, (NoneType, Missing)):
                 value = "null"
-            elif isinstance(value, (int, float)):
-                value = str(value)
             elif isinstance(value, bool):
                 value = ["false", "true"][value]
+            elif isinstance(value, (int, float)):
+                value = str(value)
 
             if not isinstance(value, str):
                 return JFTLNotice(code='JOIN-STR-VALUE', message=f"Expecting string got {type(value)}")

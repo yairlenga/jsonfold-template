@@ -4,8 +4,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Union, cast
 
-from core import Evaluator, Frame
-from model import COMPILE_DOC, CompileError, RuntimeState, StatementCompiler
+from core import Evaluator
+from model import COMPILE_DOC, CompileError, CompilerPlugin, RuntimeContext, StatementCompiler
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 @dataclass
@@ -72,19 +72,19 @@ class NavigationStatement(Evaluator):
 
         return segments
 
-    def eval(self, state: RuntimeState) -> Any | JFTLNotice | Missing:
+    def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
         value = None
         start = self._start
         if start == "_current":
-            value = state.current
+            value = ctx.current
         elif start == "_frame":
-            value = state
+            value = ctx
         elif self._start == "_input":
-            value = state.env.input
+            value = ctx.env.input
         elif self._start == "_parent._current":
-            value = cast(RuntimeState, state.parent).current
+            value = cast(RuntimeContext, ctx.parent).current
         else:
-            value = state.lookup_var(self._start)
+            value = ctx.lookup_var(self._start)
 
         traveled = "_"  # builds up the "location" string as we walk, for diagnostics
 
@@ -107,7 +107,7 @@ class NavigationStatement(Evaluator):
                 traveled += f"[{seg.i}]"
 
             elif isinstance(seg, Var):
-                key = state.lookup_var(seg.name)
+                key = ctx.lookup_var(seg.name)
                 if isinstance(key, Missing):
                     return key
                 elif isinstance(key, str) and isinstance(value, dict) and key in value:
@@ -126,7 +126,7 @@ NAV_RE_STR = r"""
     (?P<start> \$ | \$\^ | \$< | \$% | \$(?P<vars>\w+ ) )
     (?P<segments> (\[.* | \..* )? )
 """
-class NavigationPlugin(StatementCompiler):
+class NavigationCompiler(StatementCompiler):
 
     _NAV_RE = re.compile("^" + NAV_RE_STR + "$", re.VERBOSE)
 
@@ -171,3 +171,6 @@ class NavigationPlugin(StatementCompiler):
         return expr
     
 
+class NavigationPlugin(CompilerPlugin):
+    def createCompiler(self, DocCompiler) -> StatementCompiler:
+        return NavigationCompiler(DocCompiler)

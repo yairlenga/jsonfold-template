@@ -17,15 +17,15 @@ import ast
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, cast
 
-from core import Evaluator, Frame
-from model import COMPILE_DOC, RUNTIME_DOC, RuntimeState, StatementCompiler
+from core import Evaluator
+from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompilerPlugin, RuntimeContext, StatementCompiler
 from template import JFTLNotice, Missing, MISSING_VALUE
 
-def _build_env(frame: RuntimeState) -> dict[str, Any]:
+def _build_env(ctx: RuntimeContext) -> dict[str, Any]:
     """Walk the frame chain, closest scope wins: '_' + locals + parent vars."""
     env: dict[str, Any] = {}
-    chain: list[RuntimeState] = []
-    f: Optional[RuntimeState] = frame
+    chain: list[RuntimeContext] = []
+    f: Optional[RuntimeContext] = ctx
     seen: set[int] = set()
     while f is not None and id(f) not in seen:
         chain.append(f)
@@ -35,8 +35,8 @@ def _build_env(frame: RuntimeState) -> dict[str, Any]:
         f = f.parent
     for ancestor in reversed(chain):  # farthest ancestor first, closer scopes overwrite
         env.update(ancestor.vars)
-    env["_"] = frame.current
-    env["_input"] = frame.env.input
+    env["_"] = ctx.current
+    env["_input"] = ctx.env.input
     return env
 
 
@@ -44,12 +44,13 @@ class PyEvalEvaluator(Evaluator):
     """One compiled '$pyrun:' expression."""
 
     def __init__(self, code: Any, source_text: str, where: str = ""):
+        super().__init__()
         self._code = code
         self._source = source_text
         self._where = where
 
-    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
-        env = _build_env(state)
+    def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
+        env = _build_env(ctx)
         try:
             return eval(self._code, {"__builtins__": __builtins__}, env)
         except Exception as e:
@@ -59,14 +60,14 @@ class PyEvalEvaluator(Evaluator):
                 message=f"error evaluating {self._source!r}: {e}",
             )
 
-    def eval_bool(self, state: RuntimeState) -> RUNTIME_DOC:
-        result = self.eval(state)
+    def eval_bool(self, ctx: RuntimeContext) -> RUNTIME_BOOL:
+        result = self.eval(ctx)
         if isinstance(result, (JFTLNotice, Missing)):
             return result
         return bool(result)  # native Python truthiness — not JFTL's falsy rule
 
 
-class PyEvalPlugin(StatementCompiler):
+class PyEvalCompiler(StatementCompiler):
     """Registered once (e.g. via engine.add_expr_engine('pyrun', PyRunExprEngine())).
     Stateless — compile() is called once per '$pyrun:' expression found during
     template compilation, and returns a PyRunEvaluator."""
@@ -92,13 +93,14 @@ class PyEvalPlugin(StatementCompiler):
         return PyEvalEvaluator(code, source_text, where)
 
     def compile_str(self, source: str, where: str = "") -> COMPILE_DOC:
-        return self._compile(cast(str, source))
+        return self._compile(source)
 
 
+class PyEvalPlugin(CompilerPlugin):
+    def createCompiler(self, DocCompiler) -> StatementCompiler:
+        return PyEvalCompiler(DocCompiler)
 
-import ast
-from collections.abc import Mapping
-from types import CodeType, FunctionType
+from types import CodeType
 from typing import Any
 
 
@@ -109,8 +111,8 @@ class PyRunEvaluator(Evaluator):
     glob_env: dict[str, Any]
     source: Optional[str] = None
 
-    def eval(self, state: RuntimeState) -> RUNTIME_DOC:
-        names = _build_env(state)
+    def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
+        names = _build_env(ctx)
 
         # Global Object
         g = self.func_def.__globals__
@@ -127,14 +129,14 @@ class PyRunEvaluator(Evaluator):
                 message=f"error evaluating {self.source!r}: {e}",
             )
 
-    def eval_bool(self, state: RuntimeState) -> bool | JFTLNotice | Missing:
-        result = self.eval(state)
+    def eval_bool(self, ctx: RuntimeContext) -> RUNTIME_BOOL:
+        result = self.eval(ctx)
         if isinstance(result, (JFTLNotice, Missing)):
             return result
         return bool(result)  # native Python truthiness — not JFTL's falsy rule
 
 
-class PyRunPlugin(StatementCompiler):
+class PyRunCompiler(StatementCompiler):
     """Registered once (e.g. via engine.add_expr_engine('pyrun', PyRunExprEngine())).
     Stateless — compile() is called once per '$pyrun:' expression found during
     template compilation, and returns a PyRunEvaluator."""
@@ -210,3 +212,6 @@ class PyRunPlugin(StatementCompiler):
 
 
 
+class PyRunPlugin(CompilerPlugin):
+    def createCompiler(self, DocCompiler) -> StatementCompiler:
+        return PyRunCompiler(DocCompiler)
