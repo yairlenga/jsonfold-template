@@ -18,7 +18,7 @@ Tree: TypeAlias = (
     | dict[str, "Tree[T]"]
 )
 
-class _NoValueType:
+class _SentialValue:
     def __init__(self, label: str):
         super().__init__()
         self._label = label
@@ -29,9 +29,13 @@ class _NoValueType:
     def __bool__(self):
         raise TypeError(f"{self._label} cannot be used as boolean")
 
+class _NoValueType(_SentialValue):
+    ...
+
 JSON_UNSET : Final = _NoValueType("JSON_UNSET")
-_RAISE : Final = _NoValueType("_RAISE")
-_ERROR : Final = _NoValueType("_ERROR")
+
+_RAISE : Final = _SentialValue("_RAISE")
+_ERROR : Final = _SentialValue("_ERROR")
 
 JSON_LEAFS : TypeAlias = NoneType | bool | int | float | str
     # Tree of JSON Values.
@@ -190,7 +194,7 @@ class RuntimeContext (Mapping):
         if isinstance(result, JFTLNotice):
             return self._resolve(result, on_error)
 
-        elif result is JSON_UNSET:
+        elif isinstance(result, _NoValueType):
             if on_unset is _RAISE or on_unset is _ERROR:
                 error = JFTLNotice(
                     code="UNSET_CONDITION",

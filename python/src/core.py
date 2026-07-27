@@ -17,12 +17,6 @@ Tree: TypeAlias = (
     | dict[str, "Tree[T]"]
 )
 
-class _NoValueType:
-    def __repr__(self) -> str:
-        return "NO_VALUE"
-
-NO_VALUE = _NoValueType()
-
 JSON_LEAFS : TypeAlias = NoneType | bool | int | float | str
 JSON_DOC = Tree[JSON_LEAFS]
 

@@ -10,13 +10,15 @@ Adjust the import below if LogicStatement/Case live in a different module.
 
 Run with:  python -m unittest test_logic_compile.py -v
 """
+# pyright: basic
+
 from dataclasses import asdict
 from types import NoneType
-from typing import Any
+from typing import Any, cast
 import unittest
 
-from model import JSON_UNSET, DocCompiler
-from logic import _FlattenningTransformer, _MergeTransformer, ForeachStatement, LogicCompiler, LogicStatement
+from model import JSON_UNSET, DocCompiler, Statement
+from logic import _FlattenningTransformer, _MergeTransformer, Case, ForeachStatement, LogicCompiler, LogicStatement
 
 
 class Tagged:
@@ -48,15 +50,13 @@ class FakeCompiler(DocCompiler):
     def condition(self, source, where):
         return Tagged("condition", source)
 
-    def statement(self, source, where):
-        if isinstance(source, str):
-            return self.expression(source, where)
+    def statement(self, source, where: str = "") -> Statement | Tagged:
         return Tagged("statement", source)
 
 
 
 def compile_logic(args: dict) -> LogicStatement:
-    return LogicCompiler(FakeCompiler()).compile(args)
+    return cast(LogicStatement, LogicCompiler(FakeCompiler()).compile(args))
 
 
 class TestEmptyInput(unittest.TestCase):
@@ -77,16 +77,16 @@ class TestSet(unittest.TestCase):
         stmt = compile_logic({"set": {"total": "$.price"}})
 
         self.assertEqual(asdict(stmt)["_defines"],
-                         [{"name": "total", "expr": Tagged("expression", "$.price")}])
+                         [{"name": "total", "expr": Tagged("statement", "$.price")}])
 
     def test_multiple_set_bindings_preserve_all_keys(self):
         stmt = compile_logic({"set": {"a": "$.x", "b": "$.y", "c": "$.z"}})
 
         self.assertEqual(asdict(stmt)["_defines"],
             [
-                { "name": "a", "expr": Tagged("expression", "$.x")},
-                { "name": "b", "expr": Tagged("expression", "$.y")},
-                { "name": "c", "expr": Tagged("expression", "$.z")},
+                { "name": "a", "expr": Tagged("statement", "$.x")},
+                { "name": "b", "expr": Tagged("statement", "$.y")},
+                { "name": "c", "expr": Tagged("statement", "$.z")},
             ])
 
     def test_missing_set_key_is_none(self):
@@ -114,7 +114,7 @@ class TestData(unittest.TestCase):
 
     def test_data_compiled_as_expression(self):
         stmt = compile_logic({"data": "$.user.name"})
-        self.assertEqual(stmt._set_current, Tagged("expression", "$.user.name"))
+        self.assertEqual(stmt._set_current, Tagged("statement", "$.user.name"))
 
     def test_missing_data_is_none(self):
         stmt = compile_logic({})
@@ -130,7 +130,7 @@ class TestForeach(unittest.TestCase):
         assert isinstance(stmt._foreach, ForeachStatement)
         self.assertEqual(stmt._foreach.key, "idx")
         self.assertEqual(stmt._foreach.value, "item")
-        self.assertEqual(stmt._foreach.items, Tagged("expression", "$.items"))
+        self.assertEqual(stmt._foreach.items, Tagged("statement", "$.items"))
         self.assertEqual(stmt._foreach.cond, Tagged("condition", "$.item.active"))
 
     def test_foreach_without_optional_if(self):
@@ -161,8 +161,9 @@ class TestCases(unittest.TestCase):
         assert isinstance(stmt._cases, list)
 
         self.assertEqual(len(stmt._cases), 1)
+        assert isinstance(stmt._cases[0], Case)
         self.assertEqual(stmt._cases[0].cond, Tagged("condition", "$.a"))
-        self.assertEqual(stmt._cases[0].body, Tagged("expression", "$.b"))
+        self.assertEqual(stmt._cases[0].body, Tagged("statement", "$.b"))
 
     def test_multiple_cases_preserve_order(self):
         stmt = compile_logic({
@@ -172,13 +173,13 @@ class TestCases(unittest.TestCase):
                 {"when": "$.c", "then": "$.z"},
             ]
         })
-        assert isinstance(stmt._cases, list)
+        cases = cast(list[Case], stmt._cases)
 
-        self.assertEqual(len(stmt._cases), 3)
-        self.assertEqual(stmt._cases[0].cond, Tagged("condition", "$.a"))
-        self.assertEqual(stmt._cases[1].cond, Tagged("condition", "$.b"))
-        self.assertEqual(stmt._cases[2].cond, Tagged("condition", "$.c"))
-        self.assertEqual(stmt._cases[2].body, Tagged("expression", "$.z"))
+        self.assertEqual(len(cases), 3)
+        self.assertEqual(cases[0].cond, Tagged("condition", "$.a"))
+        self.assertEqual(cases[1].cond, Tagged("condition", "$.b"))
+        self.assertEqual(cases[2].cond, Tagged("condition", "$.c"))
+        self.assertEqual(cases[2].body, Tagged("statement", "$.z"))
 
     def test_missing_case_is_none(self):
         stmt = compile_logic({})
@@ -193,20 +194,20 @@ class TestBodyDefaultError(unittest.TestCase):
 
     def test_body_compiled_as_statement(self):
         stmt = compile_logic({"body": "$.result"})
-        self.assertEqual(stmt._body, Tagged("expression", "$.result"))
+        self.assertEqual(stmt._body, Tagged("statement", "$.result"))
 
     def test_default_compiled_as_statement(self):
         stmt = compile_logic({"default": "$.fallback"})
-        self.assertEqual(stmt._default_val, Tagged("expression", "$.fallback"))
+        self.assertEqual(stmt._default_val, Tagged("statement", "$.fallback"))
 
     def test_error_compiled_as_statement(self):
         stmt = compile_logic({"error": "$.errorHandler"})
-        self.assertEqual(stmt._error_val, Tagged("expression", "$.errorHandler"))
+        self.assertEqual(stmt._error_val, Tagged("statement", "$.errorHandler"))
 
     def test_body_default_error_independent(self):
         # setting one should not accidentally populate the others
         stmt = compile_logic({"body": "$.b"})
-        self.assertEqual(stmt._body, Tagged("expression", "$.b"))
+        self.assertEqual(stmt._body, Tagged("statement", "$.b"))
         self.assertIs(stmt._default_val, JSON_UNSET)
         self.assertIs(stmt._error_val, JSON_UNSET)
 
@@ -241,17 +242,17 @@ class TestFullRealisticBlock(unittest.TestCase):
         stmt = compile_logic(args)
 
         self.assertEqual(asdict(stmt)["_defines"],
-                         [{"name": "total", "expr": Tagged("expression", "$.price")}])
+                         [{"name": "total", "expr": Tagged("statement", "$.price")}])
         self.assertEqual(stmt._if, Tagged("condition", "$.enabled"))
         assert isinstance(stmt._foreach, ForeachStatement)
         self.assertEqual(stmt._foreach.key, "idx")
         self.assertEqual(stmt._foreach.value, "row")
-        self.assertEqual(stmt._foreach.items, Tagged("expression", "$.rows"))
+        self.assertEqual(stmt._foreach.items, Tagged("statement", "$.rows"))
         assert isinstance(stmt._cases, list)
         self.assertEqual(len(stmt._cases), 1)
-        self.assertEqual(stmt._body, Tagged("expression", "$.output"))
+        self.assertEqual(stmt._body, Tagged("statement", "$.output"))
         self.assertIsInstance(stmt._transformer, _MergeTransformer)
-        self.assertEqual(stmt._error_val, Tagged("expression", "$.onError"))
+        self.assertEqual(stmt._error_val, Tagged("statement", "$.onError"))
         self.assertIs(stmt._set_current, JSON_UNSET)
         self.assertIs(stmt._default_val, JSON_UNSET)
 
