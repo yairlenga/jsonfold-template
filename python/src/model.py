@@ -26,16 +26,18 @@ class _SentialValue:
     def __repr__(self) -> str:
         return self._label
     
-    def __bool__(self):
+    def __bool__(self) -> bool | None:
         raise TypeError(f"{self._label} cannot be used as boolean")
 
-class _NoValueType(_SentialValue):
-    ...
+class NoValueType(_SentialValue):
 
-JSON_UNSET : Final = _NoValueType("JSON_UNSET")
+    def __bool__(self):
+        return False
 
-_RAISE : Final = _SentialValue("_RAISE")
-_ERROR : Final = _SentialValue("_ERROR")
+JSON_UNSET : Final = NoValueType("JSON_UNSET")
+
+JFTL_RAISE : Final = _SentialValue("_RAISE_")
+JFTL_NOTICE : Final = _SentialValue("_NOTICE_")
 
 JSON_LEAFS : TypeAlias = NoneType | bool | int | float | str
     # Tree of JSON Values.
@@ -91,11 +93,11 @@ class Environment:
     # Reference to top frame. Set later, as top frame and top environment point to each other.
     top: RuntimeContext | None = None
 
-    eval_count = 0
+    eval_count : int = 0
 
 
 @dataclass
-class RuntimeContext (Mapping):
+class RuntimeContext (Mapping, ABC):
 
     _NULL_ENVIRONMENT : ClassVar = Environment(_NULL_TEMPLATE, None)
 
@@ -130,9 +132,9 @@ class RuntimeContext (Mapping):
         self.current = current
 
     def _resolve(self, error: JFTLNotice, on: Any) -> Any:
-        if on is _RAISE:
+        if on is JFTL_RAISE:
             raise JFTLException(error)
-        if on is _ERROR:
+        if on is JFTL_NOTICE:
             return error
         return on
 
@@ -142,8 +144,8 @@ class RuntimeContext (Mapping):
         *,
         context: Optional[str] = None,
         on_null: Any = JSON_UNSET,
-        on_error: Any = _ERROR,
-        on_unset: Any = _RAISE,
+        on_error: Any = JFTL_NOTICE,
+        on_unset: Any = JFTL_RAISE,
     ) -> RUNTIME_DOC:
         
         self.env.eval_count += 1
@@ -152,8 +154,8 @@ class RuntimeContext (Mapping):
         if isinstance(result, JFTLNotice):
             return self._resolve(result, on_error)
 
-        elif isinstance(result, _NoValueType):
-            if on_unset is _RAISE or on_unset is _ERROR:
+        elif isinstance(result, NoValueType):
+            if on_unset is JFTL_RAISE or on_unset is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="UNSET_STATEMENT",
                     where=self.where(context),
@@ -163,7 +165,7 @@ class RuntimeContext (Mapping):
             return on_unset
 
         elif isinstance(result, (NoneType, Missing)):
-            if on_null is _RAISE or on_null is _ERROR:
+            if on_null is JFTL_RAISE or on_null is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="MISSING_VALUE",
                     where=self.where(context),
@@ -180,8 +182,8 @@ class RuntimeContext (Mapping):
         *,
         context: Optional[str] = None,
         on_null: Any = False,
-        on_error: Any = _ERROR,
-        on_unset: Any = _RAISE,
+        on_error: Any = JFTL_NOTICE,
+        on_unset: Any = JFTL_RAISE,
     ) -> RUNTIME_BOOL:
         """Default: JFTL's strict falsiness — False | null | Missing are
         falsy, everything else truthy. Pass on_null=_RAISE (or _ERROR)
@@ -189,13 +191,9 @@ class RuntimeContext (Mapping):
         context. Override for engine-specific truthiness."""
 
         self.env.eval_count += 1
-        result = cond.eval(self) if isinstance(cond, Evaluator) else cond
 
-        if isinstance(result, JFTLNotice):
-            return self._resolve(result, on_error)
-
-        elif isinstance(result, _NoValueType):
-            if on_unset is _RAISE or on_unset is _ERROR:
+        if isinstance(cond, NoValueType):
+            if on_unset is JFTL_RAISE or on_unset is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="UNSET_CONDITION",
                     where=self.where(context),
@@ -204,8 +202,13 @@ class RuntimeContext (Mapping):
                 return self._resolve(error, on_unset)
             return on_unset
 
+        result = cond.eval_bool(self) if isinstance(cond, Evaluator) else cond
+
+        if isinstance(result, JFTLNotice):
+            return self._resolve(result, on_error)
+
         elif isinstance(result, (NoneType, Missing)):
-            if on_null is _RAISE or on_null is _ERROR:
+            if on_null is JFTL_RAISE or on_null is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="MISSING_VALUE",
                     where=self.where(context),
@@ -231,8 +234,10 @@ class RuntimeContext (Mapping):
         self.reset()
 
     @classmethod
+    @abstractmethod
     def root_context(cls, env: Environment) -> RuntimeContext: ...
 
+    @abstractmethod
     def child_state(self, name: str) -> RuntimeContext: ...
     
     def  __getitem__(self, key):
@@ -281,21 +286,21 @@ class Evaluator(ABC):
     def eval_bool(
         self,
         ctx: RuntimeContext,
-    ) -> bool | Missing | JFTLNotice | NoneType :
+    ) -> RUNTIME_BOOL :
         """Default: JFTL's strict falsiness — False | null | Missing are
         falsy, everything else truthy. Pass on_null=_RAISE (or _ERROR)
         to instead treat a missing/null result as a failure in this
         context. Override for engine-specific truthiness."""
         result = self.eval(ctx)
-        return None if isinstance(result, (NoneType, Missing)) else True if result else False
+        return result if isinstance(result, (bool, Missing, JFTLNotice, NoneType)) else True if result else False
 
 COMPILE_LEAFS : TypeAlias = Evaluator | JSON_LEAFS | Missing | JFTLNotice | Missing
     # Tree of compiled object, may include values, Missing nodes, to-bd-evaluated nodes, and error notice nodes.
 COMPILE_DOC = Tree[COMPILE_LEAFS]
 
-Expression = COMPILE_DOC | _NoValueType        # Expressoin returning any value
-Condition = COMPILE_DOC | _NoValueType         # Expression yielding boolean
-Statement = COMPILE_DOC | _NoValueType         # Statement, returning any value
+Expression = COMPILE_DOC | NoValueType        # Expressoin returning any value
+Condition = COMPILE_DOC | NoValueType         # Expression yielding boolean
+Statement = COMPILE_DOC | NoValueType         # Statement, returning any value
 
 # core.py (or wherever feels like the right shared home — maybe alongside Diagnostic/Error in template.py)
 @dataclass

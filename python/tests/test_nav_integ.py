@@ -15,12 +15,11 @@ per the constraint given. Covers:
 
 Run with:  python -m unittest test_navigation_integration.py -v
 """
-from typing import cast
 import unittest
 
-from core import Frame, Environment, JFTLTemplate
+from core import Frame, Environment
 from engine import JFTLEngine
-from model import _NULL_TEMPLATE
+from model import _NULL_TEMPLATE # pyright: ignore[reportPrivateUsage]
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +77,7 @@ def extract(path_expr: str):
     against INPUT_DOCUMENT, and return the extracted 'result' value."""
     template = { "main": { "result": path_expr}}
     compiled, _ = JFTLEngine().compile(template)
-    stmt = cast(JFTLTemplate, compiled).main_entry
+    stmt = compiled.main_entry
     frame = make_root(INPUT_DOCUMENT)
     result = stmt.eval(frame) if stmt else None
     assert(isinstance(result, dict))

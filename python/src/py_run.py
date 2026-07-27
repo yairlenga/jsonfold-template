@@ -17,8 +17,7 @@ import ast
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, cast
 
-from core import Evaluator
-from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompilerPlugin, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
 from template import JFTLNotice, Missing, MISSING_VALUE
 
 def _build_env(ctx: RuntimeContext) -> dict[str, Any]:

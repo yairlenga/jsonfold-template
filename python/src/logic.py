@@ -3,8 +3,7 @@ from types import NoneType
 from typing import Any, ClassVar, Optional, cast
 from dataclasses import dataclass
 
-from core import JSON_DOC, RUNTIME_DOC
-from model import COMPILE_DOC, JSON_UNSET, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
+from model import COMPILE_DOC, JSON_DOC, JSON_UNSET, RUNTIME_DOC, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
 from template import MISSING_VALUE, SKIP_VALUE, JFTLNotice, Missing
 
 """ {
