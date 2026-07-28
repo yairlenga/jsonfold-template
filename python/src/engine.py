@@ -8,7 +8,7 @@ from core import RUNTIME_DOC, Frame
 from logic import LogicCompiler
 from template import SKIP_VALUE, Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, RenderError, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 
 from typing import Any
@@ -330,10 +330,16 @@ class JFTLCompiler(DocCompiler):
     def compile_root(self, source: Any, where: str = "") -> tuple[Any, bool, list[JFTLNotice]]:
         self._fail = False
         compiled = self.compile(source, where)
+        ok = not self._fail and self._error_count == 0
+        # Make sure compiled is non-false, if template is valid, wrap it inside a literal,
+        # If compilation failed, make it JFTLNotice.
+        if not compiled:
+            if ok:
+                compiled = LiteralStatement(where, None, value=compiled)
+            else:
+                compiled = JFTLNotice(code="COMPILE-ERROR", message="Compile Error")
 
         return compiled, not self._fail and self._error_count == 0, self._errors
-
-
    
 @dataclass
 class JFTLRenderer():
@@ -464,14 +470,7 @@ class JFTLEngine(Engine):
         renderer = JFTLRenderer(cast(JFTLTemplate, template))
         return renderer.materialize(result)
 
-           
 
-@dataclass(kw_only=True)
-class LiteralStatement(Evaluator):
-    value: Any
-
-    def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
-        return self.value
 
 @dataclass(kw_only=True)
 class ObjectStatement(Evaluator):

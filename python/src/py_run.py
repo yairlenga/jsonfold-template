@@ -51,7 +51,7 @@ class PyEvalEvaluator(Evaluator):
     def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
         env = _build_env(ctx)
         try:
-            return eval(self._code, {"__builtins__": __builtins__}, env)
+            return eval(self._code, env)
         except Exception as e:
             return JFTLNotice(
                 code="PYRUN_RUNTIME_ERROR",

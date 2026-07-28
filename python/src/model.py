@@ -347,7 +347,7 @@ class DocCompiler(BaseCompiler):
     
     def record_notice(self, error: JFTLNotice) -> JFTLNotice: ...
 
-    
+   
 class CompileError(Exception):
     """Raised for any defect discovered while compiling a template.
     Carries the actual Error to report — no separate/duplicate fields.
@@ -360,6 +360,16 @@ class RenderError(Exception):
     def __init__(self, notice: JFTLNotice):
         super().__init__(notice.message)
         self.notice = notice
+
+
+           
+# Helper to transform Literal values
+@dataclass(kw_only=True)
+class LiteralStatement(Evaluator):
+    value: Any
+
+    def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
+        return self.value
 
 
 # Plugin Management

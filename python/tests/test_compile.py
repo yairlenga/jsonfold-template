@@ -35,7 +35,10 @@ class TestLiterals(unittest.TestCase):
 
     def test_none_is_literal(self):
         stmt = compile(None)
-        self.assertEqual(stmt, None)
+        self.assertTrue(stmt, bool(stmt))
+        self.assertIsInstance(stmt, LiteralStatement)
+        assert isinstance(stmt, LiteralStatement)
+        self.assertIs(stmt.value, None)
 
     def test_string_not_starting_with_prefix_is_literal(self):
         # starts with '$' but not '$.' — should NOT be treated as a path

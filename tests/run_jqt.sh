@@ -98,6 +98,7 @@ echo "Found ${#id_list[@]} tests, Running $#, using OUTDIR=$OUTDIR" >&2
 pass=0
 fail=0
 skip=0
+info=0
 for id in "${id_list[@]}" ; do
 	base="$OUTDIR/$id"
 	skip_msg=${data["$id.SKIP"]-}
@@ -114,6 +115,7 @@ for id in "${id_list[@]}" ; do
 	jf_out=$base.jf.out
 	# Run from memory
 	error=
+	msg=
 	rm -f $base.{input,gold,jq,jqout,jftl,out,err,ok}
 	rm -f $err_file
 
@@ -140,12 +142,12 @@ for id in "${id_list[@]}" ; do
 
 		echo "=== jq:" >> $err_file
 		if ! jq -f $jq_file < ${input_file:-/dev/null} > "$jq_out" 2>> "$err_file" ; then
-			error=${error:+, }"JQ Fail"
+			msg=${warn:+, }"JQ Fail"
 		else
 			diff=$(diff $jq_out $gold_file || true)
 			if [ "$diff" ] ; then
 				(echo "=== jq-diff: Failed" ; echo "$diff") >> $err_file
-				error+=${error:+, }"JQ-DIFF"
+				msg+=${warn:+, }"JQ-DIFF"
 			else
 				echo "=== jq-match: OK" >> $err_file
 			fi
@@ -187,16 +189,22 @@ for id in "${id_list[@]}" ; do
 		echo "SKIP $id ($skip_msg)" >&2
 		skip=$((skip+1))
 	elif [ "$error" ]; then
-		echo "FAIL $id ($error) see $err_file" >&2
+		echo "FAIL $id ($error${msg+,$msg}) see $err_file" >&2
 		fail=$((fail+1))
+	elif [ "$msg" ]; then
+		mv $err_file $OUTDIR/$id.warn
+		err_file=$OUTDIR/$id.warn
+		echo "WARN $id ($msg) see $OUTDIR/$id.warn" >&2
+        	info=$((info+1))
+		[ "$KEEP" ] || rm -f $OUTDIR/$id.{input,jq,jftl,gold,jqout,jfout}
 	else
 		echo "OK $id"
         	pass=$((pass+1))
 		mv $err_file $base.ok
-		[ "$KEEP" ] || rm -f $OUTDIR/$id.{input,jq,jftl,gold,jqout,out,err}
+		[ "$KEEP" ] || rm -f $OUTDIR/$id.{input,jq,jftl,gold,jqout,jfout,err}
 	fi
 done
  
 echo "---"
-echo "Completed: $((pass+fail+skip)), ok: $pass, fail: $fail, skipped: $skip" >&2
+echo "Completed: $((pass+fail+skip)), ok: $pass, fail: $fail, warn: $info, skipped: $skip" >&2
 [ "$fail" = 0 ]

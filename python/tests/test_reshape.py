@@ -20,7 +20,7 @@ constants at every level.
 Run with:  python -m unittest test_reshape.py -v
 """
 import json
-from typing import Any, cast
+from typing import Any
 import unittest
 
 from core import Frame, Environment
@@ -176,7 +176,7 @@ class TestReshape(unittest.TestCase):
         compiled, _ = JFTLEngine().compile( TEMPLATE, main_only=True)
         frame = make_root(INPUT_DOCUMENT)
         stmt = compiled.main_entry
-        self.result = frame.eval_value(stmt)
+        self.result = frame.eval_value(stmt) # pyright: ignore[reportUninitializedInstanceVariable]
 
     def test_pretty_print_for_visual_inspection(self):
         print("\n--- INPUT ---")

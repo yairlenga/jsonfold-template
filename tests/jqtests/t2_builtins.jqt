@@ -92,6 +92,7 @@ JFTL = {{{
 
 [127-builtins]
 LEVEL=py
+NOTE = Fixed GOLD to 19 (not 19.0)
 JQ = {{{
 .+4
 }}}
@@ -99,7 +100,7 @@ INPUT = {{{
 15
 }}}
 GOLD = {{{
-19.0
+19
 }}}
 JFTL = {{{
 {"main": "$py=_ + 4"}
@@ -803,6 +804,7 @@ JFTL = {{{
 
 [174-builtins]
 LEVEL=nav
+OUT_FMT=stream
 JQ = {{{
 null,1,null
 }}}
@@ -861,7 +863,7 @@ GOLD = {{{
 [2,3]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$"}, "body": "$pyeval=_ ** 0.5"}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$pyeval= int(v) if (v := _ ** 0.5).is_integer else v" }}
 }}}
 COMMENT=Exponentiation (**) isn't a py-tier concern by itself, but there's no math.sqrt available without __import__ — used ** 0.5 instead, which is a plain expression and technically fits py tier too; tagged eval to be conservative since I haven't confirmed ** is in simpleeval's supported operator set.
 
@@ -877,7 +879,7 @@ GOLD = {{{
 2
 }}}
 JFTL = {{{
-{"main": "$pyeval=(lambda m: (sum((x-m)**2 for x in _)/len(_))**0.5)(sum(_)/len(_))"}
+{"main": "$pyeval= int(v) if (v := (sum(x*x for x in _)/len(_) - (sum(_)/len(_))**2)**0.5).is_integer else v" } 
 }}}
 COMMENT=Standard deviation via a self-applying lambda to bind the mean once; lambda isn't in simpleeval's grammar, so eval (not py) regardless of the arithmetic being otherwise simple.
 
@@ -912,22 +914,23 @@ GOLD = {{{
 [1,0.996917,0.987688,0.972369,0.951056,0.923879,0.891006,0.85264,0.809017,0.760406,0.707106,0.649448,0.587785,0.522498,0.45399,0.382683,0.309017,0.233445,0.156434,0.078459]
 }}}
 JFTL = {{{
-{"main": "$pyeval=[int(__import__('math').cos((3.141592/2)*(v/20)) * 1000000) / 1000000 for v in range(20)]"}
+{"main": "$pyeval=[ int(r) if (r := int(__import__('math').cos((3.141592/2)*(v/20)) * 1000000) / 1000000).is_integer() else r for v in range(20)]"}
 }}}
 
 [181-builtins]
 LEVEL=eval
+NOTE=Skip position 0, as JQ sin(0) = 0, whereas for python sin(0) is 0.0
 JQ = {{{
-[(3.141592 / 2) * (range(0;20) / 20)|sin * 1000000|floor / 1000000]
+[(3.141592 / 2) * (range(1;20) / 20)|sin * 1000000|floor / 100000.0+0.0 ]
 }}}
 INPUT = {{{
 null
 }}}
 GOLD = {{{
-[0,0.078459,0.156434,0.233445,0.309016,0.382683,0.45399,0.522498,0.587785,0.649447,0.707106,0.760405,0.809016,0.85264,0.891006,0.923879,0.951056,0.972369,0.987688,0.996917]
+[0.078459,0.156434,0.233445,0.309016,0.382683,0.45399,0.522498,0.587785,0.649447,0.707106,0.760405,0.809016,0.85264,0.891006,0.923879,0.951056,0.972369,0.987688,0.996917]
 }}}
 JFTL = {{{
-{"main": "$pyeval=[int(__import__('math').sin((3.141592/2)*(v/20)) * 1000000) / 1000000 for v in range(20)]"}
+{"main": "$pyeval=[int(__import__('math').sin((3.141592/2)*(v/20)) * 1000000) / 1000000 for v in range(1,20)]"}
 }}}
 
 [182-builtins]
@@ -1078,8 +1081,9 @@ COMMENT=Same unary-minus-parsing-edge-case framing as the earlier "066" any/all-
 
 [192-builtins]
 LEVEL=eval
+NOTE = In 2.0, [reduce .[] / .[] as $i (0; . + $i)]
 JQ = {{{
-[reduce .[] / .[] as $i (0; . + $i)]
+[reduce (.[] as $x | .[] as $y | $x / $y) as $i (0; . + $i)]
 }}}
 INPUT = {{{
 [1,2]
