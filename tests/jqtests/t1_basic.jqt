@@ -187,7 +187,7 @@ GOLD = {{{
 "byte order mark"
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 
 [010-basic]
@@ -221,7 +221,7 @@ GOLD = {{{
 "Aa\r\n\t\b\fμ"
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 
 [012-basic]
@@ -328,7 +328,7 @@ GOLD = {{{
 ["foo",1,["a",1,"b",2,{"foo":"bar"}]]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$."}, "body": "$pyeval=__import__('json').loads(__import__('json').dumps(_))"}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$pyeval=__import__('json').loads(__import__('json').dumps(_))"}}
 }}}
 
 [019-basic]
@@ -649,10 +649,10 @@ GOLD = {{{
 3
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$."}, "body": "$."}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$"}}
 }}}
 OUT_MODE=stream
-COMMENT=foreach with no "value" sets frame.current to each item, so "$." re-emits it with zero expression-engine use. Streaming collected into one array.
+COMMENT=foreach with no "value" sets frame.current to each item, so "$" re-emits it with zero expression-engine use. Streaming collected into one array.
 
 [042-basic]
 LEVEL=nav
@@ -686,7 +686,7 @@ GOLD = {{{
 []
 }}}
 JFTL = {{{
-{"main": [1, "$."]}
+{"main": [1, "$"]}
 }}}
 OUT_MODE=stream
 
@@ -703,7 +703,7 @@ GOLD = {{{
 [[2]]
 }}}
 JFTL = {{{
-{"main": ["$."]}
+{"main": ["$"]}
 }}}
 
 [045-basic]
@@ -748,7 +748,7 @@ GOLD = {{{
 ["a"]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$."}, "body": "$."}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$"}}
 }}}
 
 [048-basic]
@@ -763,7 +763,7 @@ GOLD = {{{
 [["a","b"],1,["a","b"],"a","b",2,3]
 }}}
 JFTL = {{{
-{"main": {"$": true, "set": {"cur": "$."}, "body": "$pyeval=[cur, 1, cur, *cur, 2, 3]"}}
+{"main": {"$": true, "set": {"cur": "$"}, "body": "$pyeval=[cur, 1, cur, *cur, 2, 3]"}}
 }}}
 COMMENT=Star-unpacking (*cur) inside a list literal isn't in simpleeval's supported grammar, so eval tier.
 
@@ -829,7 +829,7 @@ GOLD = {{{
 [0,1,2,3,4,5,6,7,8,9]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"shape": "range", "stop": 10}, "body": "$."}}
+{"main": {"$": true, "foreach": {"shape": "range", "stop": 10}, "body": "$"}}
 }}}
 COMMENT=shape:"range" with no "value" also sets frame.current to the numeric value each iteration.
 
@@ -961,7 +961,7 @@ GOLD = {{{
 [1,2,6,24,120]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$."}, "body": "$pyeval=__import__('math').factorial(_)"}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$pyeval=__import__('math').factorial(_)"}}
 }}}
 COMMENT=This specific until() loop happens to compute a factorial — doesn't generalize to arbitrary until() usage.
 
@@ -989,7 +989,7 @@ GOLD = {{{
 [0,1,2,3,4]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"shape": "range", "stop": 5}, "body": "$."}}
+{"main": {"$": true, "foreach": {"in": 5}, "body": "$"}}
 }}}
 COMMENT=This foreach's update just re-emits the item, so it degrades to plain range iteration — coincidence, not a general foreach/reduce translation.
 
@@ -1369,7 +1369,7 @@ GOLD = {{{
 ["","","a","aa"]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$."}, "body": "$py='a'.join(_)"}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$py='a'.join(_)"}}
 }}}
 
 [089-basic]
@@ -1478,7 +1478,7 @@ GOLD = {{{
 JFTL = {{{
 {"main": {"$": true, "set": {"x": 1, "y": 2}, "body": "$py=[x, y, x]"}}
 }}}
-COMMENT=Reading a named "set" variable always needs at least py tier — bare name lookup isn't reachable via "$." navigation.
+COMMENT=Reading a named "set" variable always needs at least py tier — bare name lookup isn't reachable via "$" navigation.
 
 [096-basic]
 LEVEL=py
@@ -1592,7 +1592,7 @@ GOLD = {{{
 [2, 1]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$."}, "body": "$py=[_[1] if len(_) > 1 else None, _[0]]"}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$py=[_[1] if len(_) > 1 else None, _[0]]"}}
 }}}
 OUT_MODE=stream
 
@@ -1625,7 +1625,7 @@ GOLD = {{{
 [0]
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 
 [106-basic]

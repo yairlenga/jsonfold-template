@@ -41,7 +41,7 @@ GOLD = {{{
 2.0
 }}}
 JFTL = {{{
-{"main": "$py=1 + 1"}
+{"main": "$py=float(1 + 1)"}
 }}}
 COMMENT=Input is irrelevant to this program; jq's 2.0 vs 2 is a numeric-literal-formatting nuance not modeled here.
 
@@ -275,7 +275,7 @@ GOLD = {{{
 [200, 5]
 }}}
 JFTL = {{{
-{"main": "$py=[10 * 20, 20 / _]"}
+{"main": "$py=[10 * 20, 20 // _]"}
 }}}
 
 [139-builtins]
@@ -290,7 +290,7 @@ GOLD = {{{
 10
 }}}
 JFTL = {{{
-{"main": "$py=1 + 2 * 2 + 10 / 2"}
+{"main": "$py=1 + 2 * 2 + 10 // 2"}
 }}}
 
 [140-builtins]
@@ -305,7 +305,8 @@ GOLD = {{{
 [2, 8, 10, 14]
 }}}
 JFTL = {{{
-{"main": "$py=[16 / 4 / 2, 16 / 4 * 2, 16 - 4 - 2, 16 - 4 + 2]"}
+
+{"main": "$py=[16 // 4 // 2, 16 // 4 * 2, 16 - 4 - 2, 16 - 4 + 2]"}
 }}}
 
 [141-builtins]
@@ -452,7 +453,7 @@ GOLD = {{{
 15
 }}}
 JFTL = {{{
-{"main": "$pyeval=1 + float(_) + float('10')"}
+{"main": "$pyeval=1 + _ + int('10')"}
 }}}
 COMMENT=float() isn't in the py whitelist, so eval. Also simplifies jq's tonumber (which can return int or float depending on the literal) to always-float — fine for this input, not a faithful general tonumber.
 
@@ -548,7 +549,7 @@ GOLD = {{{
 [0, 0, 2, 1, 4, 1]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$."}, "body": "$py=len(_)"}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$py=len(_)"}}
 }}}
 COMMENT=len() is whitelisted; happens to agree with jq's length for list/dict/str here, not in general (jq's length also handles numbers/booleans/null, which Python's len() rejects).
 
@@ -592,7 +593,7 @@ GOLD = {{{
 [[], ["abc","abcd","abcde"], ["x","y","z"]]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$."}, "body": "$pyeval=sorted(_.keys())"}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$pyeval=sorted(_.keys())"}}
 }}}
 COMMENT=sorted() is whitelisted but dict.keys() isn't (only str has allowed_attrs) — needs eval for the .keys() call.
 
@@ -844,7 +845,7 @@ GOLD = {{{
 [-2, 1, 1]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$."}, "body": "$py=int(_ // 1)"}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$py=int(_ // 1)"}}
 }}}
 COMMENT=No math module reachable at py tier; integer floor-division (// 1) agrees with floor() for both signs.
 
@@ -860,7 +861,7 @@ GOLD = {{{
 [2,3]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$."}, "body": "$pyeval=_ ** 0.5"}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$pyeval=_ ** 0.5"}}
 }}}
 COMMENT=Exponentiation (**) isn't a py-tier concern by itself, but there's no math.sqrt available without __import__ — used ** 0.5 instead, which is a plain expression and technically fits py tier too; tagged eval to be conservative since I haven't confirmed ** is in simpleeval's supported operator set.
 
@@ -1119,7 +1120,7 @@ GOLD = {{{
 null
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 
 [195-builtins]
