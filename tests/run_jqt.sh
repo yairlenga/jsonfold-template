@@ -109,7 +109,7 @@ for id in "${id_list[@]}" ; do
 	input_file=$base.input
 	jq_file=$base.jq
 	gold_file=$base.gold
-	jq_out=$base.jqout
+	jq_out=$base.jq.out
 	err_file=$base.err
 	jf_file=$base.jftl
 	jf_out=$base.jf.out
@@ -196,12 +196,12 @@ for id in "${id_list[@]}" ; do
 		err_file=$OUTDIR/$id.warn
 		echo "WARN $id ($msg) see $OUTDIR/$id.warn" >&2
         	info=$((info+1))
-		[ "$KEEP" ] || rm -f $OUTDIR/$id.{input,jq,jftl,gold,jqout,jfout}
+		[ "$KEEP" ] || rm -f $OUTDIR/$id.{input,jq,jftl,gold,jq.out,jf.out}
 	else
 		echo "OK $id"
         	pass=$((pass+1))
 		mv $err_file $base.ok
-		[ "$KEEP" ] || rm -f $OUTDIR/$id.{input,jq,jftl,gold,jqout,jfout,err}
+		[ "$KEEP" ] || rm -f $OUTDIR/$id.{input,jq,jftl,gold,jq.out,jf.out,err}
 	fi
 done
  

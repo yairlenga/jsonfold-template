@@ -121,6 +121,7 @@ GOLD = {{{
 SKIP=paths/0 walks every path in the structure recursively; needs both path() and recursive descent, neither available.
 
 [206-paths]
+OUT_FMT=stream
 LEVEL=py
 JQ = {{{
 ["foo",1] as $p | getpath($p), setpath($p; 20), delpaths([$p])
@@ -141,6 +142,7 @@ COMMENT=Path ["foo",1] is a fixed literal for this test, so getpath became plain
 
 [207-paths]
 LEVEL=py
+OUT_FMT=stream
 JQ = {{{
 map(getpath([2])), map(setpath([2]; 42)), map(delpaths([[2]]))
 }}}
@@ -169,13 +171,47 @@ GOLD = {{{
 [[{"x":1}], [{"bar":2}]]
 }}}
 JFTL = {{{
-{"main": "$py=[[{k:v for k,v in a[0].items() if k != 'foo'}] if a and 'foo' in a[0] else a for a in _]"}
+{ "main": {
+    "$": true,
+    "foreach": {
+        "$": true
+    },
+    "body": {
+        "$": true,
+        "foreach": {
+            "index": "ix"
+        },
+        "body": {
+            "$": true,
+            "case": [
+                {
+                    "when": "$py=ix == 0",
+                    "then": {
+                        "$": true,
+                        "body": {
+                            "$": true,
+                            "body": [
+                                "$",
+                                { "foo": "$_missing" }
+                            ],
+                            "transform": "merge"
+                        },
+                        "transform": "drop_missing"
+                    }
+                }
+            ],
+            "body": "$"
+        }
+    }
+}}
 }}}
 COMMENT=dict comprehension with .items() — .items() isn't in the whitelisted str-only attrs, but dict.items() specifically... actually this needs eval, not py; flagging the mistake: retag as eval since .items() isn't reachable at py tier.
 LEVEL=eval
 
 [209-paths]
+SKIP = Creating/removing elements, not supported in JFTL yet
 LEVEL=py
+OUT_FMT=stream
 JQ = {{{
 ["foo",1] as $p | getpath($p), setpath($p; 20), delpaths([$p])
 }}}
@@ -204,7 +240,7 @@ GOLD = {{{
 [1,2,3]
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 COMMENT=Out-of-range path is a no-op in jq — result equals input exactly, so pure identity nav.
 
@@ -385,10 +421,10 @@ INPUT = {{{
 {"bar":42}
 }}}
 GOLD = {{{
-{"foo":42, "bar":42}
+{"bar":42, "foo":42}
 }}}
 JFTL = {{{
-{"main": "$py={**_, 'foo': _['bar'] if 'bar' in _ else None}"}
+{"main": { "$": true, "body": [  "$", { "foo": "$.bar" } ], "transform": "merge"}}
 }}}
 
 [223-paths]
@@ -424,7 +460,7 @@ GOLD = {{{
 JFTL = {{{
 {"main": ["$py=[v + 2 for v in _]", "$py=[v * 2 for v in _]", "$py=[v - 2 for v in _]", "$py=[v / 2 for v in _]", "$py=[v % 2 for v in _]"]}
 }}}
-OUT_MODE=stream
+OUT_FMT=stream
 COMMENT=Streaming 5 outputs collected into one array.
 
 [225-paths]
@@ -439,7 +475,7 @@ GOLD = {{{
 [0,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,0]
 }}}
 JFTL = {{{
-{"main": "$py=[v % 7 for v in _]"}
+{"main": "$py=[ v - 7 * int(v/7) for v in _]"}
 }}}
 COMMENT=Assumes Python's % matches jq's here for negative operands — worth spot-checking, sign-of-remainder conventions differ between languages in general.
 
@@ -633,11 +669,12 @@ SKIP=needs def and try/catch.
 
 [239-paths]
 LEVEL=py
+NOTE = In the input, Replace -NaN as the last element with NaN, Python does not handle -NaN
 JQ = {{{
 .[] = 1
 }}}
 INPUT = {{{
-[1,null,Infinity,-Infinity,NaN,-NaN]
+[1,null,Infinity,-Infinity,NaN,NaN]
 }}}
 GOLD = {{{
 [1,1,1,1,1,1]

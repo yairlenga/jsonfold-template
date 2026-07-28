@@ -829,7 +829,7 @@ GOLD = {{{
 [0,1,2,3,4,5,6,7,8,9]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"shape": "range", "stop": 10}, "body": "$"}}
+{"main": {"$": true, "foreach": {"in": 10}, "body": "$"}}
 }}}
 COMMENT=shape:"range" with no "value" also sets frame.current to the numeric value each iteration.
 
