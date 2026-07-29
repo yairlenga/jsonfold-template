@@ -26,5 +26,26 @@
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
     "python.analysis.typeCheckingMode": "standard",
-    "sarif-viewer.connectToGithubCodeScanning": "off"
+    "sarif-viewer.connectToGithubCodeScanning": "off",
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportUnusedImport": "warning",
+        "reportUnusedVariable": "warning",
+        "reportDuplicateImport": "warning",
+        "reportUnnecessaryTypeIgnoreComment": "warning",
+        "reportUnnecessaryCast": "warning",
+        "reportUnnecessaryIsInstance": "warning",
+        "reportImplicitStringConcatenation": "warning",
+        "reportPrivateUsage": "warning",
+        "reportConstantRedefinition": "warning",
+        "reportUninitializedInstanceVariable": "warning",
+        "reportCallInDefaultInitializer": "warning",
+        "reportMissingSuperCall": "warning",
+        "reportPropertyTypeMismatch": "warning",
+        "reportIncompatibleMethodOverride": "warning",
+        "reportIncompatibleVariableOverride": "warning",
+        "reportOverlappingOverload": "warning",
+        "reportInconsistentConstructor": "warning",
+        "reportMatchNotExhaustive": "warning",
+        "reportShadowedImports": "warning"
+    }
 }

@@ -25,6 +25,7 @@
 # an expensive call many times over.
 
 [361-dates]
+OUT_FMT=stream
 LEVEL=eval
 JQ = {{{
 bsearch(0,1,2,3,4)

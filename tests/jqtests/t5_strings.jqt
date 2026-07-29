@@ -140,7 +140,7 @@ GOLD = {{{
 ["a", "xx", ""]
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 COMMENT=Trimming an empty prefix is always a no-op — pure identity.
 
@@ -156,7 +156,7 @@ GOLD = {{{
 ["a", "xx", ""]
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 
 [293-strings]
@@ -171,7 +171,7 @@ GOLD = {{{
 ["a", "xx", ""]
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 
 [294-strings]
@@ -256,6 +256,7 @@ SKIP=JQ 1.7 does not have trim,ltrim,rtrim
 COMMENT=No lstrip in the whitelist — ltrim done via reverse/rstrip/reverse-back instead. Streaming 3 outputs collected into one array.
 
 [299-strings]
+OUT_FMT=stream
 LEVEL=py
 JQ = {{{
 trim, ltrim, rtrim

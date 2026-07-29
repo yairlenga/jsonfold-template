@@ -83,7 +83,7 @@ GOLD = {{{
 []
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 
 [328-blocks]
@@ -136,6 +136,7 @@ COMMENT=Runtime subscript using another field's value as the key — different f
 
 [331-blocks]
 LEVEL=py
+OUT_FMT=stream
 JQ = {{{
 .[] | .error = "no, it's OK"
 }}}
@@ -146,7 +147,7 @@ GOLD = {{{
 {"error": "no, it's OK"}
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$."}, "body": "$py={**_, 'error': \"no, it's OK\"}"}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$py={**_, 'error': \"no, it's OK\"}"}}
 }}}
 
 [332-blocks]
@@ -177,7 +178,7 @@ GOLD = {{{
 [{"key":"a", "value":1}, {"key":"b", "value":2}]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"key": "k", "value": "v", "in": "$."}, "body": {"key": "$py=k", "value": "$py=v"}}}
+{"main": {"$": true, "data": { "$": true, "body": "$", "transform": "to_pairs" }, "foreach": {}, "body": {"key": "$_[0]", "value": "$_[1]" }}}
 }}}
 COMMENT=Native foreach key+var, avoiding dict.items() (not whitelisted) entirely.
 
@@ -480,7 +481,7 @@ GOLD = {{{
 [0, [1], [[2]], [[[3]]]]
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 COMMENT=flatten(0) is defined as a no-op.
 
@@ -571,7 +572,7 @@ GOLD = {{{
 []
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 
 [360-blocks]

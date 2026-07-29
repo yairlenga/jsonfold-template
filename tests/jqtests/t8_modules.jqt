@@ -336,12 +336,13 @@ GOLD = {{{
 ",,"
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$.", "body": {"$pyeval": "','.join(('' if x is None else ('true' if x is True else ('false' if x is False else (x if isinstance(x,str) else __import__('json').dumps(x))))) for x in _)"}}}}
+{"main": {"$": true, "foreach": {"in": "$", "body": {"$pyeval": "','.join(('' if x is None else ('true' if x is True else ('false' if x is False else (x if isinstance(x,str) else __import__('json').dumps(x))))) for x in _)"}}}}
 }}}
 COMMENT=foreach with no "value" binds each inner array to frame.current ("_" inside the body expression); reuses test 400's join logic per item. Streaming jq's 4 outputs collected into one array.
 
 [402-modules]
 LEVEL=eval
+OUT_FMT = stream
 JQ = {{{
 .[] | join(",")
 }}}
@@ -353,7 +354,7 @@ GOLD = {{{
 ",a"
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$."}, "body": "$py=','.join('' if v == None else v for v in _)"}}
+{"main": {"$": true, "foreach": {"in": "$"}, "body": "$py=','.join('' if v == None else v for v in _)"}}
 }}}
 OUT_MODE=stream
 COMMENT=Same pattern as 401. Streaming  2 outputs collected into one array.
@@ -553,6 +554,7 @@ COMMENT=JOIN(table; key_expr) pairs each input item with its lookup in table; th
 
 [418-modules]
 LEVEL=eval
+OUT_FMT=stream
 JQ = {{{
 range(5;10)|IN(range(10))
 }}}
@@ -574,6 +576,7 @@ COMMENT=Streaming jq's 5 outputs collected into one array.
 
 [419-modules]
 LEVEL=eval
+OUT_FMT=stream
 JQ = {{{
 range(5;13)|IN(range(0;10;3))
 }}}
@@ -598,6 +601,7 @@ COMMENT=Streaming jq's 8 outputs collected into one array.
 
 [420-modules]
 LEVEL=eval
+OUT_FMT=stream
 JQ = {{{
 range(10;12)|IN(range(10))
 }}}

@@ -139,7 +139,7 @@ GOLD = {{{
 1
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 COMMENT=The try never actually throws here (". catch ." on a non-erroring value), so the whole expression reduces to plain identity for this input — this does NOT model try/catch in general.
 
@@ -173,7 +173,7 @@ GOLD = {{{
 "abc"
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 COMMENT=jq's abs is a no-op identity on non-numeric input.
 
@@ -442,7 +442,7 @@ GOLD = {{{
 1
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 COMMENT=debug's only observable effect on the result value is identity passthrough; its stderr side effect isn't modeled.
 
@@ -662,7 +662,7 @@ GOLD = {{{
 {"x":0}
 }}}
 JFTL = {{{
-{"main": "$."}
+{"main": "$"}
 }}}
 COMMENT=walk(.) is always identity regardless of structure — this captures only that special case, not general walk(f).
 
@@ -784,7 +784,7 @@ JFTL = {{{
 {"main": {
   "$": true,
   "set": {
-    "arr": {"$": true, "foreach": {"shape": "range", "limit": 20}, "body": "$."}
+    "arr": {"$": true, "foreach": {"shape": "range", "limit": 20}, "body": "$"}
   },
   "foreach": {"in": [1.1, 1.5, 1.7]},
   "body": "$py=arr[int(_)]"
@@ -804,7 +804,7 @@ GOLD = {{{
 [0,5,2,3,4]
 }}}
 JFTL = {{{
-{"main": "$pyeval=[5 if i == 1 else v for i, v in enumerate(_)]"}
+{"main": { "$": true, "foreach": { "index": "i", "in": 5 }, "body": "$pyeval=5 if i == 1 else _"}}
 }}}
 COMMENT=1.1 truncates to the compile-time-constant index 1 (jq floors fractional single-index assignment targets), so the index is hardcoded rather than computed from input.
 
@@ -993,6 +993,7 @@ GOLD = {{{
 SKIP=needs try/catch and setpath's exact error text.
 
 [504-other]
+OUT_FMT=stream
 #SKIP = JQ 1.7 fails
 LEVEL=run
 COMMENT=regression test for #3227

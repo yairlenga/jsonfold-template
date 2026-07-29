@@ -22,8 +22,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/python/scripts/jf_template.py",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}/tests/basic",
-            "args": [ "-v", "--all-plugins", "../basic/multiply.jftl.json"],
+            "cwd": "${workspaceFolder}/tests",
+            "args": [ "-v", "--all-plugins", "jqtests/tmp/333-blocks.jftl", "jqtests/tmp/333-blocks.input"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
             }
@@ -33,7 +33,7 @@
             "name": "Python: test",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/python/tests/test_nav_node.py",
+            "program": "${workspaceFolder}/python/tests/test_logic_elem.py",
             "console": "integratedTerminal",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"

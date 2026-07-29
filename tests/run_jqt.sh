@@ -196,7 +196,6 @@ for id in "${id_list[@]}" ; do
 		err_file=$OUTDIR/$id.warn
 		echo "WARN $id ($msg) see $OUTDIR/$id.warn" >&2
         	info=$((info+1))
-		[ "$KEEP" ] || rm -f $OUTDIR/$id.{input,jq,jftl,gold,jq.out,jf.out}
 	else
 		echo "OK $id"
         	pass=$((pass+1))
