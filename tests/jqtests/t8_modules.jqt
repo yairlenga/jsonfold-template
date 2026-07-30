@@ -322,7 +322,8 @@ JFTL = {{{
 COMMENT=Reproduces jq's join semantics on mixed types: null becomes "", booleans become lowercase "true"/"false", other non-strings get their canonical JSON form.
 
 [401-modules]
-LEVEL=eval
+LEVEL=py
+OUT_FMT=stream
 JQ = {{{
 .[] | join(",")
 }}}
@@ -336,7 +337,7 @@ GOLD = {{{
 ",,"
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$", "body": {"$pyeval": "','.join(('' if x is None else ('true' if x is True else ('false' if x is False else (x if isinstance(x,str) else __import__('json').dumps(x))))) for x in _)"}}}}
+{"main": {"$": true, "foreach": {}, "body": "$py=','.join(x if x else '' for x in _)" }}
 }}}
 COMMENT=foreach with no "value" binds each inner array to frame.current ("_" inside the body expression); reuses test 400's join logic per item. Streaming jq's 4 outputs collected into one array.
 

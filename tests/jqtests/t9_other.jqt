@@ -784,7 +784,7 @@ JFTL = {{{
 {"main": {
   "$": true,
   "set": {
-    "arr": {"$": true, "foreach": {"shape": "range", "limit": 20}, "body": "$"}
+    "arr": {"$": true, "foreach": { "in": 20}, "body": "$"}
   },
   "foreach": {"in": [1.1, 1.5, 1.7]},
   "body": "$py=arr[int(_)]"
