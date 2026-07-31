@@ -2,7 +2,7 @@
   "main": {
     "$": true,
     "data": "$.level1",
-    "body": {
+    "out": {
       "level": 1,
       "current": "$.name",
       "currentTag": "$.tag",
@@ -13,7 +13,7 @@
       "nested": {
         "$": true,
         "data": "$.level2",
-        "body": {
+        "out": {
           "level": 2,
           "current": "$.name",
           "currentTag": "$.tag",
@@ -24,7 +24,7 @@
           "nested": {
             "$": true,
             "data": "$.level3",
-            "body": {
+            "out": {
               "level": 3,
               "current": "$.name",
               "currentTag": "$.tag",
@@ -35,7 +35,7 @@
               "nested": {
                 "$": true,
                 "data": "$.level4",
-                "body": {
+                "out": {
                   "level": 4,
                   "current": "$.name",
                   "currentTag": "$.tag",

@@ -261,7 +261,7 @@ GOLD = {{{
 [1,-1]
 }}}
 JFTL = {{{
-{"main": {"$": true, "set": {"x": -1}, "body": "$py=[1, x]"}}
+{"main": {"$": true, "set": {"x": -1}, "out": "$py=[1, x]"}}
 }}}
 
 [138-builtins]
@@ -550,7 +550,7 @@ GOLD = {{{
 [0, 0, 2, 1, 4, 1]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$"}, "body": "$py=len(_)"}}
+{"main": {"$": true, "foreach": {"in": "$", "out": "$py=len(_)"}}}
 }}}
 COMMENT=len() is whitelisted; happens to agree with jq's length for list/dict/str here, not in general (jq's length also handles numbers/booleans/null, which Python's len() rejects).
 
@@ -594,7 +594,7 @@ GOLD = {{{
 [[], ["abc","abcd","abcde"], ["x","y","z"]]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$"}, "body": "$pyeval=sorted(_.keys())"}}
+{"main": {"$": true, "foreach": {"out": "$pyeval=sorted(_.keys())"}}}
 }}}
 COMMENT=sorted() is whitelisted but dict.keys() isn't (only str has allowed_attrs) — needs eval for the .keys() call.
 
@@ -847,7 +847,7 @@ GOLD = {{{
 [-2, 1, 1]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$"}, "body": "$py=int(_ // 1)"}}
+{"main": {"$": true, "foreach": {"out": "$py=int(_ // 1)"}}}
 }}}
 COMMENT=No math module reachable at py tier; integer floor-division (// 1) agrees with floor() for both signs.
 
@@ -863,7 +863,7 @@ GOLD = {{{
 [2,3]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$"}, "body": "$pyeval= int(v) if (v := _ ** 0.5).is_integer else v" }}
+{"main": {"$": true, "foreach": {"out": "$pyeval= int(v) if (v := _ ** 0.5).is_integer else v" }}}
 }}}
 COMMENT=Exponentiation (**) isn't a py-tier concern by itself, but there's no math.sqrt available without __import__ — used ** 0.5 instead, which is a plain expression and technically fits py tier too; tagged eval to be conservative since I haven't confirmed ** is in simpleeval's supported operator set.
 

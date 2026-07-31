@@ -18,7 +18,7 @@ from typing import Any, cast
 import unittest
 
 from model import JSON_UNSET, DocCompiler, Statement
-from logic import _FlattenningTransformer, _MergeTransformer, Case, ForeachStatement, LogicCompiler, LogicStatement
+from logic import _FlattenningTransformer, _MergeTransformer, _CaseItem, _ForeachPart, LogicCompiler, LogicStatement
 
 
 class Tagged:
@@ -66,7 +66,7 @@ class TestEmptyInput(unittest.TestCase):
         self.assertEqual(stmt._defines or [], [])
         self.assertEqual(stmt._if, True)
         self.assertIs(stmt._set_current, JSON_UNSET)
-        self.assertEqual(stmt._cases or [], [])
+        self.assertEqual(stmt._set_current, JSON_UNSET)
         self.assertFalse(stmt._foreach)
 
 
@@ -113,8 +113,8 @@ class TestIf(unittest.TestCase):
 class TestData(unittest.TestCase):
 
     def test_data_compiled_as_expression(self):
-        stmt = compile_logic({"data": "$.user.name"})
-        self.assertEqual(stmt._set_current, Tagged("statement", "$.user.name"))
+        stmt = compile_logic({"out": "$.user.name"})
+        self.assertEqual(stmt._out, Tagged("statement", "$.user.name"))
 
     def test_missing_data_is_none(self):
         stmt = compile_logic({})
@@ -127,7 +127,7 @@ class TestForeach(unittest.TestCase):
         stmt = compile_logic({
             "foreach": {"key": "idx", "value": "item", "in": "$.items", "if": "$.item.active"}
         })
-        assert isinstance(stmt._foreach, ForeachStatement)
+        assert isinstance(stmt._foreach, _ForeachPart)
         self.assertEqual(stmt._foreach.key, "idx")
         self.assertEqual(stmt._foreach.value, "item")
         self.assertEqual(stmt._foreach.items, Tagged("statement", "$.items"))
@@ -135,12 +135,12 @@ class TestForeach(unittest.TestCase):
 
     def test_foreach_without_optional_if(self):
         stmt = compile_logic({"foreach": {"key": "idx", "value": "item", "in": "$.items"}})
-        assert isinstance(stmt._foreach, ForeachStatement)
+        assert isinstance(stmt._foreach, _ForeachPart)
         self.assertTrue(stmt._foreach.cond)
 
     def test_foreach_without_key(self):
         stmt = compile_logic({"foreach": {"value": "item", "in": "$.items"}})
-        assert isinstance(stmt._foreach, ForeachStatement)
+        assert isinstance(stmt._foreach, _ForeachPart)
         self.assertIsNone(stmt._foreach.key)
         self.assertEqual(stmt._foreach.value, "item")
 
@@ -158,12 +158,12 @@ class TestCases(unittest.TestCase):
 
     def test_single_case(self):
         stmt = compile_logic({"case": [{"when": "$.a", "then": "$.b"}]})
-        assert isinstance(stmt._cases, list)
+        assert isinstance(stmt._out.cases, list)
 
-        self.assertEqual(len(stmt._cases), 1)
-        assert isinstance(stmt._cases[0], Case)
-        self.assertEqual(stmt._cases[0].cond, Tagged("condition", "$.a"))
-        self.assertEqual(stmt._cases[0].body, Tagged("statement", "$.b"))
+        self.assertEqual(len(stmt._out.cases), 1)
+        assert isinstance(stmt._out.cases[0], _CaseItem)
+        self.assertEqual(stmt._out.cases[0].cond, Tagged("condition", "$.a"))
+        self.assertEqual(stmt._out.cases[0].body, Tagged("statement", "$.b"))
 
     def test_multiple_cases_preserve_order(self):
         stmt = compile_logic({
@@ -173,7 +173,7 @@ class TestCases(unittest.TestCase):
                 {"when": "$.c", "then": "$.z"},
             ]
         })
-        cases = cast(list[Case], stmt._cases)
+        cases = cast(list[_CaseItem], stmt._out.cases)
 
         self.assertEqual(len(cases), 3)
         self.assertEqual(cases[0].cond, Tagged("condition", "$.a"))
@@ -183,18 +183,18 @@ class TestCases(unittest.TestCase):
 
     def test_missing_case_is_none(self):
         stmt = compile_logic({})
-        self.assertIn(stmt._cases, (None, []))
+        self.assertIs(stmt._set_current, JSON_UNSET)
 
     def test_empty_case_list_is_empty_not_none(self):
         stmt = compile_logic({"case": []})
-        self.assertIn(stmt._cases, (None, []))
+        self.assertIs(stmt._set_current, JSON_UNSET)
 
 
 class TestBodyDefaultError(unittest.TestCase):
 
     def test_body_compiled_as_statement(self):
-        stmt = compile_logic({"body": "$.result"})
-        self.assertEqual(stmt._body, Tagged("statement", "$.result"))
+        stmt = compile_logic({"data": "$.result"})
+        self.assertEqual(stmt._set_current, Tagged("statement", "$.result"))
 
     def test_default_compiled_as_statement(self):
         stmt = compile_logic({"default": "$.fallback"})
@@ -206,8 +206,8 @@ class TestBodyDefaultError(unittest.TestCase):
 
     def test_body_default_error_independent(self):
         # setting one should not accidentally populate the others
-        stmt = compile_logic({"body": "$.b"})
-        self.assertEqual(stmt._body, Tagged("statement", "$.b"))
+        stmt = compile_logic({"data": "$.b"})
+        self.assertEqual(stmt._set_current, Tagged("statement", "$.b"))
         self.assertIs(stmt._default_val, JSON_UNSET)
         self.assertIs(stmt._error_val, JSON_UNSET)
 
@@ -235,7 +235,7 @@ class TestFullRealisticBlock(unittest.TestCase):
             "if": "$.enabled",
             "foreach": {"key": "idx", "value": "row", "in": "$.rows"},
             "case": [{"when": "$.a", "then": "$.x"}],
-            "body": "$.output",
+            "out": "$.output",
             "transform": "merge",
             "error": "$.onError",
         }
@@ -244,16 +244,16 @@ class TestFullRealisticBlock(unittest.TestCase):
         self.assertEqual(asdict(stmt)["_defines"],
                          [{"name": "total", "expr": Tagged("statement", "$.price")}])
         self.assertEqual(stmt._if, Tagged("condition", "$.enabled"))
-        assert isinstance(stmt._foreach, ForeachStatement)
+        assert isinstance(stmt._foreach, _ForeachPart)
         self.assertEqual(stmt._foreach.key, "idx")
         self.assertEqual(stmt._foreach.value, "row")
         self.assertEqual(stmt._foreach.items, Tagged("statement", "$.rows"))
-        assert isinstance(stmt._cases, list)
-        self.assertEqual(len(stmt._cases), 1)
-        self.assertEqual(stmt._body, Tagged("statement", "$.output"))
+        assert isinstance(stmt._out.cases, list)
+        self.assertEqual(len(stmt._out.cases), 1)
+        self.assertEqual(stmt._out.default_case, Tagged("statement", "$.output"))
         self.assertIsInstance(stmt._transformer, _MergeTransformer)
         self.assertEqual(stmt._error_val, Tagged("statement", "$.onError"))
-        self.assertIs(stmt._set_current, JSON_UNSET)
+        self.assertIsNotNone(stmt._set_current)
         self.assertIs(stmt._default_val, JSON_UNSET)
 
 

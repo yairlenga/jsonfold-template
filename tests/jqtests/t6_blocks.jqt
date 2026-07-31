@@ -147,7 +147,7 @@ GOLD = {{{
 {"error": "no, it's OK"}
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$"}, "body": "$py={**_, 'error': \"no, it's OK\"}"}}
+{"main": {"$": true, "foreach": {"in": "$", "out": "$py={**_, 'error': \"no, it's OK\"}"}}}
 }}}
 
 [332-blocks]
@@ -178,7 +178,7 @@ GOLD = {{{
 [{"key":"a", "value":1}, {"key":"b", "value":2}]
 }}}
 JFTL = {{{
-{"main": {"$": true, "data": { "$": true, "body": "$", "transform": "to_pairs" }, "foreach": {}, "body": {"key": "$_[0]", "value": "$_[1]" }}}
+{"main": {"$": true, "data": { "$": true, "out": "$", "transform": "to_pairs" }, "foreach": { "out": {"key": "$_[0]", "value": "$_[1]" }}}}
 }}}
 COMMENT=Native foreach key+var, avoiding dict.items() (not whitelisted) entirely.
 

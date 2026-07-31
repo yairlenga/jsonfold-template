@@ -2,16 +2,16 @@
     "main": {
         "$": true,
         "foreach": {
+            "value": "x",
             "in": 10,
-            "value": "x"
-        },
-        "body": {
-      		"$": true,
-            "foreach": {
-                "in": 10,
-                "value": "y"
-            },
-            "body": "$py= x * y"
+            "out": {
+      	    	"$": true,
+            	"foreach": {
+                	"value": "y",
+                	"in": 10,
+            		"out": "$py= x * y"
+            		}
+        	}
         }
     }
 }

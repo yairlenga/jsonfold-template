@@ -103,7 +103,7 @@ class RuntimeContext (Mapping, ABC):
 
     env: Environment 
     # Aliases as '_'
-    current: Any   
+    current: Any
 
     # Location of current element, relative to parent
     part_path: str
@@ -130,6 +130,8 @@ class RuntimeContext (Mapping, ABC):
 
     def set_current(self, current: Any):
         self.current = current
+
+    def set_state_data(self, current: Any) -> None: ...
 
     def _resolve(self, error: JFTLNotice, on: Any) -> Any:
         if on is JFTL_RAISE:
@@ -159,7 +161,7 @@ class RuntimeContext (Mapping, ABC):
                 error = JFTLNotice(
                     code="UNSET_STATEMENT",
                     where=self.where(context),
-                    message="Condition not specified",
+                    message="Value not specified",
                 )
                 return self._resolve(error, on_unset)
             return on_unset
@@ -292,7 +294,7 @@ class Evaluator(ABC):
         to instead treat a missing/null result as a failure in this
         context. Override for engine-specific truthiness."""
         result = self.eval(ctx)
-        return result if isinstance(result, (bool, Missing, JFTLNotice, NoneType)) else True if result else False
+        return result if isinstance(result, (bool, Missing, JFTLNotice, NoneType)) else True
 
 COMPILE_LEAFS : TypeAlias = Evaluator | JSON_LEAFS | Missing | JFTLNotice | Missing
     # Tree of compiled object, may include values, Missing nodes, to-bd-evaluated nodes, and error notice nodes.

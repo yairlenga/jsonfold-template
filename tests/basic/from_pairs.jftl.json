@@ -3,7 +3,7 @@
       "boolean_false": {
         "$": true,
         "transform": "from_pairs",
-        "body": false,
+        "out": false,
         "error": "CATCHED: from_pairs input is boolean true, not null or a list"
       },
     "matrix": {
@@ -58,24 +58,24 @@
       },
       "foreach": {
         "value": "left",
-        "in": "$values"
-      },
-      "body": {
-        "$": true,
-        "foreach": {
-          "value": "right",
-          "in": "$values"
-        },
-        "body": {
-          "left": "$left.name",
-          "right": "$right.name",
-          "result": {
-            "$": true,
-            "body": [
-              "$left.value",
-              "$right.value"
-            ],
-            "transform": "from_pairs"
+        "in": "$values",
+        "out": {
+          "$": true,
+          "foreach": {
+            "value": "right",
+            "in": "$values",
+            "out": {
+              "left": "$left.name",
+              "right": "$right.name",
+              "result": {
+                "$": true,
+                "out": [
+                  "$left.value",
+                  "$right.value"
+                ],
+                "transform": "from_pairs"
+              }
+            }
           }
         }
       }
@@ -83,12 +83,12 @@
     "checks": {
       "empty list": {
         "$": true,
-        "body": [],
+        "out": [],
         "transform": "from_pairs"
       },
       "single pair": {
         "$": true,
-        "body": [
+        "out": [
           [
             "only",
             1
@@ -98,7 +98,7 @@
       },
       "three disjoint pairs": {
         "$": true,
-        "body": [
+        "out": [
           [
             "a",
             1
@@ -116,7 +116,7 @@
       },
       "right wins three": {
         "$": true,
-        "body": [
+        "out": [
           [
             "a",
             1
@@ -134,7 +134,7 @@
       },
       "duplicate key keeps first position": {
         "$": true,
-        "body": [
+        "out": [
           [
             "a",
             1
@@ -152,7 +152,7 @@
       },
       "order preserved for unique keys": {
         "$": true,
-        "body": [
+        "out": [
           [
             "z",
             1
@@ -170,7 +170,7 @@
       },
       "mixed overlap last wins": {
         "$": true,
-        "body": [
+        "out": [
           [
             "a",
             1
@@ -200,7 +200,7 @@
       },
       "Missing Entries skipped": {
         "$": true,
-        "body": [
+        "out": [
           [
             "empty",
             "$.MISSING"
@@ -218,7 +218,7 @@
       },
       "empty pairs skipped": {
         "$": true,
-        "body": [
+        "out": [
           [
             "$.MISSING",
             "$.MISSING"
@@ -240,7 +240,7 @@
       },
       "null value preserved": {
         "$": true,
-        "body": [
+        "out": [
           [
             "a",
             null
@@ -254,7 +254,7 @@
       },
       "null key handling": {
         "$": true,
-        "body": [
+        "out": [
           [
             null,
             1
@@ -269,7 +269,7 @@
       },
       "nested value is shallow": {
         "$": true,
-        "body": [
+        "out": [
           [
             "item",
             {
@@ -287,7 +287,7 @@
       },
       "four priorities last wins": {
         "$": true,
-        "body": [
+        "out": [
           [
             "a",
             1
@@ -332,31 +332,31 @@
       "scalar_string": {
         "$": true,
         "transform": "from_pairs",
-        "body": "not-a-list",
+        "out": "not-a-list",
         "error": "CATCHED: from_pairs input is a scalar string, not null or a list"
       },
       "scalar_number": {
         "$": true,
         "transform": "from_pairs",
-        "body": 42,
+        "out": 42,
         "error": "CATCHED: from_pairs input is a scalar number, not null or a list"
       },
       "boolean_true": {
         "$": true,
         "transform": "from_pairs",
-        "body": true,
+        "out": true,
         "error": "CATCHED: from_pairs input is boolean true, not null or a list"
       },
       "boolean_false": {
         "$": true,
         "transform": "from_pairs",
-        "body": false,
+        "out": false,
         "error": "CATCHED: from_pairs input is boolean false, not null or a list"
       },
       "pair_one_element": {
         "$": true,
         "transform": "from_pairs",
-        "body": [
+        "out": [
           [
             "only-one"
           ]
@@ -366,7 +366,7 @@
       "pair_three_elements": {
         "$": true,
         "transform": "from_pairs",
-        "body": [
+        "out": [
           [
             "a",
             "b",
@@ -378,7 +378,7 @@
       "pair_non_string_key": {
         "$": true,
         "transform": "from_pairs",
-        "body": [
+        "out": [
           [
             123,
             "value"

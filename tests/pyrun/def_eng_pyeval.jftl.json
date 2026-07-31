@@ -1,8 +1,8 @@
 {
 	"main": {
-		"1+1": { "$": true, "body": "$=1+1"},
+		"1+1": { "$": true, "out": "$=1+1"},
 		"len": "$=str(getattr('ABC', '__len__'))",
-		"range(5,10)": { "$": true, "data": "$=[x for x in range(5, 10)]","body":"$=list(_)"}
+		"range(5,10)": { "$": true, "data": "$=[x for x in range(5, 10)]","out":"$=list(_)"}
 	},
 	"config": {
 		"default_expr_engine": "pyeval"

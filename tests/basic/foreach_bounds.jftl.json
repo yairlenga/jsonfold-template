@@ -9,33 +9,32 @@
         },
         "foreach": {
             "in": "$starts",
-            "value": "s"
-        },
-        "body": {
-            "$": true,
-            "foreach": {
-                "in": "$stops",
-                "value": "e"
-            },
-            "body": {
+            "value": "s",
+            "out": {
                 "$": true,
                 "foreach": {
-                    "in": "$limits",
-                    "value": "l"
-                },
-                "body": {
-                    "start": "$s",
-                    "stop": "$e",
-                    "limit": "$l",
-                    "subset": {
+                    "in": "$stops",
+                    "value": "e",
+                    "out": {
                         "$": true,
                         "foreach": {
-                            "in": "$letters",
-                            "start": "$s",
-                            "stop": "$e",
-                            "limit": "$l"
-                        },
-                        "body": "$"
+                            "in": "$limits",
+                            "value": "l",
+                            "out": {
+                                "start": "$s",
+                                "stop": "$e",
+                                "limit": "$l",
+                                "subset": {
+                                    "$": true,
+                                    "foreach": {
+                                        "in": "$letters",
+                                        "start": "$s",
+                                        "stop": "$e",
+                                        "limit": "$l"
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

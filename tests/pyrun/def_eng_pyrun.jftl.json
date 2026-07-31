@@ -1,8 +1,8 @@
 {
 	"main": {
-		"1+1": { "$": true, "body": "$=return 1+1"},
-		"a=2:b=3:a*b": { "$": true, "body":"$=a=2 ; b=3 ; return a*b"},
-		"range(5,10)": { "$": true, "data": "$=return [x for x in range(5, 10)]","body":"$=return _"}
+		"1+1": { "$": true, "out": "$=return 1+1"},
+		"a=2:b=3:a*b": { "$": true, "out":"$=a=2 ; b=3 ; return a*b"},
+		"range(5,10)": { "$": true, "data": "$=return [x for x in range(5, 10)]","out":"$=return _"}
 	},
 	"config": {
 		"default_expr_engine": "pyrun"

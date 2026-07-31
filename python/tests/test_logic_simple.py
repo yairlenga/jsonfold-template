@@ -28,13 +28,13 @@ class TestBodyOnly(unittest.TestCase):
     """1. body only — simplest possible logic element."""
 
     def test_body_returns_navigated_value(self):
-        template = {"$": True, "body": "$.name"}
+        template = {"$": True, "out": "$.name"}
         status, result = compile_and_render(template, {"name": "Alice"})
         self.assertTrue(status.ok)
         self.assertEqual(result, "Alice")
 
     def test_body_navigates_nested_path(self):
-        template = {"$": True, "body": "$.user.address.city"}
+        template = {"$": True, "out": "$.user.address.city"}
         status, result = compile_and_render(
             template, {"user": {"address": {"city": "Springfield"}}}
         )
@@ -43,7 +43,7 @@ class TestBodyOnly(unittest.TestCase):
 
     def test_body_missing_path_produces_missing_like_result(self):
         # No "name" key in the input — the path resolves to Missing.
-        template = {"$": True, "body": "$.name"}
+        template = {"$": True, "out": "$.name"}
         status, result = compile_and_render(template, {})
         self.assertTrue(status.ok) 
         # a Missing navigation result is not itself an execution error
@@ -56,7 +56,7 @@ class TestBodyPlusIf(unittest.TestCase):
     """2. body + if — condition gates whether body runs at all."""
 
     def test_if_true_runs_body(self):
-        template = {"$": True, "if": "$.enabled", "body": "$.name"}
+        template = {"$": True, "if": "$.enabled", "out": "$.name"}
         status, result = compile_and_render(
             template, {"enabled": True, "name": "Alice"}
         )
@@ -64,7 +64,7 @@ class TestBodyPlusIf(unittest.TestCase):
         self.assertEqual(result, "Alice")
 
     def test_if_false_skips_body_and_returns_none(self):
-        template = {"$": True, "if": "$.enabled", "body": "$.name"}
+        template = {"$": True, "if": "$.enabled", "out": "$.name"}
         status, result = compile_and_render(
             template, {"enabled": False, "name": "Alice"}
         )
@@ -75,7 +75,7 @@ class TestBodyPlusIf(unittest.TestCase):
         template = {
             "$": True,
             "if": "$.enabled",
-            "body": "$.name",
+            "out": "$.name",
             "default": "$.fallbackName",
         }
         status, result = compile_and_render(
@@ -93,7 +93,7 @@ class TestBodyPlusCase(unittest.TestCase):
         template = {
             "$": True,
             "case": [{"when": "$.useSpecial", "then": "$.specialName"}],
-            "body": "$.name",
+            "out": "$.name",
         }
         status, result = compile_and_render(
             template,
@@ -106,7 +106,7 @@ class TestBodyPlusCase(unittest.TestCase):
         template = {
             "$": True,
             "case": [{"when": "$.useSpecial", "then": "$.specialName"}],
-            "body": "$.name",
+            "out": "$.name",
         }
         status, result  = compile_and_render(
             template,
@@ -122,7 +122,7 @@ class TestBodyPlusCase(unittest.TestCase):
                 {"when": "$.flagA", "then": "$.valA"},
                 {"when": "$.flagB", "then": "$.valB"},
             ],
-            "body": "$.fallback",
+            "out": "$.fallback",
         }
         status, result = compile_and_render(
             template,

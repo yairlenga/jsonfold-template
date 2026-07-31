@@ -79,7 +79,7 @@ class Context:
 
 @dataclass
 class Environment:
-    state: Context
+    ctx: Context
     # User defined variables in the CURRENT frame    
     vars: dict[str, Any] = field(default_factory=dict)
     # Cached value, including inherited, calculated, ...

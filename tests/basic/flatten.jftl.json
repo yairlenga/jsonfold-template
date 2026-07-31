@@ -15,21 +15,21 @@
       },
       "foreach": {
         "value": "a",
-        "in": "$values"
-      },
-      "body": {
-        "$": true,
-        "foreach": {
-          "value": "b",
-          "in": "$values"
-        },
-        "body": {
-          "left": "$a.name",
-          "right": "$b.name",
-          "result": {
-            "$": true,
-            "body": ["$a.value", "$b.value"],
-            "transform": "flatten"
+        "in": "$values",
+        "out": {
+          "$": true,
+          "foreach": {
+            "value": "b",
+            "in": "$values",
+            "out": {
+              "left": "$a.name",
+              "right": "$b.name",
+              "result": {
+                "$": true,
+                "out": ["$a.value", "$b.value"],
+                "transform": "flatten"
+              }
+            }
           }
         }
       }
@@ -37,42 +37,42 @@
     "checks": {
       "three empty": {
         "$": true,
-        "body": [[], [], []],
+        "out": [[], [], []],
         "transform": "flatten"
       },
       "three singles": {
         "$": true,
-        "body": [[1], [2], [3]],
+        "out": [[1], [2], [3]],
         "transform": "flatten"
       },
       "null and empty": {
         "$": true,
-        "body": [null, [1], []],
+        "out": [null, [1], []],
         "transform": "flatten"
       },
       "empty middle": {
         "$": true,
-        "body": [[1, 2], [], [3, 4, {"a": 5}]],
+        "out": [[1, 2], [], [3, 4, {"a": 5}]],
         "transform": "flatten"
       },
       "four arrays": {
         "$": true,
-        "body": [[1], [2, 3], [4, 5, 6], [7, 8, 9, 10]],
+        "out": [[1], [2, 3], [4, 5, 6], [7, 8, 9, 10]],
         "transform": "flatten"
       },
       "alternating empty": {
         "$": true,
-        "body": [[], [1], [], [2, 3]],
+        "out": [[], [1], [], [2, 3]],
         "transform": "flatten"
       },
       "nested arrays": {
         "$": true,
-        "body": [[[1, 2]], [[3, 4]], [], [[5, 6]]],
+        "out": [[[1, 2]], [[3, 4]], [], [[5, 6]]],
         "transform": "flatten"
       },
       "object values": {
         "$": true,
-        "body": [[{"a": 1}], [{"b": 2}, {"c": 3}], [], [{"d": 4}]],
+        "out": [[{"a": 1}], [{"b": 2}, {"c": 3}], [], [{"d": 4}]],
         "transform": "flatten"
       }
     }

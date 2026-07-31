@@ -1,7 +1,7 @@
 {
 	"main": {
 		"_missing": "$_missing",
-		"_error": { "$": true, "body": "$_error", "error": "Pass Error Check" },
+		"_error": { "$": true, "out": "$_error", "error": "Pass Error Check" },
 		"_skip": {
 			"Nothing array": [ "one", "$_skip", "two", "$_skip", "$_skip", "three", "four"],
 			"Nothing Object": {
@@ -15,8 +15,7 @@
 			},
 			"Nothing foreach array": {
 				"$": true,
-				"foreach": { "in": [ "a", "s", "b", "s", "s", "c", "d" ] },
-				"body": "$py= _skip if _ == 's' else _"
+				"foreach": { "in": [ "a", "s", "b", "s", "s", "c", "d" ] , "out": "$py= _skip if _ == 's' else _" }
 			},
 			"Nothing foreach object": {
 				"$": true,
@@ -31,7 +30,7 @@
 						"four": 4
 					}
 				},
-				"body": "$py= _skip if _ == 's' else _"
+				"out": "$py= _skip if _ == 's' else _"
 			}
 		},
 		"_current": "$_current",

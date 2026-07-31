@@ -5,19 +5,19 @@
 			"key": "aa"
 		},
 		"data": "AA",
-		"body": {
+		"out": {
 			"$": true,
 			"set": {
 				"key": "bb"
 			},
 			"data": "BB",
-			"body": {
+			"out": {
 				"$": true,
 				"set": {
 					"key": "cc"
 				},
 				"data": "CC",
-				"body": {
+				"out": {
 					"key": "$key",
 					"_parent.key": "$_parent.key",
 					"_parent._parent.key": "$_parent._parent.key",

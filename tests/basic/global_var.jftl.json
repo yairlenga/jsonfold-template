@@ -5,12 +5,12 @@
 			"set": {
 				"foo": "glob.foo"
 			},
-			"body": {
+			"out": {
 				"$": true,
 				"set": {
 					"bar": "local.bar"
 				},
-				"body": {
+				"out": {
 					"test": "glob/local",
 					"foo": "$foo",
 					"bar": "$bar",
@@ -23,12 +23,12 @@
 		},
 		{
 			"$": true,
-			"body": {
+			"out": {
 				"$": true,
 				"set": {
 					"bar": "local.bar"
 				},
-				"body": {
+				"out": {
 					"test": "none/local",
 					"foo": "$foo",
 					"bar": "$bar",
@@ -44,21 +44,21 @@
 			"set": {
 				"foo": "glob.foo"
 			},
-			"body": {
+			"out": {
 				"$": true,
 				"set": {
 					"foo": "mid.foo",
 					"bar": "mid.bar"
 				},
-				"body": {
+				"out": {
 					"$": true,
-					"body": {
+					"out": {
 						"$": true,
 						"set": {
 							"foo": "local.foo",
 							"bar": "local.bar"
 						},
-						"body": {						
+						"out": {						
 							"test": "glob/mid/local",
 							"foo": "$foo",
 							"bar": "$bar",
@@ -73,20 +73,20 @@
 		},
 		{
 			"$": true,
-			"body": {
+			"out": {
 				"$": true,
 				"set": {
 					"foo": "glob.foo"
 				},
-				"body": {
+				"out": {
 					"$": true,
-					"body": {
+					"out": {
 						"$": true,
 						"set": {
 							"foo": "local.foo",
 							"bar": "local.bar"
 						},
-						"body": {						
+						"out": {						
 							"test": "none/globl/local",
 							"foo": "$foo",
 							"bar": "$bar",
@@ -104,7 +104,7 @@
 			"set": {
 				"foo": "glob.foo"
 			},
-			"body": {
+			"out": {
 				"test": "glob",
 				"foo": "$foo",
 				"bar": "$bar",

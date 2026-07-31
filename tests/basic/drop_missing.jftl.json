@@ -17,12 +17,13 @@
 			"mixed-obj(4)": { "a": 1, "b": "$_missing", "c": 2, "d": "$_missing", "e": 3, "f": "$_missing", "g": 4 },
 			"empty-array": {}
 		},
-		"foreach": {},
-		"body": {
+		"foreach": {
 			"$": true,
-			"body": "$",
-			"transform": "drop_missing",
-			"error": "ERROR"
+			"out": {
+				"$": true,
+				"transform": "drop_missing",
+				"error": "ERROR"
+			}
 		}
 	}
 }

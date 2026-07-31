@@ -189,7 +189,7 @@ for id in "${id_list[@]}" ; do
 		echo "SKIP $id ($skip_msg)" >&2
 		skip=$((skip+1))
 	elif [ "$error" ]; then
-		echo "FAIL $id ($error${msg+,$msg}) see $err_file" >&2
+		echo "ERR $id ($error${msg:+,$msg}) see $err_file" >&2
 		fail=$((fail+1))
 	elif [ "$msg" ]; then
 		mv $err_file $OUTDIR/$id.warn

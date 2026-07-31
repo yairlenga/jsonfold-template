@@ -174,33 +174,33 @@ JFTL = {{{
 { "main": {
     "$": true,
     "foreach": {
-        "$": true
-    },
-    "body": {
         "$": true,
-        "foreach": {
-            "index": "ix"
-        },
-        "body": {
+        "out": {
             "$": true,
-            "case": [
-                {
-                    "when": "$py=ix == 0",
-                    "then": {
-                        "$": true,
-                        "body": {
-                            "$": true,
-                            "body": [
-                                "$",
-                                { "foo": "$_missing" }
-                            ],
-                            "transform": "merge"
-                        },
-                        "transform": "drop_missing"
-                    }
+            "foreach": {
+                "index": "ix",
+                "out": {
+                    "$": true,
+                    "case": [
+                        {
+                            "when": "$py=ix == 0",
+                            "then": {
+                                "$": true,
+                                "out": {
+                                    "$": true,
+                                    "out": [
+                                        "$",
+                                        { "foo": "$_missing" }
+                                    ],
+                                    "transform": "merge"
+                                },
+                                "transform": "drop_missing"
+                            }
+                        }
+                    ],
+                    "out": "$"
                 }
-            ],
-            "body": "$"
+            }
         }
     }
 }}
@@ -424,7 +424,7 @@ GOLD = {{{
 {"bar":42, "foo":42}
 }}}
 JFTL = {{{
-{"main": { "$": true, "body": [  "$", { "foo": "$.bar" } ], "transform": "merge"}}
+{"main": { "$": true, "out": [  "$", { "foo": "$.bar" } ], "transform": "merge"}}
 }}}
 
 [223-paths]

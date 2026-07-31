@@ -9,20 +9,20 @@
           "then": "$.vipMessage"
         }
       ],
-      "body": "$.standardMessage"
+      "out": "$.standardMessage"
     },
     "orderTotal": {
       "$": true,
       "if": "$.hasOrder",
-      "body": "$.order.amount",
+      "out": "$.order.amount",
       "default": "$.noOrderMessage"
     },
     "itemNames": {
       "$": true,
       "foreach": {
-        "in": "$.items"
-      },
-      "body": "$.name"
+        "in": "$.items",
+        "out": "$.name"
+      }
     }
   }
 }

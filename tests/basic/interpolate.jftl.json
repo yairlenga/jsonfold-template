@@ -7,11 +7,11 @@
 			"name": "Joe Smith",
 			"tax": "$py=2/3"
 		},
-		"body": {
+		"out": {
 			"interpolate": "Hello ${name}, you won ${count} ${prize}, tax=${tax}",
 			"join_str": {
 				"$": true,
-				"body": [ "hello ", "$name", " you won ", "$count", " ", "$prize", ", ", "tax=", "$tax" ],
+				"out": [ "hello ", "$name", " you won ", "$count", " ", "$prize", ", ", "tax=", "$tax" ],
 				"transform": "concat"
 			},
 			"escape": "Hello ${name}, you won $${count} ${prize}, tax=${tax}",

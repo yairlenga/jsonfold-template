@@ -3,15 +3,15 @@
         "$": true,
         "foreach": {
             "in": 10,
-            "value": "x"
-        },
-        "body": {
-      		"$": true,
-            "foreach": {
-                "in": 10,
-                "value": "y"
-            },
-            "body": "$pyeval= x * y"
+            "value": "x",
+            "out": {
+                "$": true,
+                "foreach": {
+                    "in": 10,
+                    "value": "y",
+                    "out": "$pyeval= x * y"
+                }
+            }
         }
     }
 }

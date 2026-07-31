@@ -66,8 +66,9 @@ do
 	shopt -s nullglob
 	files=($base.*.inp.json)
 	shopt -u nullglob
-        if ! $JSONFOLD -q $jftl "${files[@]}" 2>&1 > $out ; then
-		echo "FAIL $label (template status=$?)" >&2
+        X= ; $JSONFOLD -q $jftl "${files[@]}" 2>&1 > $out || X=$?
+	if [ "$X" ] ; then
+		echo "FAIL $label (template status=$X)" >&2
 		continue
 	fi
 

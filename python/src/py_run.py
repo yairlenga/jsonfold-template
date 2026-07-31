@@ -61,7 +61,7 @@ class PyEvalEvaluator(Evaluator):
 
     def eval_bool(self, ctx: RuntimeContext) -> RUNTIME_BOOL:
         result = self.eval(ctx)
-        if isinstance(result, (JFTLNotice, Missing)):
+        if isinstance(result, (bool, JFTLNotice, Missing)):
             return result
         return bool(result)  # native Python truthiness — not JFTL's falsy rule
 
@@ -130,7 +130,7 @@ class PyRunEvaluator(Evaluator):
 
     def eval_bool(self, ctx: RuntimeContext) -> RUNTIME_BOOL:
         result = self.eval(ctx)
-        if isinstance(result, (JFTLNotice, Missing)):
+        if isinstance(result, (bool, JFTLNotice, Missing)):
             return result
         return bool(result)  # native Python truthiness — not JFTL's falsy rule
 

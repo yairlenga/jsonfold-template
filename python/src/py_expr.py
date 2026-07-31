@@ -5,10 +5,9 @@ Evaluate Expressions using
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from core import RUNTIME_DOC, Evaluator
 from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes
 
-from model import COMPILE_DOC, CompilerPlugin, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_DOC, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
 from template import JFTLNotice, Missing
 
 @dataclass(kw_only=True)

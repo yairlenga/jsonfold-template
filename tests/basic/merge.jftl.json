@@ -16,24 +16,24 @@
       },
       "foreach": {
         "value": "left",
-        "in": "$values"
-      },
-      "body": {
-        "$": true,
-        "foreach": {
-          "value": "right",
-          "in": "$values"
-        },
-        "body": {
-          "left": "$left.name",
-          "right": "$right.name",
-          "result": {
-            "$": true,
-            "body": [
-              "$left.value",
-              "$right.value"
-            ],
-            "transform": "merge"
+        "in": "$values",
+        "out": {
+          "$": true,
+          "foreach": {
+            "value": "right",
+            "in": "$values",
+            "out": {
+              "left": "$left.name",
+              "right": "$right.name",
+              "result": {
+                "$": true,
+                "out": [
+                  "$left.value",
+                  "$right.value"
+                ],
+                "transform": "merge"
+              }
+            }
           }
         }
       }
@@ -41,7 +41,7 @@
     "checks": {
       "three disjoint": {
         "$": true,
-        "body": [
+        "out": [
           {"a": 1},
           {"b": 2},
           {"c": 3}
@@ -50,7 +50,7 @@
       },
       "left wins three": {
         "$": true,
-        "body": [
+        "out": [
           {"a": 1},
           {"a": 2},
           {"a": 3}
@@ -59,7 +59,7 @@
       },
       "mixed overlap": {
         "$": true,
-        "body": [
+        "out": [
           {"a": 1, "b": 2},
           {"b": 20, "c": 30},
           {"a": 100, "d": 40}
@@ -68,7 +68,7 @@
       },
       "null objects": {
         "$": true,
-        "body": [
+        "out": [
           null,
           {"a": 1},
           null,
@@ -78,7 +78,7 @@
       },
       "empty objects": {
         "$": true,
-        "body": [
+        "out": [
           {},
           {"a": 1},
           {},
@@ -88,7 +88,7 @@
       },
       "null value wins": {
         "$": true,
-        "body": [
+        "out": [
           {"a": null},
           {"a": 2, "b": 3}
         ],
@@ -96,7 +96,7 @@
       },
       "nested is shallow": {
         "$": true,
-        "body": [
+        "out": [
           {"item": {"a": 1}},
           {"item": {"b": 2}, "other": 3}
         ],
@@ -104,7 +104,7 @@
       },
       "four priorities": {
         "$": true,
-        "body": [
+        "out": [
           {"a": 1},
           {"a": 2, "b": 2},
           {"b": 3, "c": 3},

@@ -337,7 +337,7 @@ GOLD = {{{
 ",,"
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {}, "body": "$py=','.join(x if x else '' for x in _)" }}
+{"main": {"$": true, "foreach": {"out": "$py=','.join(x if x else '' for x in _)" }}}
 }}}
 COMMENT=foreach with no "value" binds each inner array to frame.current ("_" inside the body expression); reuses test 400's join logic per item. Streaming jq's 4 outputs collected into one array.
 
@@ -355,7 +355,7 @@ GOLD = {{{
 ",a"
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": "$"}, "body": "$py=','.join('' if v == None else v for v in _)"}}
+{"main": {"$": true, "foreach": {"in": "$", "out": "$py=','.join('' if v == None else v for v in _)"}}}
 }}}
 OUT_MODE=stream
 COMMENT=Same pattern as 401. Streaming  2 outputs collected into one array.

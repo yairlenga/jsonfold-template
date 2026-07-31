@@ -3,25 +3,25 @@
     "checks": {
       "null input": {
         "$": true,
-        "body": null,
+        "out": null,
         "transform": "to_pairs",
 	"error": "Error: null Input"
       },
       "empty object": {
         "$": true,
-        "body": {},
+        "out": {},
         "transform": "to_pairs"
       },
       "single entry": {
         "$": true,
-        "body": {
+        "out": {
           "a": 1
         },
         "transform": "to_pairs"
       },
       "multiple entries": {
         "$": true,
-        "body": {
+        "out": {
           "a": 1,
           "b": 2,
           "c": 3
@@ -30,7 +30,7 @@
       },
       "null value": {
         "$": true,
-        "body": {
+        "out": {
           "a": null,
           "b": 2
         },
@@ -38,7 +38,7 @@
       },
       "nested value": {
         "$": true,
-        "body": {
+        "out": {
           "item": {
             "a": 1,
             "b": 2
@@ -48,7 +48,7 @@
       },
       "array value": {
         "$": true,
-        "body": {
+        "out": {
           "items": [
             1,
             2,
@@ -59,7 +59,7 @@
       },
       "mixed values": {
         "$": true,
-        "body": {
+        "out": {
           "null": null,
           "bool": false,
           "number": 12,

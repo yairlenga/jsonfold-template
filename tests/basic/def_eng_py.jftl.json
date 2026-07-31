@@ -1,7 +1,7 @@
 {
 	"main": {
-		"1+1": { "$": true, "body": "$=1+1"},
-		"range(5,10)": { "$": true, "data": "$=[x for x in range(5, 10)]" }
+		"1+1": { "$": true, "out": "$=1+1"},
+		"range(5,10)": { "$": true, "data": "$=[x for x in range(5, 10)]", "out": "$=_[2]" }
 	},
 	"config": {
 		"default_expr_engine": "py"

@@ -6,14 +6,14 @@
             "mm": {
                 "$": true,
                 "foreach": { "value": "i", "in": 1000 },
-                "body": {
+                "out": {
                     "$": true,
                     "foreach": { "value": "i", "in": 1000 },
-                    "body": "$v5.a.b.c.d.e"
+                    "out": "$v5.a.b.c.d.e"
                 }
             }
         },
         "data": "$mm",
-        "body": "$py=sum( (sum(row) for row in mm))"
+        "out": "$py=sum( (sum(row) for row in mm))"
     }
 }

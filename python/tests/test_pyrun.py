@@ -19,7 +19,7 @@ def test1():
                 "bar": 200,
                 "list": ['a',  'b', 'c', 'd', 'e'],
             },
-            "body": {
+            "out": {
                 "foo+bar=": "$pyeval= foo + bar",
                 "join(list)=": "$pyeval= ','.join(list)"
             }

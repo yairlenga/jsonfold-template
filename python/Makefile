@@ -39,7 +39,8 @@ pytest-test:
 run-test: pytest-test basic-test pyrun-test jqtest-test jqman-test
 
 test:
-	$(MAKE) run-test | tee test.log
+	rm -f $@.log
+	($(MAKE) run-test >> $@.log) 2>&1 | tee -a $@.log
 
 package:
 	rm -f dist/jsonfold-$(VERSION)[.-]*

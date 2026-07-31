@@ -4,8 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Union, cast
 
-from core import Evaluator
-from model import COMPILE_DOC, CompileError, CompilerPlugin, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, CompileError, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 @dataclass
@@ -35,7 +34,7 @@ _SEGMENT_RE = re.compile(r"""
 class NavigationStatement(Evaluator):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
-    def __init__(self, path: str, start: Literal["_current", "_parent.current", "_input"] | str= "_current", where: str = "" ):
+    def __init__(self, path: str, start: Literal["_data", "_parent.data", "_input"] | str= "_data", where: str = "" ):
         super().__init__(where, path)
         self._path = path
         self.where = where   # for diagnostics, e.g. "user.items[0].name"
@@ -76,13 +75,13 @@ class NavigationStatement(Evaluator):
     def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
         value = None
         start = self._start
-        if start == "_current":
+        if start == "_data":
             value = ctx.current
         elif start == "_frame":
             value = ctx
         elif self._start == "_input":
             value = ctx.env.input
-        elif self._start == "_parent._current":
+        elif self._start == "_parent._data":
             value = cast(RuntimeContext, ctx.parent).current
         else:
             value = ctx.lookup_var(self._start)
@@ -136,13 +135,13 @@ class NavigationCompiler(StatementCompiler):
         head = m.group("start")
         segments = m.group("segments")
         if head == "$":
-            start = "_current"
+            start = "_data"
         elif head == "$^":
             start = "_input"
         elif head == "$%":
             start = "_frame"
         elif head == "$<":
-            start = "_parent._current"
+            start = "_parent._data"
         elif (vars := m.group("vars")) != "":
             # Convert $foo.bar to .foo.bar, starting with implied "_.vars"
             start = vars

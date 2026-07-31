@@ -5,7 +5,7 @@
       "subtotal": "$.order.subtotal",
       "taxRate": "$.order.taxRate"
     },
-    "body": {
+    "out": {
       "customerName": "$.customer.name",
       "total": "$pyrun= return round(subtotal * (1 + taxRate), 2)",
       "itemCount": "$pyrun= return len(_input['items'])",
