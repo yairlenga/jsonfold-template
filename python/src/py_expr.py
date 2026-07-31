@@ -37,7 +37,17 @@ class SimpleEvalEvaluator(Evaluator):
     def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
         se = self.se
         se.names = self._build_env(ctx)
-        return se.eval(self.source, self.compiled)
+        # TODO: Propograte exception to the user, with ability to covert them to "soft" JFTLNotice.
+        try:
+            return se.eval(self.source, self.compiled)
+        except Exception as e:
+            return JFTLNotice(
+                code="PYEXPR_RUNTIME_ERROR",
+                where=self.where, location=None,
+                message=f"error evaluating {self.source!r}: {e}",
+            )
+
+    
     
         # Using Python rules for falsyness. Can still return Missing, Error
     def eval_cond(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:

@@ -54,7 +54,7 @@ class PyEvalEvaluator(Evaluator):
             return eval(self._code, env)
         except Exception as e:
             return JFTLNotice(
-                code="PYRUN_RUNTIME_ERROR",
+                code="PYEVAL_RUNTIME_ERROR",
                 where=self._where, location=None,
                 message=f"error evaluating {self._source!r}: {e}",
             )
