@@ -27,7 +27,7 @@ the only place a template makes a decision.
         { "when": "COND-1", "then": "EXPR-1" },
         { "when": "COND-2", "then": "EXPR-2" }
     ],
-    "body": "EXPR",
+    "out": "EXPR",
     "default": "EXPR",
     "transform": null | "object",
     "error": "EXPR"
@@ -100,7 +100,7 @@ unless it names its own source explicitly.
     { "when": "COND-1", "then": "EXPR-1" },
     { "when": "COND-2", "then": "EXPR-2" }
 ],
-"body": "EXPR"
+"out": "EXPR"
 ```
 
 If `case` is present, its entries are checked in order; the first `when`
@@ -171,7 +171,7 @@ for `shape: "range"`):
   specify position the end.
 - `limit` — maximum number of items to include, measured from `start`.
 - If both `stop` and `limit` are provided the smaller values will override.
-  For example "start=5, stop=-3, limit=5 on the range "a" to "z" will produce
+  For example "start=5, stop=-3, limit=5" on the range "a" to "z" will produce
   the array [ "f", "g", "h", "i", "j"]: The first 5 elements from the sequence
   [ "f" ... "y" ].
 - All three are ordinary expressions evaluated once, before the loop
@@ -228,7 +228,7 @@ Evaluated (in the new frame) and used as the statement's result whenever:
 
 - `if` evaluates falsy, or
 - neither `case` nor `body` produces something to run, or
-- `foreach` is present but its iteration source is `null`/MISSING
+- `foreach` is present, but its iteration source is `null`/MISSING
   (nothing to iterate at all — not merely zero items surviving `if`
   filtering), or
 - (non-`foreach` case) the chosen body itself evaluates to MISSING.

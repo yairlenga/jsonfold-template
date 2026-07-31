@@ -15,6 +15,7 @@ if input objects carry real Python methods, those ARE callable from here.
 """
 import ast
 from dataclasses import dataclass
+import types
 from typing import Any, Callable, Optional, cast
 
 from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
@@ -99,7 +100,7 @@ class PyEvalPlugin(CompilerPlugin):
     def createCompiler(self, DocCompiler) -> StatementCompiler:
         return PyEvalCompiler(DocCompiler)
 
-from types import CodeType
+from types import CodeType, FunctionType
 from typing import Any
 
 
@@ -111,13 +112,26 @@ class PyRunEvaluator(Evaluator):
     source: Optional[str] = None
 
     def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
+
         names = _build_env(ctx)
+        cache = ctx.env.cache
+        key=id(self)
+        func_def : Optional[types.FunctionType]= cache.get(key)
+        if func_def is None:
+            func_globals = {}
+            func_def = types.FunctionType(self.func_def.__code__, func_globals)
+            func_globals[self.func_def.__name__] = func_def         # bind name so func_call's lookup finds it
+            cache[key] = func_def
 
         # Global Object
-        g = self.func_def.__globals__
+        g = func_def.__globals__
         g.clear()
         g.update(self.glob_env)
         g.update(names)
+        g[self.func_def.__name__] = func_def
+
+#        g["_"] = { "a": "X", "b": "X" }
+#        self.func_def.__globals__["_"] = { "a": "Y", "b": "Y" }
 
         try:
             return eval(self.func_call, g)
@@ -143,7 +157,7 @@ class PyRunCompiler(StatementCompiler):
     def _compile(self, source_text: str, where:str = "") -> PyRunEvaluator:
         # Parse the user's text as ordinary Python statements.
         filename = where if where else "<pyrun>"
-        FUNC_NAME = "pyrun_func"
+        FUNC_NAME = "_pyrun_func"
         MISSING_VAR = "_MISSING"
 
         parsed = ast.parse(
@@ -203,7 +217,7 @@ class PyRunCompiler(StatementCompiler):
         func_call = compile(FUNC_NAME + "()", filename, "eval")
         eval_globals[FUNC_NAME] = build_locals[FUNC_NAME]
 
-        return PyRunEvaluator(func_call=func_call, func_def=build_locals.get(FUNC_NAME), glob_env=eval_globals.copy(), where = where )
+        return PyRunEvaluator(func_call=func_call, func_def=build_locals.get(FUNC_NAME), glob_env=eval_globals, where = where )
 
         
     def compile_str(self, source: Any | str, where: str = "") -> COMPILE_DOC:

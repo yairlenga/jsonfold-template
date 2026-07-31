@@ -93,7 +93,11 @@ class Environment:
     # Reference to top frame. Set later, as top frame and top environment point to each other.
     top: RuntimeContext | None = None
 
+    # Runtime statistics
     eval_count : int = 0
+
+    # Runtime Data,
+    cache: dict[Any, Any] = field(default_factory=dict)
 
 
 @dataclass

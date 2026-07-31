@@ -18,7 +18,7 @@ from typing import Any, cast
 import unittest
 
 from model import JSON_UNSET, DocCompiler, Statement
-from logic import _FlattenningTransformer, _MergeTransformer, _CaseItem, _ForeachPart, LogicCompiler, LogicStatement
+from logic import _CaseEvaluator, _FlattenningTransformer, _MergeTransformer, _CaseItem, _ForeachPart, LogicCompiler, LogicStatement
 
 
 class Tagged:
@@ -158,6 +158,8 @@ class TestCases(unittest.TestCase):
 
     def test_single_case(self):
         stmt = compile_logic({"case": [{"when": "$.a", "then": "$.b"}]})
+        assert isinstance(stmt, LogicStatement)
+        assert isinstance(stmt._out, _CaseEvaluator)
         assert isinstance(stmt._out.cases, list)
 
         self.assertEqual(len(stmt._out.cases), 1)
@@ -173,6 +175,7 @@ class TestCases(unittest.TestCase):
                 {"when": "$.c", "then": "$.z"},
             ]
         })
+        assert isinstance(stmt._out, _CaseEvaluator)
         cases = cast(list[_CaseItem], stmt._out.cases)
 
         self.assertEqual(len(cases), 3)
@@ -248,6 +251,7 @@ class TestFullRealisticBlock(unittest.TestCase):
         self.assertEqual(stmt._foreach.key, "idx")
         self.assertEqual(stmt._foreach.value, "row")
         self.assertEqual(stmt._foreach.items, Tagged("statement", "$.rows"))
+        assert isinstance(stmt._out, _CaseEvaluator)
         assert isinstance(stmt._out.cases, list)
         self.assertEqual(len(stmt._out.cases), 1)
         self.assertEqual(stmt._out.default_case, Tagged("statement", "$.output"))

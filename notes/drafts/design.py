@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, Any, Callable, Optional, TextIO
+from typing import Literal, Any, Optional, TextIO
 import typing
 
 # Template Class - represent compiled templates
@@ -20,14 +20,6 @@ class Statement:
 
 # Execution environment
 class Engine:
-    # Additional functions.
-    functions: dict[str, Callable]
-
-    # Available expression engines (in addition to default CEL)
-    expr_engines: dict[str, ExprEngine]
-
-    # provided globals, merged into data context
-    data: dict[str, Any]
 
     def compile(self, source: dict) -> tuple[Template, list[Error]]: ...
 
