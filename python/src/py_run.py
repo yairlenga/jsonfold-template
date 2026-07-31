@@ -100,7 +100,7 @@ class PyEvalPlugin(CompilerPlugin):
     def createCompiler(self, DocCompiler) -> StatementCompiler:
         return PyEvalCompiler(DocCompiler)
 
-from types import CodeType, FunctionType
+from types import CodeType
 from typing import Any
 
 

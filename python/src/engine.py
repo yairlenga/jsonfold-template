@@ -85,8 +85,6 @@ class JFTLCompiler(DocCompiler):
     _nav_compiler : Optional[NavigationCompiler] = None
     _expr_compilers: dict[str, Optional[StatementCompiler]] = field(default_factory=dict)
 
-    INTERPOLATE_RE = re.compile(r"\$\$\{|\$\{([^}]*)\}")
-
     # Compile single ex
     def _compile_simple_str(self, source: Any, where: str = "") -> COMPILE_DOC:
 
@@ -368,7 +366,7 @@ class JFTLRenderer():
                 eval_v, _ = self._render(v, frame)
                 if isinstance(eval_v, JFTLNotice):
                     return eval_v, None
-                elif eval_v == SKIP_VALUE:
+                elif eval_v is SKIP_VALUE:
                     continue  # silently dropped from objects, per locked sentinel rules
                 result[k] = eval_v
             return result, None
@@ -379,7 +377,7 @@ class JFTLRenderer():
                 eval_v, _ = self._render(v, frame)
                 if isinstance(eval_v, JFTLNotice):
                     return eval_v, None
-                elif eval_v == SKIP_VALUE:
+                elif eval_v is SKIP_VALUE:
                     continue
                 result.append(eval_v)
             return result, None
@@ -421,12 +419,14 @@ class JFTLEngine(Engine):
 
         compiler = JFTLCompiler(config, self._plugins)
         compiled, valid, errors = compiler.compile_root(top["main"], where)
+        first_error = next((e for e in errors if e.severity in (Severity.FATAL, Severity.ERROR)), None) 
 
         if not isinstance((datasets := top.get("datasets", {}) or {}) , dict):
             raise CompileError(
                 JFTLNotice(code='BAD-DATASET', message=f"Dataset must be dictionary, got {type(datasets)}")
                 )
-        return JFTLTemplate(main_entry=compiled, config=config, datasets=datasets, valid=valid ), errors
+
+        return JFTLTemplate(main_entry=compiled, config=config, datasets=datasets, valid=valid, error=first_error ), errors
     
     def _render_top(self, renderer: JFTLRenderer, input: Any, body: Optional[Evaluator], datasets: Optional[dict] = None) -> tuple[Any, RenderStatus]:
         if not body:
@@ -482,7 +482,7 @@ class ObjectStatement(Evaluator):
             value = item.eval(ctx) if isinstance(item, Evaluator) else item
             if isinstance(value, JFTLNotice):
                 return value
-            if value == SKIP_VALUE:
+            if value is SKIP_VALUE:
                 continue  # silently dropped from objects, per locked sentinel rules
             result[key] = value
         return result
@@ -498,7 +498,7 @@ class ArrayStatement(Evaluator):
             value = item.eval(ctx) if isinstance(item, Evaluator) else item
             if isinstance(value, JFTLNotice):
                 return value
-            elif value == SKIP_VALUE:
+            elif value is SKIP_VALUE:
                 continue
             result.append(value)
         return result

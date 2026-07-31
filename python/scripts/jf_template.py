@@ -224,11 +224,10 @@ def _process_multi_records(args, engine, compiled, records: Iterator[tuple[Any, 
 def _process_single_doc(args, engine, compiled, input, input_desc, input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any]:
 
     t1 = time.perf_counter()
-
     all_ok, manifest = _process_record(args, engine, compiled, input, dest, input_label=input_label, input_desc=input_desc, output_label=dest_label)
     elapsed = time.perf_counter() - t1
+
     out_count = len(manifest) if isinstance(manifest, list) else manifest.get("doc_count", 1) if manifest else 0
-    elapsed = time.perf_counter() - t1
     if args.target:
         if args.split:
             info(f"Input {input_label} ({input_desc}), {out_count} files, completed in {elapsed:.3f} seconds")

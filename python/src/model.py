@@ -63,6 +63,8 @@ class JFTLTemplate(Template):
 
     # From Template:
     valid: bool
+
+    # TODO: Capture frst error of a template.
     error: Optional[JFTLNotice] = None
 
     # Implementation

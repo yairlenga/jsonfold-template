@@ -58,7 +58,6 @@ class RenderStatus:
 
 class Template(ABC):
     valid: bool
-    config_data: dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class Engine(ABC):

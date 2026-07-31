@@ -340,7 +340,7 @@ class LogicStatement(Evaluator):
 
             if isinstance(item, JFTLNotice):
                 return item
-            elif item == SKIP_VALUE:
+            elif item is SKIP_VALUE:
                 continue
 
             if do_dict:
@@ -360,7 +360,7 @@ class LogicStatement(Evaluator):
             # Apply limit, if ix_limit is set
             out_count = out_count + 1
             if ix_limit is not None and out_count >= ix_limit:
-                stop_index = start_index + ix_limit
+                break
 
         return dict_result if do_dict else list_result
 
@@ -489,10 +489,11 @@ class LogicCompiler(StatementCompiler):
             for case in cases
             ]
 
-        return _CaseEvaluator(where, None, cases=v_cases, default_case=default_case)
+        return _CaseEvaluator(where=where, source_code=None, cases=v_cases, default_case=default_case)
 
 
-    TOKEN_RE = re.compile(r"^[A-Za-z]\w*$", re.ASCII)
+    _TOKEN_RE = re.compile(r"^[A-Za-z]\w*$", re.ASCII)
+
     def _get_named_var(self, args: dict[str, JSON_DOC], tag: str) -> str | None :
         if not tag in args:
             return None
@@ -500,6 +501,10 @@ class LogicCompiler(StatementCompiler):
         if not isinstance(var_name, str):
             self.compiler.record_notice(JFTLNotice(code="LOGIC-BAD-ID", message=f"Expecting variable name for '{tag}', got '{type(var_name)}'"))
             return None
+        if not self._TOKEN_RE.fullmatch(var_name):
+            self.compiler.record_notice(JFTLNotice(code="LOGIC-BAD-ID", message=f"Invalid variable name for '{tag}', got 'var_name'"))
+            return None
+        
         return var_name
 
     def _compile_object(self, source: dict[str, JSON_DOC], where: str = "") -> LogicStatement:
@@ -538,7 +543,7 @@ class LogicCompiler(StatementCompiler):
             v_foreach_cond = self._compile_cond(v_loop, "if", True)
             v_foreach_out = self._comple_output(v_loop, "out")
             v_foreach_update = None
-            update = source.get("update", {})
+            update = v_loop.get("update")
             if isinstance( update, dict ):
                 v_foreach_update = [
                     _DefineVar(
@@ -547,7 +552,7 @@ class LogicCompiler(StatementCompiler):
                         )
                     for name, expr in update.items()
                 ]
-            else:
+            elif update is not None:
                 compiler.record_notice(JFTLNotice(code="LOGIC-BAD-SET", message=f"Logic 'set' expecting dictionary, got {type(defines)}"))
           
             v_foreach = _ForeachPart(

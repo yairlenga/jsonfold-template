@@ -10,6 +10,43 @@ from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes
 from model import COMPILE_DOC, RUNTIME_DOC, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
 from template import JFTLNotice, Missing
 
+def _create_simple_eval() -> SimpleEval:
+    STRING_ATTRS = [
+        "join",
+        "lower",
+        "upper",
+        "strip",
+        "rstrip",
+        "startswith",
+        "endswith",
+        "replace",
+        "split"
+    ]
+    # Was SimpleEval, but it does not support comprehension 
+    se = EvalWithCompoundTypes(
+        allowed_attrs= { str: STRING_ATTRS }
+    )
+    se.functions = {
+        "abs": abs,
+        "len": len,
+        "min": min,
+        "max": max,
+        "sum": sum,
+        "round": round,
+        "range": range,
+        "sorted": sorted,
+        "any": any,
+        "all": all,
+        "int": int,
+        "float": float,
+        "bool": bool,
+        "str": str,
+        "ord": ord,
+        "chr": chr,
+    }
+    return se
+
+
 @dataclass(kw_only=True)
 class SimpleEvalEvaluator(Evaluator):
     se: SimpleEval
@@ -35,7 +72,13 @@ class SimpleEvalEvaluator(Evaluator):
         return env
 
     def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
-        se = self.se
+
+        key = id(self)
+        se = ctx.env.cache.get(key)
+        # Clone on first call
+        if se is None:
+            se = _create_simple_eval()
+            ctx.env.cache[key] = se
         se.names = self._build_env(ctx)
         # TODO: Propograte exception to the user, with ability to covert them to "soft" JFTLNotice.
         try:
@@ -46,12 +89,10 @@ class SimpleEvalEvaluator(Evaluator):
                 where=self.where, location=None,
                 message=f"error evaluating {self.source!r}: {e}",
             )
-
-    
     
         # Using Python rules for falsyness. Can still return Missing, Error
     def eval_cond(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
-        result = self.se.eval(self.source, previously_parsed=self.compiled,)
+        result = self.eval(ctx)
         if isinstance(result, (Missing, JFTLNotice)):
             return result
         return bool(result)
@@ -63,43 +104,8 @@ class SimpleEvalCompiler(StatementCompiler):
     _se : SimpleEval = field(init=False)
 
     def __post_init__(self) -> None:
-        self._se = self.simple_eval if self.simple_eval else self._default_simple_eval()
+        self._se = self.simple_eval if self.simple_eval else _create_simple_eval()
 
-    def _default_simple_eval(self) -> SimpleEval:
-        STRING_ATTRS = [
-            "join",
-            "lower",
-            "upper",
-            "strip",
-            "rstrip",
-            "startswith",
-            "endswith",
-            "replace",
-            "split"
-        ]
-        # Was SimpleEval, but it does not support comprehension 
-        se = EvalWithCompoundTypes(
-            allowed_attrs= { str: STRING_ATTRS }
-        )
-        se.functions = {
-            "abs": abs,
-            "len": len,
-            "min": min,
-            "max": max,
-            "sum": sum,
-            "round": round,
-            "range": range,
-            "sorted": sorted,
-            "any": any,
-            "all": all,
-            "int": int,
-            "float": float,
-            "bool": bool,
-            "str": str,
-            "ord": ord,
-            "chr": chr,
-        }
-        return se
 
     def compile_str(self, source: Any | str, where: str = "") -> COMPILE_DOC:
         assert isinstance(source, str)
