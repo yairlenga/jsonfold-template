@@ -1,0 +1,11 @@
+{
+    "main": {
+        "$": true,
+        "set": {
+            "n": 1000,
+            "m": 1000
+        },
+        "foreach": { "in": "$n", "out": { "$": true, "foreach": { "in": "$m" }} },
+        "out": "N=${n}, M=${m}"
+    }
+}
