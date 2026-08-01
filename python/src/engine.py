@@ -8,7 +8,7 @@ from core import Frame
 from logic import LogicCompiler
 from template import SKIP_VALUE, Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, RUNTIME_DOC, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_DOC, RUNTIME_LIST_LIKE, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 
 from typing import Any
@@ -371,7 +371,7 @@ class JFTLRenderer():
                 result[k] = eval_v
             return result, None
         
-        if isinstance(source, list):
+        if isinstance(source, RUNTIME_LIST_LIKE):
             result = []
             for v in source:
                 eval_v, _ = self._render(v, frame)
@@ -388,7 +388,7 @@ class JFTLRenderer():
         return self._materialize(result)
 
     def _materialize(self, value: Any) -> Any:
-        if isinstance(value, (Missing, Frame)):
+        if isinstance(value, (Missing, RuntimeContext)):
             return None
         if isinstance(value, dict):
             drop_nulls = self._drop_null_attributes
@@ -398,7 +398,7 @@ class JFTLRenderer():
                 if ( mv := self._materialize(v)) is not None or not drop_nulls
             }
 
-        if isinstance(value, (list, tuple)):
+        if isinstance(value, RUNTIME_LIST_LIKE):
             return [ self._materialize(v) for v in value ]
         if isinstance(value, ( NoneType, bool, int, float, str)):
             return value

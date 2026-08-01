@@ -48,6 +48,8 @@ RUNTIME_LEAFS : TypeAlias = JSON_LEAFS | Missing | JFTLNotice
 RUNTIME_DOC = Tree[RUNTIME_LEAFS]
 RUNTIME_BOOL = bool | Missing | JFTLNotice | NoneType
 
+RUNTIME_LIST_LIKE = (list, tuple)
+
 # Template Class - represent compiled templates
 
 # Runtime Objects

@@ -3,7 +3,7 @@ from types import NoneType
 from typing import Any, ClassVar, Optional, cast
 from dataclasses import dataclass
 
-from model import COMPILE_DOC, JSON_DOC, JSON_UNSET, RUNTIME_DOC, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
+from model import COMPILE_DOC, JSON_DOC, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
 from template import MISSING_VALUE, SKIP_VALUE, JFTLNotice, Missing
 
 """
@@ -89,7 +89,7 @@ class _ForeachPart():
     # List[list] -> List
 class _FlattenningTransformer(Transformer):
     def transform(self, input: RUNTIME_DOC ) -> list[RUNTIME_DOC] | JFTLNotice:
-        if not isinstance(input, list):
+        if not isinstance(input, RUNTIME_LIST_LIKE):
             return JFTLNotice(
                     code="FLATTEN_INPUT",
                     message=f"The 'flatten' transform input is array of array, got non-list",
@@ -98,7 +98,7 @@ class _FlattenningTransformer(Transformer):
         for pos, item in enumerate(input):
             if item is None:
                 continue
-            if not isinstance(item, list):
+            if not isinstance(item, RUNTIME_LIST_LIKE):
                 return JFTLNotice(
                     code="FLATTEN_ITEM",
                     message=f"The 'flatten' transformation input is array of array, got non list items in position {pos}",
@@ -113,7 +113,7 @@ class _FlattenningTransformer(Transformer):
     # list[dict] -> dict
 class _MergeTransformer(Transformer):
     def transform(self, input: RUNTIME_DOC) -> dict[str, RUNTIME_DOC] | JFTLNotice:
-        if not isinstance(input, list):
+        if not isinstance(input, RUNTIME_LIST_LIKE):
             return JFTLNotice(
                     code="MERGE_INPUT",
                     message=f"The 'merge' transformation input is array of objects, got non-list input",
@@ -154,7 +154,7 @@ class _DropMissingTransformer (Transformer):
             return None
         if isinstance(input, dict):
             return { k:v for k, v in input.items() if not isinstance(v, Missing) }
-        elif isinstance(input, list):
+        elif isinstance(input, RUNTIME_LIST_LIKE):
             return [x for x in input if not isinstance(x, Missing)]
 
         return JFTLNotice(
@@ -166,14 +166,14 @@ class _DropMissingTransformer (Transformer):
     # List[Pairs] -> Dict
 class _FromPairsTransformer (Transformer):
     def transform(self, input: RUNTIME_DOC) -> dict[str, RUNTIME_DOC] | JFTLNotice :
-        if not isinstance(input, list):
+        if not isinstance(input, RUNTIME_LIST_LIKE):
             return JFTLNotice(
                     code="FROM_PAIRS_INPUT",
                     message=f"The 'from_pairs' transformation input is array of objects, got non-list input",
                 )
 
         for pos, item in enumerate(input):
-            if not isinstance(item, list) or len(item) != 2:
+            if not isinstance(item, RUNTIME_LIST_LIKE) or len(item) != 2:
                 return JFTLNotice(
                     code="FROM_PAIRS_DATA",
                     message=f"The 'from_pairs' transformation input is array of pairs, got non pair in position {pos} {input}",
@@ -265,7 +265,7 @@ class LogicStatement(Evaluator):
         count = None
 
         do_dict = False
-        if isinstance(items, list):
+        if isinstance(items, RUNTIME_LIST_LIKE):
             count = len(items)
             loop_iter = enumerate(items)
 
@@ -411,8 +411,8 @@ class LogicStatement(Evaluator):
             v_foreach = self._eval_foreach(ctx)
             if isinstance(v_foreach, (NoneType, Missing, JFTLNotice)):
                 return self._return_result(ctx, v_foreach)
+            ctx.set_current(v_foreach)
             current = v_foreach
-            ctx.set_current(current)
 
         # Transformation, as long as the value is "something"
         if ( v_return := self._out):

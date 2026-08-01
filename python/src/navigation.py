@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Union, cast
 
-from model import COMPILE_DOC, CompileError, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_LIST_LIKE, CompileError, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 @dataclass
@@ -100,7 +100,7 @@ class NavigationStatement(Evaluator):
                 traveled += f".{seg.name}"
 
             elif isinstance(seg, Index):
-                if isinstance(value, list) and -len(value) <= seg.i < len(value):
+                if isinstance(value, RUNTIME_LIST_LIKE) and -len(value) <= seg.i < len(value):
                     value = value[seg.i]
                 else:
                     return MISSING_VALUE
@@ -112,7 +112,7 @@ class NavigationStatement(Evaluator):
                     return key
                 elif isinstance(key, str) and isinstance(value, dict) and key in value:
                     value = value[key]
-                elif isinstance(key, int) and isinstance(value, list) and -len(value) <= key < len(value):
+                elif isinstance(key, int) and isinstance(value, RUNTIME_LIST_LIKE) and -len(value) <= key < len(value):
                     value = value[key]
                 else:
                     return MISSING_VALUE

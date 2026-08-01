@@ -183,7 +183,7 @@ def _process_record(args, engine, compiled, record: Any, dest: TextIO, *, input_
         return all_ok, manifest
 
     # Unlikely - the top level object is scalar, just wrap it inside an array.
-    if not isinstance(result, list):
+    if not isinstance(result, (list, tuple)):
         result = [ result ]
 
     manifest = []
