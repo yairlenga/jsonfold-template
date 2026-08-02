@@ -359,7 +359,7 @@ GOLD = {{{
 JFTL= {{{
 { "main": {
     "$": true,
-    "out": [ { "a": "$.a", "b": "$.b" }, { "$": true, "out": [[ "$.d", "$.a" ]], "transform": "from_pairs"}, {"e": "$.b" }],
+    "out": [ { "a": "$.a", "b": "$.b" }, { "$": true, "out": [[ "$.d", "$.a" ]], "transform": "to_object"}, {"e": "$.b" }],
     "transform": "merge"
 }}
 }}}
@@ -369,7 +369,7 @@ JQ = {{{
 {"a",b,"a$\(1+1)"}
 }}}
 INPUT = {{{
-{"a":1, "b":2, "a$2":4}
+{"a":1, "b":2, "c":3, "a$2":4}
 }}}
 GOLD = {{{
 {"a":1, "b":2, "a$2":4}
@@ -377,11 +377,15 @@ GOLD = {{{
 JFTL= {{{
 { "main": {
     "$": true,
-    "out": [ { "a": "$.a", "b": "$.b" }, { "$": true, "out": [[ "a${$.c}", "$.a" ]], "transform": "from_pairs"}, {"e": "$.b" }],
+    "out": [
+        { "a": "$.a" },
+        { "b": "$.b" },
+        { "$": true, "set": { "k": "$py= f'a${1+1}'" }, "out": [[ "$k", "$[$k]" ]], "transform": "to_object"}
+    ],
     "transform": "merge"
 }}
 }}}
-SKIP=same computed/interpolated-key limitation as 020.
+1SKIP=same computed/interpolated-key limitation as 020.
 
 [022-basic]
 LEVEL=nav

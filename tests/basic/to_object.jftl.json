@@ -1,6 +1,6 @@
 {
     "main": {
-        "from_pairs": {
+        "from-pairs": {
             "$": true,
             "data": [
                 [ "list1", "LIST-1" ],

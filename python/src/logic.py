@@ -270,20 +270,20 @@ class LogicStatement(Evaluator):
         items = ctx.eval_value(foreach.items) if foreach.items is not JSON_UNSET else ctx.current
 
         ix_start = ctx.eval_value(foreach.start)
-        if ix_start is not None and not isinstance(ix_start, int):
+        if not isinstance(ix_start, (NoneType, int)) or isinstance(ix_start, bool):
             return JFTLNotice(
                     code="FOREACH_START",
                     message=f"foreach 'start' must be an integer value",
                 ) 
         ix_stop = ctx.eval_value(foreach.stop)
-        if ix_stop is not None and not isinstance(ix_stop, int):
+        if not isinstance(ix_stop, (NoneType, int)) or isinstance(ix_stop, bool):
             return JFTLNotice(
                     code="FOREACH_STOP",
                     message=f"foreach 'stop' must be an integer value",
                 ) 
 
         ix_limit = ctx.eval_value(foreach.limit)
-        if ix_limit is not None and not isinstance(ix_limit, int):
+        if not isinstance(ix_limit, (NoneType, int)) or isinstance(ix_limit, bool):
             return JFTLNotice(
                     code="FOREACH_LIMIT",
                     message=f"foreach 'stop' must be an integer value",
@@ -304,10 +304,14 @@ class LogicStatement(Evaluator):
             loop_iter = iter(items.items())
 
         elif isinstance(items, int) and not isinstance(items, bool):
+            if items < 0:
+                return JFTLNotice(code="FOREACH_NEGATIVE", message=f"foreach 'in' accept only non-negative integer, got {items}")
             count = items - start_index
             loop_iter = enumerate(range(start_index, items))
             ix_stop = ix_stop - start_index if ix_stop else None
             start_index = 0
+        elif isinstance(items, (NoneType, Missing)):
+            return MISSING_VALUE
         else:
             return JFTLNotice(code="FOREACH_IN", message=f"foreach expecting list/dict/int, got {type(items)}")
 

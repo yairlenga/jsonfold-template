@@ -121,9 +121,11 @@ class JFTLCompiler(DocCompiler):
     # interpolated by variable name instead.
 
     _NAV_HEAD = r"""
-        \^                            # top frame
-      | _                             # current
-      | \$ [A-Za-z_]\w*               # named variable ($foo)
+                                      # start at current data
+      | \^                            # top frame
+      | <                             # prev frame data
+      | %                             # frame
+      | [A-Za-z_]\w*                  # named variable ($foo)
       | [A-Za-z_]\w*                  # bareword variable fallback
     """
 
@@ -222,8 +224,10 @@ class JFTLCompiler(DocCompiler):
         return StringJoinStatement(items=segments)
 
     def _compile_str(self, source: str, where: str = "") -> COMPILE_DOC:
+
         # Check if this is potential interpolation:
-        if "${" in source:
+        int_pos = source.find("${")
+        if int_pos == 0 or int_pos > 0 and not source.startswith('$'):
             interpolated = self._compile_interpolated(source, where)
             if interpolated:
                 return interpolated
