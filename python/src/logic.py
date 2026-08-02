@@ -77,7 +77,7 @@ class _CaseEvaluator(Evaluator):
 class _ForeachPart():
     key_var: Optional[str] = None
     value_var: Optional[str] = None
-    iter_var: Optional[str] = None
+#    iter_var: Optional[str] = None
     items: Optional[Statement] = None
     cond: Optional[Condition] = None
     out: Optional[Statement] = None
@@ -568,7 +568,7 @@ class LogicCompiler(StatementCompiler):
             # Runtime variables
             v_foreach_key = self._get_named_var(v_loop, "key", "_key")
             v_foreach_value = self._get_named_var(v_loop, "var")
-            v_foreach_iter = self._get_named_var(v_loop, "var")
+#            v_foreach_iter = self._get_named_var(v_loop, "var")
 
             # Runtime expressions
             v_foreach_in = self._compile_expr(v_loop, "in")
@@ -594,7 +594,7 @@ class LogicCompiler(StatementCompiler):
             v_foreach = _ForeachPart(
                 key_var = v_foreach_key,
                 value_var = v_foreach_value,
-                iter_var = v_foreach_iter,
+#                iter_var = v_foreach_iter,
 
                 items = v_foreach_in,               
                 start = v_foreach_start,
