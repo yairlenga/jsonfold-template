@@ -259,8 +259,8 @@ class LogicStatement(Evaluator):
     # Stage 3 ("foreach")
     _foreach: Optional[_ForeachPart] = None
     # Stage 4 — Returned value ("transform", "return")
-    _transformer: Optional[Transformer] = None
     _out: Optional[Statement] = None
+    _transformer: Optional[Transformer] = None
     # Stage 6 Fallback — wraps the whole pipeline
     _default_val: Optional[Statement] = None
     _error_val: Optional[Statement] = None
