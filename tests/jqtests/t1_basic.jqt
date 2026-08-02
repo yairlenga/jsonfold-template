@@ -665,7 +665,7 @@ JFTL = {{{
 {"main": {"$": true, "foreach": {"in": "$"}, "out": "$"}}
 }}}
 OUT_MODE=stream
-COMMENT=foreach with no "value" sets frame.current to each item, so "$" re-emits it with zero expression-engine use. Streaming collected into one array.
+COMMENT=foreach with no "var" sets frame.current to each item, so "$" re-emits it with zero expression-engine use. Streaming collected into one array.
 
 [042-basic]
 LEVEL=nav
@@ -844,7 +844,7 @@ GOLD = {{{
 JFTL = {{{
 {"main": {"$": true, "foreach": {"in": 10}, "out": "$"}}
 }}}
-COMMENT=shape:"range" with no "value" also sets frame.current to the numeric value each iteration.
+COMMENT=shape:"range" with no "var" also sets frame.current to the numeric value each iteration.
 
 [053-basic]
 LEVEL=py

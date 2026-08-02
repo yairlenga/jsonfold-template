@@ -57,12 +57,12 @@
         ]
       },
       "foreach": {
-        "value": "left",
+        "var": "left",
         "in": "$values",
         "out": {
           "$": true,
           "foreach": {
-            "value": "right",
+            "var": "right",
             "in": "$values",
             "out": {
               "left": "$left.name",

@@ -9,17 +9,17 @@
         },
         "foreach": {
             "in": "$starts",
-            "value": "s",
+            "var": "s",
             "out": {
                 "$": true,
                 "foreach": {
                     "in": "$stops",
-                    "value": "e",
+                    "var": "e",
                     "out": {
                         "$": true,
                         "foreach": {
                             "in": "$limits",
-                            "value": "l",
+                            "var": "l",
                             "out": {
                                 "start": "$s",
                                 "stop": "$e",

@@ -14,12 +14,12 @@
         ]
       },
       "foreach": {
-        "value": "a",
+        "var": "a",
         "in": "$values",
         "out": {
           "$": true,
           "foreach": {
-            "value": "b",
+            "var": "b",
             "in": "$values",
             "out": {
               "left": "$a.name",

@@ -1,0 +1,52 @@
+[
+  {
+    "data": [],
+    "all_even": true
+  },
+  {
+    "data": [
+      2
+    ],
+    "all_even": true
+  },
+  {
+    "data": [
+      3
+    ],
+    "all_even": false
+  },
+  {
+    "data": [
+      2,
+      4,
+      6
+    ],
+    "all_even": true
+  },
+  {
+    "data": [
+      3,
+      5,
+      7
+    ],
+    "all_even": false
+  },
+  {
+    "data": [
+      1,
+      2,
+      3
+    ],
+    "all_even": false
+  },
+  {
+    "data": [
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "all_even": false
+  }
+]

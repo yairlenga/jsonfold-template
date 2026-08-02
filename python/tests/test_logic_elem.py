@@ -125,7 +125,7 @@ class TestForeach(unittest.TestCase):
 
     def test_full_foreach_block(self):
         stmt = compile_logic({
-            "foreach": {"key": "idx", "value": "item", "in": "$.items", "if": "$.item.active"}
+            "foreach": {"key": "idx", "var": "item", "in": "$.items", "if": "$.item.active"}
         })
         assert isinstance(stmt._foreach, _ForeachPart)
         self.assertEqual(stmt._foreach.key, "idx")
@@ -133,15 +133,26 @@ class TestForeach(unittest.TestCase):
         self.assertEqual(stmt._foreach.items, Tagged("statement", "$.items"))
         self.assertEqual(stmt._foreach.cond, Tagged("condition", "$.item.active"))
 
+    def test_full_foreach_block_with_default_key(self):
+        stmt = compile_logic({
+            "foreach": {"var": "item", "in": "$.items", "if": "$.item.active"}
+        })
+        assert isinstance(stmt._foreach, _ForeachPart)
+        self.assertEqual(stmt._foreach.key, "_key")
+        self.assertEqual(stmt._foreach.value, "item")
+        self.assertEqual(stmt._foreach.items, Tagged("statement", "$.items"))
+        self.assertEqual(stmt._foreach.cond, Tagged("condition", "$.item.active"))
+
+
     def test_foreach_without_optional_if(self):
-        stmt = compile_logic({"foreach": {"key": "idx", "value": "item", "in": "$.items"}})
+        stmt = compile_logic({"foreach": {"key": "idx", "var": "item", "in": "$.items"}})
         assert isinstance(stmt._foreach, _ForeachPart)
         self.assertTrue(stmt._foreach.cond)
 
     def test_foreach_without_key(self):
-        stmt = compile_logic({"foreach": {"value": "item", "in": "$.items"}})
+        stmt = compile_logic({"foreach": {"var": "item", "in": "$.items"}})
         assert isinstance(stmt._foreach, _ForeachPart)
-        self.assertIsNone(stmt._foreach.key)
+        self.assertEqual(stmt._foreach.key, "_key")
         self.assertEqual(stmt._foreach.value, "item")
 
     def test_missing_foreach_is_false_and_all_subfields_none(self):
@@ -236,7 +247,7 @@ class TestFullRealisticBlock(unittest.TestCase):
         args = {
             "set": {"total": "$.price"},
             "if": "$.enabled",
-            "foreach": {"key": "idx", "value": "row", "in": "$.rows"},
+            "foreach": {"key": "idx", "var": "row", "in": "$.rows"},
             "case": [{"when": "$.a", "then": "$.x"}],
             "out": "$.output",
             "transform": "merge",

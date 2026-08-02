@@ -3,12 +3,12 @@
         "$": true,
         "foreach": {
             "in": 10,
-            "value": "x",
+            "var": "x",
             "out": {
                 "$": true,
                 "foreach": {
                     "in": 10,
-                    "value": "y",
+                    "var": "y",
                     "out": "$pyeval= x * y"
                 }
             }

@@ -2,12 +2,12 @@
     "main": {
         "$": true,
         "foreach": {
-            "value": "x",
+            "var": "x",
             "in": 10,
             "out": {
       	    	"$": true,
             	"foreach": {
-                	"value": "y",
+                	"var": "y",
                 	"in": 10,
             		"out": "$py= x * y"
             		}

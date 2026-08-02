@@ -1,0 +1,15 @@
+{
+    "main": {
+        "$": true,
+        "data": { "$": true, "foreach": { "in": 1000, "start": 10 }},
+        "out": {
+            "$": true,
+            "set": { "s": 0.0, "n": 0 },
+            "foreach": { "limit": 1, "if": "$= _ % 2 == 0 and _ %3 == 0 and _ %5 == 0 and _ %7 == 0" } ,
+            "out": "$[0]"
+        }
+    },
+    "config": {
+        "default_expr_engine": "py"
+    }
+}

@@ -5,10 +5,10 @@
             "v5": { "a": { "b": { "c": { "d": { "e": 1 }}}}},
             "mm": {
                 "$": true,
-                "foreach": { "value": "i", "in": 1000 },
+                "foreach": { "var": "i", "in": 1000 },
                 "out": {
                     "$": true,
-                    "foreach": { "value": "i", "in": 1000 },
+                    "foreach": { "var": "i", "in": 1000 },
                     "out": "$v5.a.b.c.d.e"
                 }
             }

@@ -21,7 +21,7 @@ from template import MISSING_VALUE, SKIP_VALUE, JFTLNotice, Missing
   // Stage 3 — Foreach (optional)
   "foreach": {
     "in": "EXPR",
-    "value": "ITEM-VAR", "key": "KEY-VAR", "index": "INDEX-VAR",
+    "var": "ITEM-VAR", "key": "KEY-VAR",
     "start": "EXPR", "stop": "EXPR", "limit": "EXPR",
     "case": [ { "when": "COND", "then": "EXPR" } ],
     "out": "EXPR",                       // per-item output
@@ -77,7 +77,6 @@ class _CaseEvaluator(Evaluator):
 class _ForeachPart():
     key: Optional[str] = None
     value: Optional[str] = None
-    index: Optional[str] = None
     items: Optional[Statement] = None
     cond: Optional[Condition] = None
     out: Optional[Statement] = None
@@ -299,7 +298,6 @@ class LogicStatement(Evaluator):
         v_value = foreach.value
         v_key = foreach.key
         v_cond = foreach.cond
-        v_index = foreach.index
         dict_result : dict[str, Any]= {}
         list_result = []
 
@@ -316,12 +314,8 @@ class LogicStatement(Evaluator):
             pos = pos+1
             if (start_index is not None and pos < start_index) or (stop_index is not None and pos >= stop_index):
                 continue
-            new_key = cast(str, key) if do_dict else None
             if v_key:
                 new_vars[v_key] = key
-
-            if v_index:
-                new_vars[v_index] = pos
 
             if v_value:
                 new_vars[v_value] = item
@@ -344,7 +338,7 @@ class LogicStatement(Evaluator):
                 continue
 
             if do_dict:
-                dict_result[cast(str, new_key)] = item
+                dict_result[cast(str, key)] = item
             else:
                 list_result.append(item)
 
@@ -494,9 +488,9 @@ class LogicCompiler(StatementCompiler):
 
     _TOKEN_RE = re.compile(r"^[A-Za-z]\w*$", re.ASCII)
 
-    def _get_named_var(self, args: dict[str, JSON_DOC], tag: str) -> str | None :
+    def _get_named_var(self, args: dict[str, JSON_DOC], tag: str, fallback: Optional[str] = None) -> str | None :
         if not tag in args:
-            return None
+            return fallback
         var_name = args[tag]
         if not isinstance(var_name, str):
             self.compiler.record_notice(JFTLNotice(code="LOGIC-BAD-ID", message=f"Expecting variable name for '{tag}', got '{type(var_name)}'"))
@@ -530,9 +524,8 @@ class LogicCompiler(StatementCompiler):
         v_foreach = None
         if isinstance(v_loop, dict):
             # Compile time constants
-            v_foreach_key = self._get_named_var(v_loop, "key")
-            v_foreach_value = self._get_named_var(v_loop, "value")
-            v_foreach_index = self._get_named_var(v_loop, "index")
+            v_foreach_key = self._get_named_var(v_loop, "key", "_key")
+            v_foreach_value = self._get_named_var(v_loop, "var")
 
             # Runtime expressions
             v_foreach_in = self._compile_expr(v_loop, "in")
@@ -558,7 +551,6 @@ class LogicCompiler(StatementCompiler):
             v_foreach = _ForeachPart(
                 key = v_foreach_key,
                 value = v_foreach_value,
-                index = v_foreach_index,
                 items = v_foreach_in,
                 
                 start = v_foreach_start,

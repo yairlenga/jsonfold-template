@@ -803,7 +803,7 @@ GOLD = {{{
 [0,5,2,3,4]
 }}}
 JFTL = {{{
-{"main": { "$": true, "foreach": { "index": "i", "in": 5, "out": "$pyeval=5 if i == 1 else _"}}}
+{"main": { "$": true, "foreach": { "key": "i", "in": 5, "out": "$pyeval=5 if i == 1 else _"}}}
 }}}
 COMMENT=1.1 truncates to the compile-time-constant index 1 (jq floors fractional single-index assignment targets), so the index is hardcoded rather than computed from input.
 
