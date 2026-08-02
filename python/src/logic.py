@@ -161,44 +161,7 @@ class _DropMissingTransformer (Transformer):
                 code="DROP_MISSING_INPUT",
                 message=f"The 'drop_missing' transformation input ",
             )
-
-
-    # List[Pairs] -> Dict
-class _FromPairsTransformer (Transformer):
-    def transform(self, input: RUNTIME_DOC) -> dict[str, RUNTIME_DOC] | JFTLNotice :
-        if not isinstance(input, RUNTIME_LIST_LIKE):
-            return JFTLNotice(
-                    code="FROM_PAIRS_INPUT",
-                    message=f"The 'from_pairs' transformation input is array of objects, got non-list input",
-                )
-
-        for pos, item in enumerate(input):
-            if not isinstance(item, RUNTIME_LIST_LIKE) or len(item) != 2:
-                return JFTLNotice(
-                    code="FROM_PAIRS_DATA",
-                    message=f"The 'from_pairs' transformation input is array of pairs, got non pair in position {pos} {input}",
-                )
-
-            key = item[0]
-            value = item[1]
-
-            # Skiped entries: [ null, null], and [false, null]
-            if value in [None, False] and not key:
-                continue
-            elif isinstance(value, Missing):
-                continue
-
-            # Validate key is string.
-            if not isinstance(key, str):
-                return JFTLNotice(
-                    code="FROM_PAIRS_BAD_KEY",
-                    message=f"Invalid key type {type(item[0])} for missing item in 'from_pairs' pairs position {pos}, {input}",
-                )
-            
-        valid_input = cast(list[tuple], input)
-
-        return dict(item for item in valid_input if item[0])
-    
+   
     # List[str] -> Str
 class _JoinStrTransformer(Transformer):
 
@@ -217,6 +180,72 @@ class _JoinStrTransformer(Transformer):
 
     def transform(self, input: RUNTIME_DOC) -> RUNTIME_DOC:
         return self._transform(cast(list[str | None | Missing], input))
+    
+# List[Pairs] | List[{key,value}] | Dict[Any, Pairs|{key,value}] -> Dict
+class _ToObjectTransformer(Transformer):
+    def _extract(self, entry: RUNTIME_DOC) -> tuple[Any, RUNTIME_DOC] | JFTLNotice:
+        if isinstance(entry, list):
+            if len(entry) != 2:
+                return JFTLNotice(
+                    code="TO_OBJECT_ITEM",
+                    message=f"The 'to_object' transformation expects a [key, value] pair, got list of length {len(entry)}",
+                )
+            return entry[0], entry[1]
+
+        if isinstance(entry, dict):
+            if len(entry) != 2 or "key" not in entry or "value" not in entry:
+                return JFTLNotice(
+                    code="TO_OBJECT_ITEM",
+                    message=f"The 'to_object' transformation expects an object with exactly 'key' and 'value', got {entry!r}",
+                )
+            return entry["key"], entry["value"]
+
+        return JFTLNotice(
+            code="TO_OBJECT_ITEM",
+            message=f"The 'to_object' transformation expects a [key, value] pair or {{key, value}} object, got {type(entry)}",
+        )
+
+    def transform(self, input: RUNTIME_DOC) -> dict[str, RUNTIME_DOC] | JFTLNotice:
+        if isinstance(input, dict):
+            entries = input.values()
+        elif isinstance(input, list):
+            entries = input
+        else:
+            return JFTLNotice(
+                code="TO_OBJECT_INPUT",
+                message=f"The 'to_object' transformation expects an array or object of entries, got {type(input)}",
+            )
+
+        result: dict[str, RUNTIME_DOC] = {}
+        for entry in entries:
+            if isinstance(entry, (NoneType, Missing)):
+                continue
+
+            pair = self._extract(entry)
+            if isinstance(pair, JFTLNotice):
+                return pair
+
+            # Ignore missing/None Entries
+            if isinstance(pair, (NoneType, Missing)):
+                continue
+
+            key, value = pair
+            # Silently ignore None/Missing entries
+            if isinstance(key, (NoneType, Missing)) and isinstance(value, (NoneType, Missing)):
+                continue
+
+            if not isinstance(key, str):
+                # Siltently ignore setting invalid keys to None/Missing
+                if isinstance(value, (NoneType, Missing)):
+                    continue
+                return JFTLNotice(
+                    code="TO_MAP_BAD_KEY",
+                    message=f"Invalid key type {type(key)} in 'to_object' entry {entry!r}",
+                )
+
+            result[key] = value  # later entries win on collision, matching 'merge'
+
+        return result
 
 
 @dataclass(slots=True)
@@ -461,26 +490,38 @@ class LogicCompiler(StatementCompiler):
         expr = self.compiler.condition(args[tag], tag)
         return expr
     
-    def _comple_output(self, source: dict[str, JSON_DOC], where="") -> Expression:
 
-        default_case = self._compile_expr(source, "out", MISSING_VALUE)
-        if isinstance(default_case, JFTLNotice):
-            return default_case
+    # Compile the 'out' statement or a 'case' statement with chain if if-elif-elif-else.
+    def _compile_out_or_case(self, source: dict[str, JSON_DOC], where="") -> Expression:
 
+        # If 'out' is present, make sure no 'case' exists (OK to hav case=None!)
         cases = source.get("case")
-        if cases in (None, []):
-            return default_case
+
+        if "out" in source:
+            if not cases in (None, []):
+                return JFTLNotice(code="OUT-CASE-CONFLICT", message="Either 'out' or 'case' are allowed, but not both")
+
+            return self._compile_expr(source, "out")
         
+        if cases in (None, []):
+            return None
+
         if not isinstance(cases, list):
             return JFTLNotice(code="LOGIC-BAD-CASE", message=f"Logic `case` expecting 'case, got {type(cases)}")
 
+        # The last case can be 'else': 'expr', and is converted to 'when': True, 'then': 'expr'
+        default_case = None
+        else_case = cases.pop() if cases and isinstance(cases[-1], dict) and len(cases[-1]) == 1 and "else" in cases[-1] else None
+        if isinstance(else_case, dict):
+            default_case = self._compile_expr(else_case, "else")
+           
         v_cases = [
             _CaseItem(
                 cond = self._compile_cond(case, "when"),
                 body = self._compile_expr(case, "then"),
             )
-            if isinstance(case, dict)
-            else JFTLNotice(code="LOGIC-BAD-CASE", message=f"Logic `case` expecting 'case, got {type(case)}")
+            if isinstance(case, dict) and len(case) == 2 and "when" in case and "then" in case
+            else JFTLNotice(code="LOGIC-BAD-CASE", message=f"Logic `case` expecting dict with when/then {type(case)}")
             for case in cases
             ]
 
@@ -536,7 +577,7 @@ class LogicCompiler(StatementCompiler):
             v_foreach_limit = self._compile_expr(v_loop, "limit", None)
 
             v_foreach_cond = self._compile_cond(v_loop, "if", True)
-            v_foreach_out = self._comple_output(v_loop, "out")
+            v_foreach_out = self._compile_out_or_case(v_loop, "out")
             v_foreach_update = None
             update = v_loop.get("update")
             if isinstance( update, dict ):
@@ -582,7 +623,7 @@ class LogicCompiler(StatementCompiler):
             else:
                 v_transformer = transform_class()
 
-        v_out = self._comple_output(source, "out")
+        v_out = self._compile_out_or_case(source, "out")
         v_default =  self._compile_expr(source, "default")
         v_error =  self._compile_expr(source, "error")
 
@@ -611,9 +652,10 @@ class LogicCompiler(StatementCompiler):
             "flatten": _FlattenningTransformer,
             "merge": _MergeTransformer,
             "to_pairs": _ToPairsTransformer,
-            "from_pairs": _FromPairsTransformer,
+
             "drop_missing": _DropMissingTransformer,
             "concat": _JoinStrTransformer,
+            "to_object": _ToObjectTransformer,
         }
 
 

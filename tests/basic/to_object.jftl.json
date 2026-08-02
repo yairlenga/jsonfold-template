@@ -1,0 +1,71 @@
+{
+    "main": {
+        "from_pairs": {
+            "$": true,
+            "data": [
+                [ "list1", "LIST-1" ],
+                [ "list2", "LIST-2" ],
+                [ "list3", "LIST-3" ]
+            ],
+            "transform": "to_object"
+        },
+        "from-kv": {
+            "$": true,
+            "data": [
+                { "key": "key1", "value": "VALUE-1"},
+                { "key": "key2", "value": "VALUE-2"},
+                { "key": "key3", "value": "VALUE-3"}
+            ],
+            "transform": "to_object"
+        },
+        "mixed": {
+            "$": true,
+            "data": [
+                [ "list1", "LIST-1" ],
+                { "key": "key1", "value": "VALUE-1"},
+                { "key": "key2", "value": "VALUE-2"},
+                [ "list2", "LIST-2" ],
+                { "key": "key3", "value": "VALUE-3"},
+                [ "list3", "LIST-3" ]
+            ],
+            "transform": "to_object"
+        },
+        "skip-null": {
+            "$": true,
+            "data": [
+                [ "list1", "LIST-1" ],
+                { "key": "key1", "value": "VALUE-1"},
+                null,
+                { "key": "key2", "value": "VALUE-2"},
+                [ null, null],
+                [ "list2", "LIST-2" ],
+                [ "null", null],
+                { "key": "key3", "value": "VALUE-3"},
+                [ "list3", "LIST-3" ]
+            ],
+            "transform": "to_object"
+        },
+        "skip-missing": {
+            "$": true,
+            "data": [
+                [ "list1", "LIST-1" ],
+                { "key": "key1", "value": "VALUE-1"},
+                "$_missing",
+                { "key": "key2", "value": "VALUE-2"},
+                [ null, null],
+                [ null, "$_missing"],
+                [ "$_missing", null],
+                [ "$_missing", "$_missing"],
+                [ "list2", "LIST-2" ],
+                [ "null", null],
+                [ "Missing", "$_missing"],
+                { "key": "key3", "value": "VALUE-3"},
+                [ "list3", "LIST-3" ]
+            ],
+            "transform": "to_object"
+        },
+
+
+        "_": "_"
+    }
+}

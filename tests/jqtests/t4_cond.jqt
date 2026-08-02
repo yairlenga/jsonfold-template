@@ -51,7 +51,7 @@ GOLD = {{{
 ["yep","yep","yep","yep","nope","nope","yep","nope"]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"$": true, "case": [{"when": "$.baz", "then": "strange"}, {"when": "$.foo", "then": "yep"}], "out": "nope"}}}
+{"main": {"$": true, "foreach": {"$": true, "case": [{"when": "$.baz", "then": "strange"}, {"when": "$.foo", "then": "yep"}, {"else": "nope" }]}}}
 }}}
 COMMENT=elif chain maps directly onto "case"'s ordered when/then list.
 

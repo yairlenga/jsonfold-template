@@ -196,9 +196,9 @@ JFTL = {{{
                                 },
                                 "transform": "drop_missing"
                             }
-                        }
-                    ],
-                    "out": "$"
+                        },
+                        { "else": "$"}
+                    ]
                 }
             }
         }

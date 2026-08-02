@@ -248,8 +248,7 @@ class TestFullRealisticBlock(unittest.TestCase):
             "set": {"total": "$.price"},
             "if": "$.enabled",
             "foreach": {"key": "idx", "var": "row", "in": "$.rows"},
-            "case": [{"when": "$.a", "then": "$.x"}],
-            "out": "$.output",
+            "case": [{"when": "$.a", "then": "$.x"}, { "else": "$.output"}],
             "transform": "merge",
             "error": "$.onError",
         }

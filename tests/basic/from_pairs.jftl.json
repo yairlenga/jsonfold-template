@@ -2,9 +2,9 @@
   "main": {
       "boolean_false": {
         "$": true,
-        "transform": "from_pairs",
+        "transform": "to_object",
         "out": false,
-        "error": "CATCHED: from_pairs input is boolean true, not null or a list"
+        "error": "CATCHED: to_object input is boolean true, not null or a list"
       },
     "matrix": {
       "$": true,
@@ -73,7 +73,7 @@
                   "$left.value",
                   "$right.value"
                 ],
-                "transform": "from_pairs"
+                "transform": "to_object"
               }
             }
           }
@@ -84,7 +84,7 @@
       "empty list": {
         "$": true,
         "out": [],
-        "transform": "from_pairs"
+        "transform": "to_object"
       },
       "single pair": {
         "$": true,
@@ -94,7 +94,7 @@
             1
           ]
         ],
-        "transform": "from_pairs"
+        "transform": "to_object"
       },
       "three disjoint pairs": {
         "$": true,
@@ -112,7 +112,7 @@
             3
           ]
         ],
-        "transform": "from_pairs"
+        "transform": "to_object"
       },
       "right wins three": {
         "$": true,
@@ -130,7 +130,7 @@
             3
           ]
         ],
-        "transform": "from_pairs"
+        "transform": "to_object"
       },
       "duplicate key keeps first position": {
         "$": true,
@@ -148,7 +148,7 @@
             3
           ]
         ],
-        "transform": "from_pairs"
+        "transform": "to_object"
       },
       "order preserved for unique keys": {
         "$": true,
@@ -166,7 +166,7 @@
             3
           ]
         ],
-        "transform": "from_pairs"
+        "transform": "to_object"
       },
       "mixed overlap last wins": {
         "$": true,
@@ -196,7 +196,7 @@
             40
           ]
         ],
-        "transform": "from_pairs"
+        "transform": "to_object"
       },
       "Missing Entries skipped": {
         "$": true,
@@ -214,7 +214,7 @@
             2
           ]
         ],
-        "transform": "from_pairs"
+        "transform": "to_object"
       },
       "empty pairs skipped": {
         "$": true,
@@ -236,7 +236,7 @@
             2
           ]
         ],
-        "transform": "from_pairs"
+        "transform": "to_object"
       },
       "null value preserved": {
         "$": true,
@@ -250,7 +250,7 @@
             2
           ]
         ],
-        "transform": "from_pairs"
+        "transform": "to_object"
       },
       "null key handling": {
         "$": true,
@@ -264,7 +264,7 @@
             2
           ]
         ],
-        "transform": "from_pairs",
+        "transform": "to_object",
         "error": "Null Key not allowed"
       },
       "nested value is shallow": {
@@ -283,7 +283,7 @@
             }
           ]
         ],
-        "transform": "from_pairs"
+        "transform": "to_object"
       },
       "four priorities last wins": {
         "$": true,
@@ -325,47 +325,46 @@
             4
           ]
         ],
-        "transform": "from_pairs"
+        "transform": "to_object"
       }
     },
     "errors": {
       "scalar_string": {
         "$": true,
-        "transform": "from_pairs",
         "out": "not-a-list",
-        "error": "CATCHED: from_pairs input is a scalar string, not null or a list"
+        "transform": "to_object",
+        "error": "CATCHED: to_object input is a scalar string, not null or a list"
       },
       "scalar_number": {
         "$": true,
-        "transform": "from_pairs",
         "out": 42,
-        "error": "CATCHED: from_pairs input is a scalar number, not null or a list"
+        "transform": "to_object",
+        "error": "CATCHED: to_object input is a scalar number, not null or a list"
       },
       "boolean_true": {
         "$": true,
-        "transform": "from_pairs",
         "out": true,
-        "error": "CATCHED: from_pairs input is boolean true, not null or a list"
+        "transform": "to_object",
+        "error": "CATCHED: to_object input is boolean true, not null or a list"
       },
       "boolean_false": {
         "$": true,
-        "transform": "from_pairs",
         "out": false,
-        "error": "CATCHED: from_pairs input is boolean false, not null or a list"
+        "transform": "to_object",
+        "error": "CATCHED: to_object input is boolean false, not null or a list"
       },
       "pair_one_element": {
         "$": true,
-        "transform": "from_pairs",
         "out": [
           [
             "only-one"
           ]
         ],
+        "transform": "to_object",
         "error": "CATCHED: pair has 1 element, expected [key, value]"
       },
       "pair_three_elements": {
         "$": true,
-        "transform": "from_pairs",
         "out": [
           [
             "a",
@@ -373,17 +372,18 @@
             "c"
           ]
         ],
+        "transform": "to_object",
         "error": "CATCHED: pair has 3 elements, expected [key, value]"
       },
       "pair_non_string_key": {
         "$": true,
-        "transform": "from_pairs",
         "out": [
           [
             123,
             "value"
           ]
         ],
+        "transform": "to_object",
         "error": "CATCHED: pair key is a number, not a string"
       }
     }

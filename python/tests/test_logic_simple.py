@@ -92,8 +92,7 @@ class TestBodyPlusCase(unittest.TestCase):
     def test_matching_case_overrides_body(self):
         template = {
             "$": True,
-            "case": [{"when": "$.useSpecial", "then": "$.specialName"}],
-            "out": "$.name",
+            "case": [{"when": "$.useSpecial", "then": "$.specialName"}, { "else": "$.name"}],
         }
         status, result = compile_and_render(
             template,
@@ -105,8 +104,7 @@ class TestBodyPlusCase(unittest.TestCase):
     def test_no_matching_case_falls_back_to_body(self):
         template = {
             "$": True,
-            "case": [{"when": "$.useSpecial", "then": "$.specialName"}],
-            "out": "$.name",
+            "case": [{"when": "$.useSpecial", "then": "$.specialName"}, { "else": "$.name"}],
         }
         status, result  = compile_and_render(
             template,
@@ -121,8 +119,8 @@ class TestBodyPlusCase(unittest.TestCase):
             "case": [
                 {"when": "$.flagA", "then": "$.valA"},
                 {"when": "$.flagB", "then": "$.valB"},
+                {"else": "$.fallback"}
             ],
-            "out": "$.fallback",
         }
         status, result = compile_and_render(
             template,
