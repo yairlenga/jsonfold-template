@@ -75,8 +75,9 @@ class _CaseEvaluator(Evaluator):
 
 @dataclass(slots=True)
 class _ForeachPart():
-    key: Optional[str] = None
-    value: Optional[str] = None
+    key_var: Optional[str] = None
+    value_var: Optional[str] = None
+    iter_var: Optional[str] = None
     items: Optional[Statement] = None
     cond: Optional[Condition] = None
     out: Optional[Statement] = None
@@ -295,8 +296,8 @@ class LogicStatement(Evaluator):
 
         new_vars = ctx.vars
         # Process foreach loop
-        v_value = foreach.value
-        v_key = foreach.key
+        v_value = foreach.value_var
+        v_key = foreach.key_var
         v_cond = foreach.cond
         dict_result : dict[str, Any]= {}
         list_result = []
@@ -523,9 +524,10 @@ class LogicCompiler(StatementCompiler):
         v_loop = source.get("foreach", None)
         v_foreach = None
         if isinstance(v_loop, dict):
-            # Compile time constants
+            # Runtime variables
             v_foreach_key = self._get_named_var(v_loop, "key", "_key")
             v_foreach_value = self._get_named_var(v_loop, "var")
+            v_foreach_iter = self._get_named_var(v_loop, "var")
 
             # Runtime expressions
             v_foreach_in = self._compile_expr(v_loop, "in")
@@ -549,15 +551,17 @@ class LogicCompiler(StatementCompiler):
                 compiler.record_notice(JFTLNotice(code="LOGIC-BAD-SET", message=f"Logic 'set' expecting dictionary, got {type(defines)}"))
           
             v_foreach = _ForeachPart(
-                key = v_foreach_key,
-                value = v_foreach_value,
-                items = v_foreach_in,
-                
+                key_var = v_foreach_key,
+                value_var = v_foreach_value,
+                iter_var = v_foreach_iter,
+
+                items = v_foreach_in,               
                 start = v_foreach_start,
                 stop = v_foreach_stop,
                 limit = v_foreach_limit,
-                out = v_foreach_out,
+
                 cond = v_foreach_cond,
+                out = v_foreach_out,
                 update = v_foreach_update,
             )
         elif v_loop is not None:

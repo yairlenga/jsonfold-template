@@ -128,8 +128,8 @@ class TestForeach(unittest.TestCase):
             "foreach": {"key": "idx", "var": "item", "in": "$.items", "if": "$.item.active"}
         })
         assert isinstance(stmt._foreach, _ForeachPart)
-        self.assertEqual(stmt._foreach.key, "idx")
-        self.assertEqual(stmt._foreach.value, "item")
+        self.assertEqual(stmt._foreach.key_var, "idx")
+        self.assertEqual(stmt._foreach.value_var, "item")
         self.assertEqual(stmt._foreach.items, Tagged("statement", "$.items"))
         self.assertEqual(stmt._foreach.cond, Tagged("condition", "$.item.active"))
 
@@ -138,8 +138,8 @@ class TestForeach(unittest.TestCase):
             "foreach": {"var": "item", "in": "$.items", "if": "$.item.active"}
         })
         assert isinstance(stmt._foreach, _ForeachPart)
-        self.assertEqual(stmt._foreach.key, "_key")
-        self.assertEqual(stmt._foreach.value, "item")
+        self.assertEqual(stmt._foreach.key_var, "_key")
+        self.assertEqual(stmt._foreach.value_var, "item")
         self.assertEqual(stmt._foreach.items, Tagged("statement", "$.items"))
         self.assertEqual(stmt._foreach.cond, Tagged("condition", "$.item.active"))
 
@@ -152,8 +152,8 @@ class TestForeach(unittest.TestCase):
     def test_foreach_without_key(self):
         stmt = compile_logic({"foreach": {"var": "item", "in": "$.items"}})
         assert isinstance(stmt._foreach, _ForeachPart)
-        self.assertEqual(stmt._foreach.key, "_key")
-        self.assertEqual(stmt._foreach.value, "item")
+        self.assertEqual(stmt._foreach.key_var, "_key")
+        self.assertEqual(stmt._foreach.value_var, "item")
 
     def test_missing_foreach_is_false_and_all_subfields_none(self):
         stmt = compile_logic({})
@@ -259,8 +259,8 @@ class TestFullRealisticBlock(unittest.TestCase):
                          [{"name": "total", "expr": Tagged("statement", "$.price")}])
         self.assertEqual(stmt._if, Tagged("condition", "$.enabled"))
         assert isinstance(stmt._foreach, _ForeachPart)
-        self.assertEqual(stmt._foreach.key, "idx")
-        self.assertEqual(stmt._foreach.value, "row")
+        self.assertEqual(stmt._foreach.key_var, "idx")
+        self.assertEqual(stmt._foreach.value_var, "row")
         self.assertEqual(stmt._foreach.items, Tagged("statement", "$.rows"))
         assert isinstance(stmt._out, _CaseEvaluator)
         assert isinstance(stmt._out.cases, list)

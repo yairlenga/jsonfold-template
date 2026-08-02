@@ -27,6 +27,9 @@ basic-test:
 pyrun-test:
 	(cd ../tests/pyrun && ../run_tests.sh -mpyrun)
 
+advanced-test:
+	(cd ../tests/advanced && ../run_tests.sh -mpyrun)
+
 jqman-test:
 	(cd ../tests/jqman && cat *.jqt | ../run_jqt.sh)
 
@@ -36,7 +39,7 @@ jqtest-test:
 pytest-test:
 	pytest
 
-run-test: pytest-test basic-test pyrun-test jqtest-test jqman-test
+run-test: pytest-test basic-test pyrun-test advanced-test jqtest-test jqman-test
 
 test:
 	rm -f $@.log
