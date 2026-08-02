@@ -2,7 +2,7 @@
 # runtime.py
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Literal, Union, cast
+from typing import Any, Literal, Union
 
 from model import COMPILE_DOC, RUNTIME_LIST_LIKE, CompileError, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
 from template import MISSING_VALUE, JFTLNotice, Missing
@@ -82,7 +82,9 @@ class NavigationStatement(Evaluator):
         elif self._start == "_input":
             value = ctx.env.input
         elif self._start == "_parent._data":
-            value = cast(RuntimeContext, ctx.parent).current
+            if not ctx.parent:
+                return JFTLNotice(code="NAV-NO-PARENT", message="Using '$%' is not valid at the top frame")
+            value = ctx.parent.current
         else:
             value = ctx.lookup_var(self._start)
 
@@ -93,10 +95,7 @@ class NavigationStatement(Evaluator):
                 return value  # already failed upstream — propagate, stop walking
 
             if isinstance(seg, Key):
-                if isinstance(value, Mapping) and seg.name in value:
-                    value = value[seg.name]
-                else:
-                    return MISSING_VALUE
+                value = value.get(seg.name, MISSING_VALUE) if isinstance(value, Mapping) else MISSING_VALUE
                 traveled += f".{seg.name}"
 
             elif isinstance(seg, Index):
@@ -110,9 +109,9 @@ class NavigationStatement(Evaluator):
                 key = ctx.lookup_var(seg.name)
                 if isinstance(key, Missing):
                     return key
-                elif isinstance(key, str) and isinstance(value, dict) and key in value:
-                    value = value[key]
-                elif isinstance(key, int) and isinstance(value, RUNTIME_LIST_LIKE) and -len(value) <= key < len(value):
+                elif isinstance(key, str):
+                    value = value.get(key, MISSING_VALUE) if isinstance(value, Mapping) else MISSING_VALUE
+                elif isinstance(key, int) and not isinstance(key, bool) and isinstance(value, RUNTIME_LIST_LIKE) and -len(value) <= key < len(value):
                     value = value[key]
                 else:
                     return MISSING_VALUE

@@ -39,6 +39,9 @@ JSON_UNSET : Final = NoValueType("JSON_UNSET")
 JFTL_RAISE : Final = _SentialValue("_RAISE_")
 JFTL_NOTICE : Final = _SentialValue("_NOTICE_")
 
+JFTL_SKIP : Final = Missing(code="SKIP", message= "Skip entry sentinel")
+JFTL_BREAK : Final = Missing(code="BREAK", message= "Skip entry sentinel")
+
 JSON_LEAFS : TypeAlias = NoneType | bool | int | float | str
     # Tree of JSON Values.
 JSON_DOC = Tree[JSON_LEAFS]

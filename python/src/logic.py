@@ -3,8 +3,8 @@ from types import NoneType
 from typing import Any, ClassVar, Optional, cast
 from dataclasses import dataclass
 
-from model import COMPILE_DOC, JSON_DOC, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
-from template import MISSING_VALUE, SKIP_VALUE, JFTLNotice, Missing
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
+from template import MISSING_VALUE, JFTLNotice, Missing
 
 """
 {
@@ -368,8 +368,10 @@ class LogicStatement(Evaluator):
 
             if isinstance(item, JFTLNotice):
                 return item
-            elif item is SKIP_VALUE:
+            elif item is JFTL_SKIP:
                 continue
+            elif item is JFTL_BREAK:
+                break
 
             if do_dict:
                 dict_result[cast(str, key)] = item

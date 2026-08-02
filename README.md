@@ -1,7 +1,7 @@
 # JFTL — JSONFold Template Language
 
 
-<!-- LTeX: dictionary+=JSONata dictionary+=foreach dictionary+=py dictionary+=jq dictionary+=versionable -->
+<!-- LTeX: dictionary+=JSONata dictionary+=foreach dictionary+=py dictionary+=jq dictionary+=versionable dictionary+=awk dictionary+=JMESPath -->
 <!-- cspell:words simpleeval JSONata versionable pyeval -->
 
 JFTL is a JSON-based template language for transforming JSON documents into other JSON documents.
@@ -9,6 +9,44 @@ JFTL is a JSON-based template language for transforming JSON documents into othe
 Unlike text template engines, JFTL operates on structured data. Templates are themselves valid JSON, making them easy to read, validate, generate, version, and manipulate using standard JSON tooling.
 
 JFTL is designed for data transformation, report generation, API reshaping, ETL pipelines, configuration generation, and similar tasks where the output is JSON rather than text.
+
+---
+
+# When to Use JFTL
+
+When processing JSON, developers typically choose between three kinds of tools.
+
+## JSON Query Languages
+
+Tools such as **jq**, **JSONata**, and **JMESPath** excel at extracting, filtering, and projecting data. They are concise and powerful for one-off queries and relatively simple transformations.
+
+As the desired output becomes more structured—or the transformation requires multiple stages, aggregation, or reusable business logic—the resulting expressions become increasingly difficult to read and maintain.
+
+## Text Template Engines
+
+Template engines such as **Mustache**, **Handlebars**, **Jinja**, and **Django Templates** are designed to generate text: HTML pages, configuration files, emails, source code, and documents.
+
+Although they can generate JSON, JSON is treated simply as text. The template author is responsible for commas, braces, quoting, escaping, and indentation. The template engine has little understanding of the structure of the generated JSON document.
+
+## General-Purpose Programming Languages
+
+Languages such as **Python**, **JavaScript**, **Java**, and **Rust** can express virtually any transformation.
+
+However, many JSON transformations are business rules rather than software projects. Building and maintaining application code introduces additional overhead: source files, dependencies, testing, build systems, packaging, deployment, and ongoing maintenance.
+
+For many data transformations, that is simply more engineering than the problem requires.
+
+## Where JFTL Fits
+
+JFTL fills the gap between these approaches.
+
+It operates directly on structured JSON data, while producing structured JSON output. It provides the declarative style of a template language together with variables, iteration, conditional logic, aggregation, and structural transformations, without requiring a full programming project.
+
+A JFTL transformation is itself a JSON document. It can be version-controlled, validated, generated, merged, stored as configuration, compiled once, and executed repeatedly by any JFTL runtime.
+
+If **jq** is optimized for querying JSON, and **Mustache** is optimized for generating text, JFTL is optimized for generating **complex JSON documents**
+
+You can think of JFTL as playing a role for structured JSON similar to the one **awk** has long played for simple data processing: expressive enough for non-trivial transformations, yet lightweight enough that you don't need to build an application around every data-mapping task.
 
 ---
 

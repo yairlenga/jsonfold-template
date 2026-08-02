@@ -6,9 +6,9 @@ import re
 
 from core import Frame
 from logic import LogicCompiler
-from template import SKIP_VALUE, Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
+from template import Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, RUNTIME_DOC, RUNTIME_LIST_LIKE, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, RUNTIME_DOC, RUNTIME_LIST_LIKE, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 
 from typing import Any
@@ -353,36 +353,48 @@ class JFTLRenderer():
             self._drop_null_attributes = config.drop_null_attributes
 
     def render(self, source: Any | Evaluator, frame: Frame) -> tuple[Any, Optional[JFTLNotice]]:
-        result, error = self._render(source, frame)
+        result= self._render(source, frame)
+        error = None
         # Possible that the document itself is an (unhandled) error
         if not error and isinstance(result, JFTLNotice):
             error = result
             result = None
         return result, error
 
-    def _render(self, source: Any | Evaluator, frame: Frame) -> tuple[Any, Optional[JFTLNotice]]:
+    def _render(self, source: Any | Evaluator, frame: Frame) -> Any:
         if isinstance(source, Evaluator):
-            return source.eval(frame), None
+            return source.eval(frame)
 
+        # Most likely, below not used, as objects are either "All-Literal" (converted into LiteralStatement),
+        # or "mixed" literal/statement, which get converted to ObjectStatement. This is kept in case the
+        # compiler will decide to keep a dictionary in "unknown" state.
         if isinstance(source, dict):
             result = {}
             for k, v in source.items():
-                eval_v, _ = self._render(v, frame)
+                eval_v = self._render(v, frame)
                 if isinstance(eval_v, JFTLNotice):
                     return eval_v, None
-                elif eval_v is SKIP_VALUE:
+                elif eval_v is JFTL_SKIP:
                     continue  # silently dropped from objects, per locked sentinel rules
+                elif eval_v is JFTL_BREAK:
+                    break
                 result[k] = eval_v
-            return result, None
+            return result
         
+
+        # Most liekly, below not used, and arrays are either "all-lieteral" (converted into LiteralStatement),
+        # or "mixed" literal/statement, which get converted to ArrayStatement. This is kept in case the
+        # compiler will decide to keep array ni "unknown" state.
         if isinstance(source, RUNTIME_LIST_LIKE):
             result = []
             for v in source:
-                eval_v, _ = self._render(v, frame)
+                eval_v = self._render(v, frame)
                 if isinstance(eval_v, JFTLNotice):
                     return eval_v, None
-                elif eval_v is SKIP_VALUE:
+                elif eval_v is JFTL_SKIP:
                     continue
+                elif eval_v is JFTL_BREAK:
+                    break
                 result.append(eval_v)
             return result, None
        
@@ -486,8 +498,10 @@ class ObjectStatement(Evaluator):
             value = item.eval(ctx) if isinstance(item, Evaluator) else item
             if isinstance(value, JFTLNotice):
                 return value
-            if value is SKIP_VALUE:
+            if value is JFTL_SKIP:
                 continue  # silently dropped from objects, per locked sentinel rules
+            elif value is JFTL_BREAK:
+                break
             result[key] = value
         return result
 
@@ -502,8 +516,10 @@ class ArrayStatement(Evaluator):
             value = item.eval(ctx) if isinstance(item, Evaluator) else item
             if isinstance(value, JFTLNotice):
                 return value
-            elif value is SKIP_VALUE:
+            elif value is JFTL_SKIP:
                 continue
+            elif value is JFTL_BREAK:
+                break
             result.append(value)
         return result
 

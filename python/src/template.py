@@ -43,7 +43,6 @@ class Missing():
         return self
     
 MISSING_VALUE : Final = Missing(code="MISSING", message="Unspecific MISSING")
-SKIP_VALUE : Final = Missing(code="SKIP", message= "Skip entry sentinel")
 
 
 @dataclass

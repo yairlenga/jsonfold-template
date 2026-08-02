@@ -2,8 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import Any
 
-from model import JFTL_NOTICE, JFTL_RAISE, Environment, RuntimeContext
-from template import SKIP_VALUE, ERROR_VALUE, MISSING_VALUE, JFTLException, JFTLNotice
+from model import JFTL_BREAK, JFTL_NOTICE, JFTL_RAISE, JFTL_SKIP, Environment, RuntimeContext
+from template import ERROR_VALUE, MISSING_VALUE, JFTLException, JFTLNotice
 
 # Template Class - represent compiled templates
 
@@ -39,7 +39,8 @@ class Frame (RuntimeContext):
         top_vars = {
             "_missing": MISSING_VALUE,
             "_error": ERROR_VALUE,
-            "_skip" : SKIP_VALUE,
+            "_skip" : JFTL_SKIP,
+            "_break": JFTL_BREAK,
             "_input" : env.input,
             "_level" : 0,
             "_datasets": env.datasets,
