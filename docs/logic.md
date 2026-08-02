@@ -140,7 +140,8 @@ For each included item, its contribution to the result is produced by `case` or 
 - `out` is a plain expression, evaluated per item.
 - `case` is an array of `{ "when": COND, "then": EXPR }` objects, evaluated in order — first match wins. The last item may instead be `{ "else": EXPR }`, an unconditional fallback if nothing else matched.
 - If neither `case` nor `out` is given, the item itself is used as-is.
-- If the result is the skip sentinel, the item is dropped from the result entirely (not included, doesn't count against `limit`).
+- If the result is the skip sentinel `_skip`, the item is dropped from the result entirely (not included, doesn't count against `limit`).
+- If the result is the break sentinel value `_break`, processing of the current collection stop, and not additional items are processes.
 
 ```json
 "foreach": {
