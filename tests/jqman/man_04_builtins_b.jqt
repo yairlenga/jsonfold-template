@@ -1,4 +1,4 @@
-See manual_full_00_README.txt for the tier legend. IMPORTANT UPDATE from where I'd gotten to in file 03: PYRUN isn't limited to arithmetic -- it's a full Python expression, so list/dict comprehensions (including with an `if` clause) count as ONE expression too. That resolves most of what I was earlier calling BLOCKED for "needs foreach to iterate a nested/object field" or "needs a filter mechanism" -- the iteration and filtering just happen inside the Python expression against `_`, and OUT_FMT=STREAM (if needed) unwraps whatever array that expression produces. Went back and fixed curated-batch 106/110 and a few entries in files 01-03 once I realized this. Genuinely still-BLOCKED cases from here on are narrower: unbounded/recursive traversal (no `def`, so no general recursion in one expression), anything needing `import` (regex/dates/base64/uri -- unconfirmed sandbox access), and true control-flow (label/break, exception-based try/catch).
+See manual_full_00_README.txt for the tier legend. IMPORTANT UPDATE from where I'd gotten to in file 03: PYRUN isn't limited to arithmetic -- it's a full Python expression, so list/dict comprehensions (including with an `if` clause) count as ONE expression too. That resolves most of what I was earlier calling BLOCKED for "needs foreach to iterate a nested/object field" or "needs a filter mechanism" -- the iteration and filtering just happen inside the Python expression against `_`, and OUT_FMT=stream (if needed) unwraps whatever array that expression produces. Went back and fixed curated-batch 106/110 and a few entries in files 01-03 once I realized this. Genuinely still-BLOCKED cases from here on are narrower: unbounded/recursive traversal (no `def`, so no general recursion in one expression), anything needing `import` (regex/dates/base64/uri -- unconfirmed sandbox access), and true control-flow (label/break, exception-based try/catch).
 
 [BB-001-map]
 LEVEL=logic
@@ -162,7 +162,7 @@ COMMENT=PYRUN.
 
 [BB-021-select-after-iterator]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .[] | select(.id == "second")
 INPUT = [{"id": "first", "val": 1}, {"id": "second", "val": 2}]
 GOLD = {"id": "second", "val": 2}
@@ -171,7 +171,7 @@ COMMENT=PYRUN+STREAM. Same example as curated-batch 110 (now fixed there too), i
 
 [BB-022-type-filter-numbers]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .[]|numbers
 INPUT = [[],{},1,"foo",null,true,false]
 GOLD = 1

@@ -10,7 +10,7 @@ COMMENT=BLOCKED: needs `re.search`/`re.match` (or Python's `in`/`==` for this li
 
 [RX-002-match]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = match("(abc)+"; "g")
 INPUT = "abc abc"
 GOLD = [{"offset": 0, "length": 3, "string": "abc", "captures": [{"offset": 0, "length": 3, "string": "abc", "name": null}]}, {"offset": 4, "length": 3, "string": "abc", "captures": [{"offset": 4, "length": 3, "string": "abc", "name": null}]}]
@@ -27,7 +27,7 @@ COMMENT=BLOCKED: needs named-group regex support -- import.
 
 [RX-004-scan]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = scan("c")
 INPUT = "abcdefabc"
 GOLD = ["c", "c"]
@@ -44,7 +44,7 @@ COMMENT=BLOCKED: import (this is the 2-arg regex-split form, distinct from BE-02
 
 [RX-006-splits]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = splits(", *")
 INPUT = "ab,cd,   ef, gh"
 GOLD = ["ab","cd","ef","gh"]

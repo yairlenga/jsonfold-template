@@ -34,7 +34,7 @@ COMMENT=WEAK PYRUN, hardcoded: this is really testing a bounded iterative loop (
 
 [BF2-005-recurse]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = recurse(.foo[])
 INPUT = {"foo":[{"foo": []}, {"foo":[{"foo":[]}]}]}
 GOLD = [{"foo":[{"foo":[]},{"foo":[{"foo":[]}]}]}, {"foo":[]}, {"foo":[{"foo":[]}]}, {"foo":[]}]

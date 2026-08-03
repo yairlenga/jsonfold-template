@@ -196,7 +196,7 @@ JQ = .[]
 INPUT = {"a": 1, "b": 1}
 GOLD = 1 1
 JFTL = {"main": {"$": true, "foreach": {}, "body": "$."}}
-COMMENT=PYRUN+STREAM, sidesteps the object-vs-array foreach-default question entirely: compute the values as a real array in Python, then let OUT_FMT=STREAM unwrap that array. Still don't know whether foreach itself auto-detects object input (see curated-batch 106's original concern), but this route doesn't need it.
+COMMENT=PYRUN+STREAM, sidesteps the object-vs-array foreach-default question entirely: compute the values as a real array in Python, then let OUT_FMT=stream unwrap that array. Still don't know whether foreach itself auto-detects object input (see curated-batch 106's original concern), but this route doesn't need it.
 
 [BF-021-optional-iterator]
 SKIP = Need negative test, no exapmle in code for ".[]?"
@@ -218,7 +218,7 @@ JQ = .foo, .bar
 INPUT = {"foo": 42, "bar": "something else", "baz": true}
 GOLD = 42 "something else"
 JFTL = {"main": [ "$.foo", "$.bar" ] }
-COMMENT=PYRUN+STREAM, revised: build the fan-out as a Python list, OUT_FMT=STREAM unwraps it into jq's two separate outputs.
+COMMENT=PYRUN+STREAM, revised: build the fan-out as a Python list, OUT_FMT=stream unwraps it into jq's two separate outputs.
 
 [BF-023-comma-mixed-scalar-iterator]
 LEVEL=py
@@ -227,7 +227,7 @@ JQ = .user, .projects[]
 INPUT = {"user":"stedolan", "projects": ["jq", "wikiflow"]}
 GOLD = "stedolan" "jq" "wikiflow"
 JFTL = {"main": "$py= [_['user']] + _['projects'] " }
-COMMENT=PYRUN+STREAM, revised. Same expression as TV-001, but this one streams (3 separate jq outputs, no enclosing [...]) so OUT_FMT=STREAM is set here where TV-001 didn't need it.
+COMMENT=PYRUN+STREAM, revised. Same expression as TV-001, but this one streams (3 separate jq outputs, no enclosing [...]) so OUT_FMT=stream is set here where TV-001 didn't need it.
 TODO = Need a way to append multiple lists together, without python
 
 [BF-024-comma-index-list]

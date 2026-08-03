@@ -101,28 +101,35 @@ def _exception_summary(exc: BaseException, verbose: bool) -> str:
     return f"{type(exc).__name__}: {exc}"
 
 
+def _text_info(text) -> dict:
+    return { "lines": _count_lines(text), "length": len(text) }
+
+def _format_text_info(info) -> str:
+    return f"{info["length"]} characters, {info["lines"]} lines"
+
+
 def _text_desc(text: str) -> str:
-    return f"{len(text)} characters, {_count_lines(text)} lines"
+    return _format_text_info(_text_info(text))
 
 def _write_json_result(args, dest: TextIO, result: Any, input_label: str, input_desc: str, output_label: str) -> tuple[bool, Any]:
 
     json_out = _format_output(result, args.indent, args.raw)
-    bytes = len(json_out.encode('utf-8'))
+    doc_length = len(json_out.encode('utf-8'))
     lines = _count_lines(json_out)
 
     if args.sections:
-        desc = f"{bytes} characters, {lines} lines"
+        desc = f"{doc_length} characters, {lines} lines"
 
         comment = f"output: '{output_label}' ({desc}), Input: {input_label} ({input_desc})"
         print("// " + comment, file=dest)
     
     print(json_out, file=dest)
-    return True, { "lines": lines, "bytes": bytes, "doc_count": 1 }
+    return True, { "lines": lines, "length": doc_length, "doc_count": 1 }
 
 def _write_json_file(args, out_file: str, result: Any, input_label: str, input_desc: str, output_id: str) -> tuple[bool, Any]:
     with open(out_file, mode="w", encoding="utf-8") as dest:
         ok, result = _write_json_result(args, dest, result, input_label, input_desc, output_id)
-    result = { "output": output_id } | result
+    result = { "file": output_id } | result
     return ok, result
 
     # Read single json record from the input stream
@@ -196,18 +203,24 @@ def _process_record(args, engine, compiled, record: Any, dest: TextIO, *, input_
 
 
 
-def _process_multi_records(args, engine, compiled, records: Iterator[tuple[Any, str]], input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any, int]:
+def _process_multi_records(args, engine, compiled, records: Iterator[tuple[Any, str, dict]], input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any, int, str, dict]:
 
 #    decoder = json.JSONDecoder()
 #    input_desc = _text_desc(input) if input is not None else "(none)"
-    out_count = 0
+    tot_lines = 0
+    tot_length = 0;
+    tot_doc = 0
     manifest = None
     all_ok = True
 
     manifest = []
+
     while True:
         try:
-            record, desc = next(records)
+            record, desc, doc_info = next(records)
+            if doc_info:
+                tot_lines += doc_info.get("lines", 0)
+                tot_length += doc_info.get("length", 0)
         except StopIteration:
             break
         except Exception as ex:
@@ -215,11 +228,18 @@ def _process_multi_records(args, engine, compiled, records: Iterator[tuple[Any, 
         ok, summary = _process_record(args, engine, compiled, record, dest, input_label=input_label, input_desc=desc, output_label=dest_label)
 
         manifest.append(summary)
-        out_count += summary.get("doc_count", len(summary)) if isinstance(summary, dict) else len(summary) if isinstance(summary, list) else 0
+        doc_count = summary.get("doc_count", len(summary)) if isinstance(summary, dict) else len(summary) if isinstance(summary, list) else 0
+        tot_doc += doc_count
         if not ok:
             all_ok = False
 
-    return all_ok, manifest, out_count
+    all_info = {
+        "lines": tot_lines,
+        "length": tot_length,
+        "doc_count": tot_doc,
+    }
+    
+    return all_ok, manifest, tot_doc, _format_text_info(all_info), all_info
 
 def _process_single_doc(args, engine, compiled, input, input_desc, input_label: str,  dest: TextIO, dest_label: str ) -> tuple[bool, Any]:
 
@@ -246,23 +266,24 @@ def _read_empty_doc() -> tuple[Any, str]:
     return None, "(none)"
 
     # Generate single document from a file
-def _read_json_doc(fp: TextIO) -> tuple[Any, str]:
-    data = json.load(fp)
-    desc = "Document"
-    return data, desc
+def _read_json_doc(fp: TextIO) -> tuple[Any, str, dict]:
+    json_text = fp.read()
+    data = json.loads(json_text)
+    info = _text_info(json_text)
+    return data, _format_text_info(info), info
 
     # Generate stream of documents from json lines input
-def _jsonline_record_reader(fp: TextIO) -> Iterator[tuple[Any, str]]:
+def _jsonline_record_reader(fp: TextIO) -> Iterator[tuple[Any, str, dict]]:
     for line_no, line in enumerate(fp, start=1):
         stripped= line.strip()
         if not stripped:
             continue
         data = json.loads(stripped)
         desc = f"{_text_desc(stripped)}, at line {line_no}"
-        yield data, desc    
+        yield data, desc, _text_info(stripped)
 
     # Generate stream of documents from JSON objects
-def _json_stream_reader(fp: TextIO) -> Iterator[tuple[Any, str]]:
+def _json_stream_reader(fp: TextIO) -> Iterator[tuple[Any, str, dict]]:
 
     input = fp.read()
     decoder = json.JSONDecoder()
@@ -283,9 +304,12 @@ def _json_stream_reader(fp: TextIO) -> Iterator[tuple[Any, str]]:
         # Parse the next
         record_count += 1
         data, pos = decoder.raw_decode(input, pos)
-        desc = f"{_text_desc(input[start_pos:pos])}, starting at line {start_line}"
+        text_info = _text_info(input[start_pos:])
+        text_info["start"] = start_line
+
+        desc = f"{_format_text_info(text_info)}, starting at line {start_line}"
         start_line += input[start_pos:pos].count("\n")
-        yield data, desc
+        yield data, desc, text_info
 
 
 def _process_file(args, engine, compiled, input_path: Optional[str], input_label: str) -> Any:
@@ -313,7 +337,7 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
             raise ProcessingException(ExitCode.READ_ERROR) from ex
 
         if args.target and not args.split:
-            new_name = Path(input_path).name.removesuffix(".json") + ".out"
+            new_name = re.sub( r"\.(json|jsonl|toml|yaml)$", "", Path(input_path).name.removesuffix(".json")) + ".out"
             output_path = Path(args.target) / new_name
 
     if output_path:
@@ -321,17 +345,17 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
 
     input = None
     records = None
+    doc_info = {}
+    desc = ""
     if input_fp:
         match args.input_format:
             case "json":
-                input, desc = _read_json_doc(input_fp)
+                input, desc, doc_info = _read_json_doc(input_fp)
 
             case "stream":
-                desc = ""
                 records = _json_stream_reader(input_fp)
 
             case "jsonl":
-                desc = ""
                 records = _jsonline_record_reader(input_fp)
 
             case _:
@@ -342,7 +366,7 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
 
     if records:
         t1 = time.perf_counter()
-        status, summary, out_count = _process_multi_records(args, engine, compiled, records, input_label, output_fp, new_name)
+        status, summary, out_count, desc, doc_info = _process_multi_records(args, engine, compiled, records, input_label, output_fp, new_name)
         elapsed = time.perf_counter() - t1
         inp_count = len(summary)
 
@@ -361,7 +385,7 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
     if output_path:
         output_fp.close()
 
-    return status, summary
+    return status, summary, doc_info
 
 
 def _parse_datasets(args):
@@ -450,6 +474,11 @@ def main() -> int:
     parser.add_argument("-s", "--sections", action="store_true",
                         help="Add '//' comment line before each result, with input/output size and timing info.")
 
+    parser.add_argument("-m", "--map", dest="map_file", metavar="FILE", default=None,
+                        help="Write manifest mapping input files to output files to FILE, ('-' for stdout)" )
+    parser.add_argument("--nomap", dest="map_file", action="store_false",
+                        help="Suppress the manifest, even if --map/--target would otherwise write one." )
+
     # Logging
     # TODO: -c / --check - compile only
     parser.add_argument("-k", "--keep-going", action="store_true",
@@ -528,55 +557,84 @@ def main() -> int:
 
     # None in the input list will run the template without input
     input_sources = args.files if args.files else [None]
-    all_ok = True
-    any_ok = False
+    inp_ok = 0
+    inp_fail = 0
+    inp_all = len(input_sources)
     exit_code = 0
 
-    manifest = {}
+    summary_map = {}
+    
     for input_path in input_sources:
         input_label = "(stdin)" if input_path == "-" else input_path if input_path else "(none)"
-        summary = None
+        input_id = input_path or ""
+        summary = {}
+        message = None
         ok = False
         error_code = 0
+        doc_info = {}
         try:           
-            ok, summary =  _process_file(args, engine, compiled, input_path, input_label)
+            ok, summary, doc_info =  _process_file(args, engine, compiled, input_path, input_label)
 
         except RenderError as ex:
-            summary = f"error: {type(ex).__name__}: {ex}"
+            message = f"error: {type(ex).__name__}: {ex}"
             error(f"Error rendering: {input_label}: {_exception_summary(ex, args.verbose)}")
             error_code = ExitCode.RENDER_ERROR
         
         except ProcessingException as ex:
-            summary = f"error: {type(ex).__name__}: {ex}"
+            message = f"error: {type(ex).__name__}: {ex}"
             error(f"Error processing: {input_label}: {_exception_summary(ex.__cause__ or ex, args.verbose)}")
             error_code = ex.code
 
         except Exception as ex:
-            summary = f"error: {type(ex).__name__}: {ex}"
+            message = f"error: {type(ex).__name__}: {ex}"
             error(f"Exception Processing '{input_label}': {_exception_summary(ex, args.verbose)}")
             error_code = ExitCode.PY_EXCEPTION
 
+        if not summary:
+            summary = {
+                "code" : error_code,
+                "message": message
+            }
+        item = {
+            "source": input_id,
+            "ok": ok,
+            **doc_info,
+            "output": summary,
+        }
+
         if ok:
-            any_ok = True
+            inp_ok += 1
         else:
-            all_ok = False
+            inp_fail += 1
             if not args.keep_going:
                 break
             # Capture first error code
             if not exit_code:
                 exit_code = error_code or ExitCode.GENERAL_ERROR
 
-        manifest_id = input_path or ""
-        manifest[manifest_id] = summary
+        summary_map[input_id] = item
 
-    if args.target:
+    map_file = args.map_file if args.map_file is not None else "-" if args.target else None
+
+    if map_file:
+        manifest = {
+            "count": inp_all,
+            "passed": inp_ok,
+            "failed": inp_fail,
+            "skipped": inp_all - inp_ok - inp_fail,
+            "input": summary_map,
+        }
         try:
-            json.dump(manifest, fp=sys.stdout, indent=2)
+            if map_file == "-":
+                json.dump(manifest, fp=sys.stdout, indent=2)
+            else:
+                with open(map_file, "w", encoding="utf-8") as out:
+                    json.dump(manifest, fp=out, indent = 2)
         except Exception as ex:
             error(f"Error writing manifest: {_exception_summary(ex, args.verbose)}")
             return ExitCode.OUTPUT_ERROR
 
-    return exit_code if not any_ok else ExitCode.SUCCESS if all_ok else ExitCode.PARTIAL
+    return exit_code if not inp_ok else ExitCode.SUCCESS if inp_ok == inp_all else ExitCode.PARTIAL
 
 if __name__ == "__main__":
     try:

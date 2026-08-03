@@ -2,7 +2,7 @@ See manual_full_00_README.txt for the tier legend. `halt`/`halt_error` sections 
 
 [BC-001-empty-stream]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = 1, empty, 2
 INPUT = null
 GOLD = [1, 2]
@@ -171,7 +171,7 @@ COMMENT=PYRUN, only 1 level of nesting here so the general flatten(1)-shaped exp
 
 [BC-022-range-stream]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = range(2; 4)
 INPUT = null
 GOLD = [2, 3]

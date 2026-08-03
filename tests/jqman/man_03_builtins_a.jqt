@@ -1,7 +1,7 @@
 See manual_full_00_README.txt for the tier legend before reading this file. Two extra conventions used from here on, to keep PYRUN entries honest:
   - Object field access inside a PYRUN expression uses `_.get('key')` (mirrors Navigation's null-safe-on-missing-key behavior), not `_['key']` (which raises on a missing key).
   - jq's arithmetic operators (+ - * /) are polymorphic (numbers/arrays/strings/objects all behave differently). I'm NOT implementing that polymorphism generically -- each PYRUN expression below is a specific-case Python translation valid for that one example's types, not a reusable jq-operator equivalent.
-  - `map(f)` examples (jq's own array-collect, single output) get plain foreach + no OUT_FMT. `.[] | f`-style examples (an actual jq stream) get foreach + OUT_FMT=STREAM. These read the same in jq but reshape differently for GOLD.
+  - `map(f)` examples (jq's own array-collect, single output) get plain foreach + no OUT_FMT. `.[] | f`-style examples (an actual jq stream) get foreach + OUT_FMT=stream. These read the same in jq but reshape differently for GOLD.
 
 [BA-001-addition-number]
 LEVEL=logic
@@ -85,7 +85,7 @@ COMMENT=PYRUN, hand-unrolled: this specific test is only 1 level of nesting so I
 
 [BA-011-division-error-suppression]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .[] | (1 / .)?
 INPUT = [1,0,-1]
 GOLD = [1, -1]
@@ -102,7 +102,7 @@ COMMENT=PYRUN+STREAM-shape-but-not-STREAM-tagged: map(f) is jq's own array-colle
 
 [BA-013-length-stream]
 LEVEL=foreach
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .[] | length
 INPUT = [[1,2], "string", {"a":2}, null, -5]
 GOLD = [2, 6, 1, 0, 5]
@@ -151,7 +151,7 @@ COMMENT=PYRUN+map.
 
 [BA-019-in-object-stream]
 LEVEL=foreach
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .[] | in({"foo": 42})
 INPUT = ["foo", "bar"]
 GOLD = [true, false]

@@ -8,7 +8,7 @@ from core import Frame
 from logic import LogicCompiler
 from template import Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, RUNTIME_DOC, RUNTIME_LIST_LIKE, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 
 from typing import Any
@@ -352,7 +352,7 @@ class JFTLRenderer():
         if isinstance(self.template, JFTLTemplate) and (config := self.template.config):
             self._drop_null_attributes = config.drop_null_attributes
 
-    def render(self, source: Any | Evaluator, frame: Frame) -> tuple[Any, Optional[JFTLNotice]]:
+    def render(self, source: COMPILE_DOC, frame: Frame) -> tuple[RUNTIME_DOC, Optional[JFTLNotice]]:
         result= self._render(source, frame)
         error = None
         # Possible that the document itself is an (unhandled) error
@@ -361,7 +361,7 @@ class JFTLRenderer():
             result = None
         return result, error
 
-    def _render(self, source: Any | Evaluator, frame: Frame) -> Any:
+    def _render(self, source: COMPILE_DOC, frame: Frame) -> RUNTIME_DOC:
         if isinstance(source, Evaluator):
             return source.eval(frame)
 
@@ -369,41 +369,20 @@ class JFTLRenderer():
         # or "mixed" literal/statement, which get converted to ObjectStatement. This is kept in case the
         # compiler will decide to keep a dictionary in "unknown" state.
         if isinstance(source, dict):
-            result = {}
-            for k, v in source.items():
-                eval_v = self._render(v, frame)
-                if isinstance(eval_v, JFTLNotice):
-                    return eval_v, None
-                elif eval_v is JFTL_SKIP:
-                    continue  # silently dropped from objects, per locked sentinel rules
-                elif eval_v is JFTL_BREAK:
-                    break
-                result[k] = eval_v
-            return result
-        
+            return ObjectStatement.eval_object(frame, source)
 
         # Most liekly, below not used, and arrays are either "all-lieteral" (converted into LiteralStatement),
         # or "mixed" literal/statement, which get converted to ArrayStatement. This is kept in case the
         # compiler will decide to keep array ni "unknown" state.
         if isinstance(source, RUNTIME_LIST_LIKE):
-            result = []
-            for v in source:
-                eval_v = self._render(v, frame)
-                if isinstance(eval_v, JFTLNotice):
-                    return eval_v, None
-                elif eval_v is JFTL_SKIP:
-                    continue
-                elif eval_v is JFTL_BREAK:
-                    break
-                result.append(eval_v)
-            return result, None
+            return ArrayStatement.eval_array(frame, source)
        
-        return source, None
+        return source
     
-    def materialize(self, result: Any) -> Any:
+    def materialize(self, result: RUNTIME_DOC) -> JSON_DOC:
         return self._materialize(result)
 
-    def _materialize(self, value: Any) -> Any:
+    def _materialize(self, value: RUNTIME_DOC) -> JSON_DOC:
         if isinstance(value, (Missing, RuntimeContext)):
             return None
         if isinstance(value, dict):
@@ -418,7 +397,9 @@ class JFTLRenderer():
             return [ self._materialize(v) for v in value ]
         if isinstance(value, ( NoneType, bool, int, float, str)):
             return value
-        return JFTLNotice(code='BAD-RESULT', message=f"Result contained unknown type {type(value)}")
+
+        raise RenderError(
+            JFTLNotice(code='BAD-RESULT', message=f"Result contained unknown type {type(value)}"))
 
 @dataclass
 class JFTLEngine(Engine):
@@ -479,22 +460,32 @@ class JFTLEngine(Engine):
             status = RenderStatus(False, re.notice)
         return result, status
         
-    def materialize(self, result: Any, template: Optional[Template] = None) -> Any:
-        if not template:
-            template = JFTLTemplate(main_entry=None, config=JFTLConfig(), valid=True)
+    def materialize(self, result: Any, template: Optional[Template] = None) -> tuple[Any, Optional[JFTLNotice]]:
+        try:
+            if isinstance(result, JFTLNotice):
+                return None, result
 
-        renderer = JFTLRenderer(cast(JFTLTemplate, template))
-        return renderer.materialize(result)
+            if not template:
+                template = JFTLTemplate(main_entry=None, config=JFTLConfig(), valid=True)
+
+            renderer = JFTLRenderer(cast(JFTLTemplate, template))
+            result = renderer.materialize(result)
+            return result, None
+        except RenderError as re:
+            status = re.notice
+
+        return result, status
 
 
 
 @dataclass(kw_only=True)
 class ObjectStatement(Evaluator):
-    entries: dict[str, Expression]
+    entries: dict[str, COMPILE_DOC]
 
-    def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
+    @staticmethod
+    def eval_object(ctx:RuntimeContext, dict: dict[str, COMPILE_DOC]) -> RUNTIME_DOC:
         result = {}
-        for key, item in self.entries.items():
+        for key, item in dict.items():
             value = item.eval(ctx) if isinstance(item, Evaluator) else item
             if isinstance(value, JFTLNotice):
                 return value
@@ -505,14 +496,17 @@ class ObjectStatement(Evaluator):
             result[key] = value
         return result
 
+    def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
+        return self.eval_object(ctx, self.entries)
 
 @dataclass(kw_only=True)
 class ArrayStatement(Evaluator):
-    items: list[Expression | Any]
+    items: list[COMPILE_DOC]
 
-    def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
+    @staticmethod
+    def eval_array(ctx: RuntimeContext, items: list[COMPILE_DOC]) -> RUNTIME_DOC:
         result = []
-        for item in self.items:
+        for item in items:
             value = item.eval(ctx) if isinstance(item, Evaluator) else item
             if isinstance(value, JFTLNotice):
                 return value
@@ -522,6 +516,9 @@ class ArrayStatement(Evaluator):
                 break
             result.append(value)
         return result
+
+    def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
+        return self.eval_array(ctx, self.items)
 
 @dataclass(kw_only=True)
 class ValueFormatStatement(Evaluator):
@@ -550,7 +547,7 @@ class StringJoinStatement(Evaluator):
             value = item.eval(ctx) if isinstance(item, Evaluator) else item
             if isinstance(value, str):
                 pass
-            elif isinstance(value, (NoneType, Missing)):
+            elif isinstance(value, RUNTIME_NULL_LIKE):
                 value = "null"
             elif isinstance(value, bool):
                 value = ["false", "true"][value]

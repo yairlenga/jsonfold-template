@@ -262,7 +262,15 @@ INPUT = {{{
 GOLD = {{{
 "string (\"very-long-long-long-long...\") cannot be negated"
 }}}
-SKIP=needs try/catch (unimplemented in the engine).
+JFTL = {{{
+{
+    "main": {
+        "$": true,
+        "out": "$py=_ - _",
+        "error": "string (\"very-long-long-long-long...\") cannot be negated"
+    }
+}
+}}}
 
 [397-modules]
 JQ = {{{
@@ -274,7 +282,15 @@ INPUT = {{{
 GOLD = {{{
 "string (\"very-long-long-long-long...\") and string (\"very-long-long-long-long...\") cannot be subtracted"
 }}}
-SKIP=needs try/catch.
+JFTL = {{{
+{
+    "main": {
+        "$": true,
+        "out": "$py=_ - _",
+        "error": "string (\"very-long-long-long-long...\") and string (\"very-long-long-long-long...\") cannot be subtracted"
+    }
+}
+}}}
 
 [398-modules]
 JQ = {{{

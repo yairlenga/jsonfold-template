@@ -21,7 +21,7 @@ The table below groups every built-in by category; each is covered in detail in 
 | `_datasets` | Template | namespace | Namespace containing all datasets available during rendering.                                                                                       |
 | `_external` | Template | namespace | External variables supplied by the rendering environment.                                                                                           |
 | `_top`      | Template | context   | Runtime context of the top-level logic element.                                                                                                     |
-| `_level`    | Scoped   | int       | Nesting level of the current logic element.                                                                                                         |
+| `_data` | Scoped | json | Value most recently assigned by a data statement in the current logic element. || `_level`    | Scoped   | int       | Nesting level of the current logic element.                                                                                                         |
 | `_local`    | Scoped   | namespace | Variables declared in the current logic-element scope.                                                                                              |
 | `_global`   | Scoped   | namespace | Variables declared in the top-level logic-element scope.                                                                                            |
 | `_parent`   | Scoped   | context   | Runtime context of the enclosing logic element.                                                                                                     |
@@ -30,17 +30,17 @@ The table below groups every built-in by category; each is covered in detail in 
 
 ---
 
-# Constant Values
+## Constant Values
 
 Constant values are immutable singletons used by JFTL to control evaluation. They are not ordinary JSON values, and they are identical across every template and every render — fixed for the life of the process.
 
-## `_missing`
+### `_missing`
 
 Represents the absence of a value.
 
 Unlike JSON `null`, `_missing` indicates that no value existed or no value was produced. In the final template result they get converted to null, but until that point, they remain distinct, making it possible to distinguish between the `null` value no-value present. They are similar to the JavaScript `undefined`. The `_missing` value is treated as false in conditions (similar to `null`),
 
-### Examples
+#### Examples
 In the following example, both "missing" and "nonexisting" will show "Nothing" is the output. Both the $nonexisting expression, and the explicit `_missing` variable resolve to the missing value, which is converted to the string "Nothing" by the `default` clause. Without the `default` clause, they `_missing` value will be converted to `null` in the final output.
 
 ```json
@@ -61,7 +61,7 @@ In the following example, both "missing" and "nonexisting" will show "Nothing" i
 }
 ```
 
-Common sources include:
+#### Common sources include:
 
 * navigation to a nonexistent object member;
 * an array index outside the array bounds;
@@ -78,7 +78,7 @@ A logic element may replace `Missing` using `default`.
 
 ---
 
-## `_skip`
+### `_skip`
 
 Omits the current generated item.
 
@@ -91,7 +91,7 @@ When returned from a `foreach` item's `out` or `case` expression. It is conceptu
 
 When produced while generating an array or object outside `foreach`, the corresponding output element is omitted.
 
-### Examples
+#### Examples
 
 In the following three examples, the entries with `_skip` value are removed from the final output. The `foreach` part start with the range 0, 1, 3, ..., 9, and then convert any number that is not divisible 3 to _skip, which is then removed from the output.
 ```json
@@ -113,7 +113,7 @@ In the following three examples, the entries with `_skip` value are removed from
 
 ---
 
-## `_break`
+### `_break`
 
 Terminates the current `foreach` iteration immediately.
 
@@ -121,7 +121,9 @@ The current item is not added to the result, `update` is not executed, and no ad
 
 `_break` is conceptually similar to `break` in an imperative language.
 
-```json`
+#### Examples
+
+```json
 // Template:
 {
     "main": {
@@ -136,14 +138,13 @@ The current item is not added to the result, `update` is not executed, and no ad
   "array": [ 1, 2 ],
   "object": { "a": 1 }
 }
+```
 
 When produced while generating an array or object outside `foreach`, the created object will not include any additional elements. 
 
-```
-
 ---
 
-## `_error`
+### `_error`
 
 Represents a processing error.
 
@@ -151,13 +152,54 @@ When an expression produces `_error`, normal evaluation stops and the logic elem
 
 Unlike `Missing`, `_error` represents a processing failure rather than an absent value.
 
+Unlike `_skip` and `_break`, which only affect the array, object, or `foreach` they occur in, `_error` aborts the entire structure being built — the moment it's encountered, construction stops immediately, with no partial result, and the error propagates outward until something catches it.
+
+#### Examples
+
+In the following example, `_error` is unhandled. Since `main` here is a plain object with no enclosing logic element, nothing intercepts the error, and the entire render fails — there is no partial output, not even `null`; the render itself does not succeed.
+
+```json
+// Template
+{
+    "main": {
+        "array": [ 1, 2, "$_error", 3, 4 ]
+    }
+}
+// Output
+// render fails; no JSON result is produced
+[ERROR] GENERIC-ERROR: Unspecific Error
+```
+
+In the next example, the same failure occurs one level deeper — inside `data` — but this time the enclosing logic element has an `error` clause, which intercepts the error and supplies a replacement value instead. This mirrors how `default` recovers from `Missing`.
+
+```json
+// Template
+{
+    "main": {
+        "$": true,
+        "data": { "count": 5, "values": [ 1, 2, "$_error", 3, 4 ] },
+        "error": "Could not process values"
+    }
+}
+// Output
+"Could not process values"
+```
+
+#### Common sources include:
+
+* an explicit `$_error`;
+* a runtime exception inside a `$py=`, `$pyeval=`, or `$pyrun=` expression, converted internally into a notice;
+* a `transform` given input of the wrong shape (for example, `merge` given a non-list);
+* an unresolvable navigation, such as `$<` used with no enclosing logic element.
+* 
+
 ---
 
-# Template Values
+## Template Values
 
 Template values are initialized once at the start of a render operation and remain unchanged throughout that render — but differ from one render to the next.
 
-## `_input`
+### `_input`
 
 The complete input document supplied to the render operation.
 
@@ -165,9 +207,48 @@ This is equivalent to the navigation root `$^`.
 
 Use `_input` from expression engines and `$^` from navigation expressions.
 
+Unlike `$` (current data), which changes as `data` and `foreach` reassign it at each nesting level, `_input`/`$^` always refers to the original document handed to `render()` — unaffected by how deep the current logic element is nested, or what `data`/`foreach` have done to `$` along the way.
+
+### Examples
+
+In the following example, the top-level `data` replaces `$` with the `orders` array, and a nested `foreach` replaces it again with each individual order. From inside that nested loop, `$` can no longer reach the original document — but `$^` still can, letting each order look up a value (the customer's `region`) that lives outside the array being iterated.
+
+```json
+// Template
+{
+    "main": {
+        "$": true,
+        "data": "$.orders",
+        "foreach": {
+            "var": "order",
+            "out": {
+                "id": "$order.id",
+                "amount": "$order.amount",
+                "region": "$^.customer.region"
+            }
+        }
+    }
+}
+// Input
+{
+    "customer": { "id": 42, "region": "EMEA" },
+    "orders": [
+        { "id": 1001, "amount": 250 },
+        { "id": 1002, "amount": 75 }
+    ]
+}
+// Output
+[
+    { "id": 1001, "amount": 250, "region": "EMEA" },
+    { "id": 1002, "amount": 75, "region": "EMEA" }
+]
+```
+
+Without `$^`, this value would be unreachable from inside the `foreach` — `$` no longer points at the top-level document once `data` and `foreach` have replaced it, and `$<` (the *enclosing* logic element's current data) would only reach as far as the `orders` array, not the original document above it.
+
 ---
 
-## `_datasets`
+### `_datasets`
 
 Namespace containing all datasets available during rendering.
 
@@ -215,6 +296,75 @@ For access to the original input document, prefer `$^` or `_input`.
 # Scoped Values
 
 Scoped values are updated whenever execution enters a new logic element.
+
+Good addition — this closes a real gap. Worth tracing the code first since there's a subtlety: `_data` and the navigation root `$` share an internal name coincidentally, but they are not the same mechanism, and the doc should be careful not to blur them.
+
+`core.py`'s `Frame.set_state_data`:
+```python
+def set_state_data(self, current: Any):
+    self.vars["_data"] = current
+```
+is called from exactly one place — `logic.py`'s `LogicStatement._eval`, Stage 2 (`data`):
+```python
+if (v_set_current := self._set_current) is not JSON_UNSET:
+    v_data = ctx.eval_value(v_set_current)
+    ...
+    ctx.set_state_data(current)
+    ctx.set_current(current)
+```
+`foreach`'s per-item assignment (`_eval_foreach`) only calls `ctx.set_current(item)` — never `set_state_data` — so `_data` is untouched by iteration. That's the exact distinction you're asking for: `_` moves every iteration, `_data` stays fixed at whatever `data` last assigned, for the life of that logic element.
+
+*(Aside, not for the doc: `navigation.py` separately uses the string `"_data"` as `NavigationStatement`'s internal marker for the `$` root — `if start == "_data": value = ctx.current`. That's an unrelated internal implementation detail, not the same as this `vars["_data"]` entry; worth knowing so a future code reader doesn't conflate the two, but not something to expose in the doc itself.)*
+
+Here's the new section:
+
+---
+
+## `_data`
+
+The value most recently assigned by a `data` statement in the current logic element.
+
+Unlike `_`, which is reassigned on every `foreach` iteration, `_data` is set only when `data` runs — once, at Stage 2 of the logic element's evaluation — and is **not** touched by `foreach`, however many iterations follow. This makes `_data` useful for reaching back to the value `data` selected, from inside a loop where `_` (and `$`) now refer to the current item instead.
+
+If the current logic element has no `data` statement of its own, `_data` is inherited from the nearest enclosing logic element that set one, via normal variable lookup.
+
+### Examples
+
+```json
+// Template
+{
+    "main": {
+        "$": true,
+        "data": "$.customer",
+        "foreach": {
+            "in": "$.orders",
+            "out": {
+                "customer_id": "$_data.id",
+                "customer_name": "$_data.name",
+                "amount": "$_"
+            }
+        }
+    }
+}
+// Input
+{
+    "customer": {
+        "id": 42,
+        "name": "Ada",
+        "orders": [ 100, 250, 75 ]
+    }
+}
+// Output
+[
+    { "customer_id": 42, "customer_name": "Ada", "amount": 100 },
+    { "customer_id": 42, "customer_name": "Ada", "amount": 250 },
+    { "customer_id": 42, "customer_name": "Ada", "amount": 75 }
+]
+```
+
+`data` selects the customer object once, before the loop starts. Inside `foreach`, `_` (and `$`) change on every iteration to the current order amount — but `$_data` still refers to the customer object throughout, letting every iteration reach `customer_id`/`customer_name` without needing `$<` or a `var`-bound reference back to the outer scope.
+
+---
 
 ## `_level`
 
@@ -274,6 +424,9 @@ Use plain `$foo` / `$%.foo` for everyday variable access. Reach for `_local`, `_
 
 ---
 
+## Foreach Values
+
+
 # Foreach Values
 
 Foreach values are updated for each iteration.
@@ -282,13 +435,80 @@ Foreach values are updated for each iteration.
 
 Current data.
 
-Outside `foreach`, `_` contains the current data of the active logic element.
+Outside `foreach`, `_` contains the current data of the active logic element — this is what `data` assigns.
 
-During `foreach`, it contains the current source item.
+Inside `foreach`, whether `_` tracks the source item depends on whether `var` is specified:
 
-During `foreach.update`, it contains the generated output for the current iteration.
+* **No `var` given** — each source item becomes `_` (and `$`) directly for that iteration.
+* **`var` given** — the source item is bound to `$var` instead; `_` and `$` are *not* updated to the item, and continue referring to whatever the enclosing logic element's current data was (e.g. whatever `data` set, or the parent's current data if no `data` was used).
 
-Navigation expressions use `$` to reference the same value.
+In both cases, once `out` is evaluated, `_` (and `$`) is updated to hold the **result of `out`** — this is what `foreach.update` reads.
+
+Navigation expressions use `$` to reference the same value as `_`.
+
+### Examples
+
+**`data` sets `_` for the whole logic element:**
+
+```json
+// Template
+{
+    "main": {
+        "$": true,
+        "data": "$.customer",
+        "out": "$_.name"
+    }
+}
+// Input
+{ "customer": { "name": "Ada", "id": 7 }, "other": 1 }
+// Output
+"Ada"
+```
+
+After `data`, `_` (and `$`) refer to the customer object — not the original input document. (Use `$^` to still reach the original input; see `_input`.)
+
+**`foreach` with no `var` — the source item becomes `_` directly:**
+
+```json
+// Template
+{
+    "main": {
+        "$": true,
+        "foreach": {
+            "in": "$.scores",
+            "out": "$py= _ * 2"
+        }
+    }
+}
+// Input
+{ "scores": [ 1, 2, 3 ] }
+// Output
+[ 2, 4, 6 ]
+```
+
+No named variable is needed — each score is available as `_` (or `$`) for the duration of that iteration.
+
+**`foreach` with `var` — `_` does *not* track the item, only `$var` does:**
+
+```json
+// Template
+{
+    "main": {
+        "$": true,
+        "data": "$.label",
+        "foreach": {
+            "var": "score",
+            "in": "$.scores",
+            "out": "$py= score * 2",
+            "update": { "history": "$py= _local.get('history', []) + [_]" }
+        }
+    }
+}
+// Input
+{ "label": "round-1", "scores": [ 1, 2, 3 ] }
+```
+
+Inside `out`, `$score` gives the source item (`1`, `2`, `3`) — `_` here still refers to `"round-1"` (from `data`), *not* the current score, because `var` was given. After `out` runs, `_` is reassigned to the `out` result (`2`, `4`, `6`), which is what `update` sees and accumulates into `history`.
 
 ---
 
@@ -302,9 +522,54 @@ Its value depends on the iteration source:
 * object — member name;
 * integer range — current integer value.
 
-The value is updated for every iteration.
+The value is updated for every iteration, using the name given by `foreach.key`, or `_key` if none is specified.
 
----
+### Examples
+
+**Iterating an array — `_key` is the index:**
+
+```json
+// Template
+{
+    "main": {
+        "$": true,
+        "foreach": {
+            "in": "$.items",
+            "out": { "index": "$_key", "value": "$_" }
+        }
+    }
+}
+// Input
+{ "items": [ "a", "b", "c" ] }
+// Output
+[
+    { "index": 0, "value": "a" },
+    { "index": 1, "value": "b" },
+    { "index": 2, "value": "c" }
+]
+```
+
+**Iterating an object — `_key` is the member name:**
+
+```json
+// Template
+{
+    "main": {
+        "$": true,
+        "foreach": {
+            "in": "$.prices",
+            "out": { "currency": "$_key", "amount": "$_" }
+        }
+    }
+}
+// Input
+{ "prices": { "USD": 10, "EUR": 9 } }
+// Output
+{
+    "USD": { "currency": "USD", "amount": 10 },
+    "EUR": { "currency": "EUR", "amount": 9 }
+}
+```
 
 # Missing versus `null`
 

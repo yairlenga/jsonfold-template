@@ -52,6 +52,7 @@ RUNTIME_DOC = Tree[RUNTIME_LEAFS]
 RUNTIME_BOOL = bool | Missing | JFTLNotice | NoneType
 
 RUNTIME_LIST_LIKE = (list, tuple)
+RUNTIME_NULL_LIKE = (NoneType, Missing)
 
 # Template Class - represent compiled templates
 
@@ -177,7 +178,7 @@ class RuntimeContext (Mapping, ABC):
                 return self._resolve(error, on_unset)
             return on_unset
 
-        elif isinstance(result, (NoneType, Missing)):
+        elif isinstance(result, RUNTIME_NULL_LIKE):
             if on_null is JFTL_RAISE or on_null is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="MISSING_VALUE",
@@ -220,7 +221,7 @@ class RuntimeContext (Mapping, ABC):
         if isinstance(result, JFTLNotice):
             return self._resolve(result, on_error)
 
-        elif isinstance(result, (NoneType, Missing)):
+        elif isinstance(result, RUNTIME_NULL_LIKE):
             if on_null is JFTL_RAISE or on_null is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="MISSING_VALUE",

@@ -14,7 +14,7 @@ JQ = [ .[] | . * 2]
 INPUT = [1, 2, 3]
 GOLD = [2, 4, 6]
 JFTL = {"main": {"$": true, "foreach": {}, "body": "$py= _ * 2"}}
-COMMENT=STREAM+PYRUN combo: this one IS a plain map (default-shape foreach over the root array, per-item body), so unlike TV-001 it doesn't need the array-collect mismatch. GOLD is a real array (not reshaped-from-stream) since jq's own [...] already collects it into one array literal here -- worth double-checking whether that changes whether OUT_FMT=STREAM applies at all, since there's no comparison-as-a-stream question when jq itself only emits 1 output.
+COMMENT=STREAM+PYRUN combo: this one IS a plain map (default-shape foreach over the root array, per-item body), so unlike TV-001 it doesn't need the array-collect mismatch. GOLD is a real array (not reshaped-from-stream) since jq's own [...] already collects it into one array literal here -- worth double-checking whether that changes whether OUT_FMT=stream applies at all, since there's no comparison-as-a-stream question when jq itself only emits 1 output.
 
 [TV-003-object-construction-shortcut-stream]
 LEVEL=logic
@@ -23,7 +23,7 @@ JQ = {user, title: .titles[]}
 INPUT = {"user":"stedolan","titles":["JQ Primer", "More JQ"]}
 GOLD = {"user":"stedolan", "title": "JQ Primer"} {"user":"stedolan", "title": "More JQ"}
 JFTL = { "main": {"$": true, "foreach": { "value": "title", "in": "$.titles" }, "body": { "user": "$.user", "title": "$title" }}}
-COMMENT=PYRUN+STREAM, revised: a single Python comprehension builds the whole result array (sidesteps curated-108's object-literal-body question and the nested-field-iteration question), OUT_FMT=STREAM unwraps it. Doesn't test jq's {shorthand} key syntax specifically -- that's now purely a jq-side parsing detail, invisible once translated.
+COMMENT=PYRUN+STREAM, revised: a single Python comprehension builds the whole result array (sidesteps curated-108's object-literal-body question and the nested-field-iteration question), OUT_FMT=stream unwraps it. Doesn't test jq's {shorthand} key syntax specifically -- that's now purely a jq-side parsing detail, invisible once translated.
 
 [TV-004-object-construction-computed-key]
 LEVEL=logic

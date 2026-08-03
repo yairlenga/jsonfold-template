@@ -18,7 +18,7 @@ COMMENT=PYRUN. Python dict equality already ignores key order, matches jq's obje
 
 [CC-003-equality-stream]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .[] == 1
 INPUT = [1, 1.0, "1", "banana"]
 GOLD = [true, true, false, false]
@@ -51,7 +51,7 @@ COMMENT=PYRUN. Wrapped in bool() since jq's and/or always yield true/false, unli
 
 [CC-007-or-stream]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = (true, false) or false
 INPUT = null
 GOLD = [true, false]
@@ -60,7 +60,7 @@ COMMENT=PYRUN+STREAM.
 
 [CC-008-and-cartesian]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = (true, true) and (true, false)
 INPUT = null
 GOLD = [true, false, true, false]
@@ -109,7 +109,7 @@ COMMENT=PYRUN. generator next()-with-default picks the first non-false/non-null 
 
 [CC-014-alt-per-value]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = (false, null, 1) | . // 42
 INPUT = null
 GOLD = [42, 42, 1]

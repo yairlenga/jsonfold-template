@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import Any
 
 from model import JFTL_BREAK, JFTL_NOTICE, JFTL_RAISE, JFTL_SKIP, Environment, RuntimeContext
@@ -34,6 +34,10 @@ class Frame (RuntimeContext):
     def set_state_data(self, current: Any):
         self.vars["_data"] = current
 
+    def _set_frame_vars(self):
+        self.vars["_level"] = self.level
+        self._cache["_local"] = self.vars
+
     @classmethod
     def root_context(cls, env: Environment) -> Frame:
         top_vars = {
@@ -42,7 +46,6 @@ class Frame (RuntimeContext):
             "_skip" : JFTL_SKIP,
             "_break": JFTL_BREAK,
             "_input" : env.input,
-            "_level" : 0,
             "_datasets": env.datasets,
             "_": env.input,
         }
@@ -52,25 +55,29 @@ class Frame (RuntimeContext):
         env.top = frame
         top_vars["_top"] = frame
         top_vars["_external"] = top_vars
-        top_vars["_local"] = top_vars
+        # The _local and _parent variable are not regular variables - they are "namespaces" resolving
+        # variable names from the local variables, injected variables, and parent chain. There are
+        # NOT stored in the 'var' space to avoid cycles, and will resolve to null at materialization
+        # time, if they somehow become part of the result.
+        frame._set_frame_vars()
         frame._update_current()
         return frame
 
     def child_state(self, name: str) -> Frame:
-        child_vars : dict[str, Any] = {
-            "_parent" : self,
-        }
-        frame = replace(
-            self,
-            parent = self,
+        # The _local and _parent variables are "namespaces", and are injected directly into the
+        # cache, no stored in the regular "vars" space to avoid cycles.
+        frame = (type(self))(
+            parent=self,
+            env=self.env,
+            current=self.current,
             level = self.level+1,
-            vars = child_vars,
             part_path = name,
-            _cache = {},
-            _full_path = self._full_path + " " + name
+            _full_path = self._full_path + " " + name,
+            global_ctx = self.global_ctx
         )
+        frame._cache["_parent"] = frame.parent
+        frame._set_frame_vars()
         frame._update_current()
-        child_vars["_local"] = child_vars
         return frame
     
     def  __getitem__(self, key):
@@ -96,6 +103,8 @@ class Frame (RuntimeContext):
         frame = self
         chain = []
         while frame is not None:
+            if name in frame._cache:
+                return frame._cache[name]
             if name in frame.vars:
                 # Found a value - cache at all levels
                 value = frame.vars[name]

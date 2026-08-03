@@ -18,7 +18,7 @@ COMMENT=PYRUN, no import needed.
 
 [BD-003-tonumber]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .[] | tonumber
 INPUT = [1, "1"]
 GOLD = [1, 1]
@@ -27,7 +27,7 @@ COMMENT=PYRUN+STREAM, simplified: only handles integer-looking strings (fine for
 
 [BD-004-toboolean]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .[] | toboolean
 INPUT = ["true", "false", true, false]
 GOLD = [true, false, true, false]
@@ -36,7 +36,7 @@ COMMENT=PYRUN+STREAM.
 
 [BD-005-tostring]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .[] | tostring
 INPUT = [1, "1", [1]]
 GOLD = ["1", "1", "[1]"]
@@ -53,7 +53,7 @@ COMMENT=PYRUN. Checks bool before number since Python bool subclasses int.
 
 [BD-007-infinite-comparison]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = .[] | (infinite * .) < 0
 INPUT = [-1, 1]
 GOLD = [true, false]
@@ -62,7 +62,7 @@ COMMENT=PYRUN+STREAM.
 
 [BD-008-infinite-nan-type]
 LEVEL=logic
-OUT_FMT=STREAM
+OUT_FMT=stream
 JQ = infinite, nan | type
 INPUT = null
 GOLD = ["number", "number"]

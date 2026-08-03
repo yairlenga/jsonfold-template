@@ -3,7 +3,7 @@ from types import NoneType
 from typing import Any, ClassVar, Optional, cast
 from dataclasses import dataclass
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 """
@@ -218,7 +218,7 @@ class _ToObjectTransformer(Transformer):
 
         result: dict[str, RUNTIME_DOC] = {}
         for entry in entries:
-            if isinstance(entry, (NoneType, Missing)):
+            if isinstance(entry, RUNTIME_NULL_LIKE):
                 continue
 
             pair = self._extract(entry)
@@ -226,17 +226,17 @@ class _ToObjectTransformer(Transformer):
                 return pair
 
             # Ignore missing/None Entries
-            if isinstance(pair, (NoneType, Missing)):
+            if isinstance(pair, RUNTIME_NULL_LIKE):
                 continue
 
             key, value = pair
             # Silently ignore None/Missing entries
-            if isinstance(key, (NoneType, Missing)) and isinstance(value, (NoneType, Missing)):
+            if isinstance(key, RUNTIME_NULL_LIKE) and isinstance(value, RUNTIME_NULL_LIKE):
                 continue
 
             if not isinstance(key, str):
                 # Siltently ignore setting invalid keys to None/Missing
-                if isinstance(value, (NoneType, Missing)):
+                if isinstance(value, RUNTIME_NULL_LIKE):
                     continue
                 return JFTLNotice(
                     code="TO_MAP_BAD_KEY",
@@ -310,7 +310,7 @@ class LogicStatement(Evaluator):
             loop_iter = enumerate(range(start_index, items))
             ix_stop = ix_stop - start_index if ix_stop else None
             start_index = 0
-        elif isinstance(items, (NoneType, Missing)):
+        elif isinstance(items, RUNTIME_NULL_LIKE):
             return MISSING_VALUE
         else:
             return JFTLNotice(code="FOREACH_IN", message=f"foreach expecting list/dict/int, got {type(items)}")
@@ -439,7 +439,7 @@ class LogicStatement(Evaluator):
         # May return Missing, which should result in early exit
         if self._foreach:
             v_foreach = self._eval_foreach(ctx)
-            if isinstance(v_foreach, (NoneType, Missing, JFTLNotice)):
+            if isinstance(v_foreach, (RUNTIME_NULL_LIKE, JFTLNotice)):
                 return self._return_result(ctx, v_foreach)
             ctx.set_current(v_foreach)
             current = v_foreach
@@ -452,7 +452,7 @@ class LogicStatement(Evaluator):
 
         if self._transformer and not isinstance(current, Missing):
             current = self._transformer.transform(current)
-            if isinstance(current, (NoneType, Missing, JFTLNotice)):
+            if isinstance(current, (RUNTIME_NULL_LIKE, JFTLNotice)):
                 return self._return_result(ctx, current)
             ctx.set_current(current)
 
