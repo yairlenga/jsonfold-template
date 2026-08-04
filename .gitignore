@@ -4,5 +4,6 @@
 *.err
 [0-9]
 out/
+work/
 tmp/
 .*cache*/

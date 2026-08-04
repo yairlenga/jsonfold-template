@@ -4,8 +4,14 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Union
 
-from model import COMPILE_DOC, RUNTIME_LIST_LIKE, CompileError, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, FAST_INLINE, RUNTIME_DOC, RUNTIME_LIST_LIKE, CompileError, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
 from template import MISSING_VALUE, JFTLNotice, Missing
+
+try:
+    _profile = profile
+except NameError:
+    def _profile(func):
+        return func
 
 @dataclass
 class Key:
@@ -30,6 +36,23 @@ _SEGMENT_RE = re.compile(r"""
   | \['(?P<sq>[^']*)'\]
   | \[\$(?P<var>\w+)\]
 """, re.VERBOSE)
+
+
+@dataclass(kw_only=True)
+class VariableStatement(Evaluator):
+    name: str
+
+    @_profile
+    def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
+        return ctx.lookup_var(self.name)
+
+    # TODO: Profile, and decide if useful.
+    @_profile
+    def eval_inline(self, ctx: RuntimeContext) -> RUNTIME_DOC:
+        name = self.name
+        if name in ctx.vars:
+            return ctx.vars[name]
+        return ctx.lookup_var(name)
 
 class NavigationStatement(Evaluator):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
@@ -71,7 +94,8 @@ class NavigationStatement(Evaluator):
                 message=f"trailing unparsed text at position {pos} in {path_text!r}"))
 
         return segments
-
+    
+    @_profile
     def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
         value = None
         start = self._start
@@ -128,7 +152,7 @@ class NavigationCompiler(StatementCompiler):
 
     _NAV_RE = re.compile("^" + NAV_RE_STR + "$", re.VERBOSE)
 
-    def parse_nav(self, m: re.Match[str], where) -> NavigationStatement | JFTLNotice:
+    def parse_nav(self, m: re.Match[str], where) -> NavigationStatement | VariableStatement | JFTLNotice:
 
         start = None
         head = m.group("start")
@@ -144,6 +168,8 @@ class NavigationCompiler(StatementCompiler):
         elif (vars := m.group("vars")) != "":
             # Convert $foo.bar to .foo.bar, starting with implied "_.vars"
             start = vars
+            if not segments:
+                return VariableStatement(name=vars)                
 
         if not start:
             return JFTLNotice(code="BAD-NAV-SYNTAX", message=f"Unknown start: '${head}", where=where)

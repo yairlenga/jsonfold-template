@@ -5,7 +5,12 @@ from typing import Any
 from model import JFTL_BREAK, JFTL_NOTICE, JFTL_RAISE, JFTL_SKIP, Environment, RuntimeContext
 from template import ERROR_VALUE, MISSING_VALUE, JFTLException, JFTLNotice
 
-# Template Class - represent compiled templates
+
+try:
+    _profile = profile
+except NameError:
+    def _profile(func):
+        return func
 
 # Runtime Objects
 
@@ -24,12 +29,18 @@ class Frame (RuntimeContext):
             return error
         return on
 
+    @_profile
     def _update_current(self):
+        pass
         self.vars["_"] = self.current
+        return
 
+    @_profile
     def set_current(self, current: Any):
+        pass
         super().set_current(current)
         self._update_current()
+        return
 
     def set_state_data(self, current: Any):
         self.vars["_data"] = current
@@ -95,7 +106,8 @@ class Frame (RuntimeContext):
     def __contains__(self, key: object) -> bool:
         return key in self.vars
 
-    def lookup_var(self, name: str, *, cache_value: bool = False) -> Any:
+    @_profile
+    def lookup_var(self, name: str, *, cache_result: bool = False) -> Any:
         """Search this frame, then parent, then parent's parent, ...
         for `name` in `vars`. Caches the result (or MISSING) at every
         frame walked through, so a repeated lookup from the same frame
@@ -103,12 +115,15 @@ class Frame (RuntimeContext):
         frame = self
         chain = []
         while frame is not None:
+# TODO: Check if dict.get outperform in/getitem            
+#   if (v := frame._cache.get(name, JFTL_NONE) is not JFTL_NONE or (v := frame.vars.get(name, JFTL_NONE)) is not JFTL_NONE:
+#   return v
             if name in frame._cache:
                 return frame._cache[name]
             if name in frame.vars:
                 # Found a value - cache at all levels
                 value = frame.vars[name]
-                if cache_value:
+                if cache_result:
                     for f in chain[1:]:
                         f._cache[name] = value
                 return value

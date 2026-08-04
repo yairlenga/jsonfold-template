@@ -1,10 +1,18 @@
+import itertools
 import re
 from types import NoneType
 from typing import Any, ClassVar, Optional, cast
 from dataclasses import dataclass
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
+from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
 from template import MISSING_VALUE, JFTLNotice, Missing
+
+try:
+    _profile = profile
+except NameError:
+    def _profile(func):
+        return func
+
 
 """
 {
@@ -247,7 +255,6 @@ class _ToObjectTransformer(Transformer):
 
         return result
 
-
 @dataclass(slots=True)
 class LogicStatement(Evaluator):
 
@@ -265,7 +272,9 @@ class LogicStatement(Evaluator):
     _default_val: Optional[Statement] = None
     _error_val: Optional[Statement] = None
 
+    @_profile
     def _eval_foreach(self, ctx: RuntimeContext) -> list[RUNTIME_DOC] | dict[str, RUNTIME_DOC] | JFTLNotice | Missing:
+        pass
         foreach = cast(_ForeachPart, self._foreach)
         items = ctx.eval_value(foreach.items) if foreach.items is not JSON_UNSET else ctx.current
 
@@ -328,50 +337,69 @@ class LogicStatement(Evaluator):
                 stop_index = count + stop_index
 
         new_vars = ctx.vars
-        # Process foreach loop
+        # Fetch foreach structure for fast performance
         v_value = foreach.value_var
         v_key = foreach.key_var
         v_cond = foreach.cond
+        v_out = foreach.out
+        v_update = foreach.update
+
+        # Setup output
         dict_result : dict[str, Any]= {}
         list_result = []
 
-        result = dict_result if do_dict else list_result
-        if ix_limit == 0 or not loop_iter:
-            return result
+        if ix_limit == 0:
+            return dict_result if do_dict else list_result
         
         pos = -1
         out_count = 0
+
+        if start_index or stop_index:
+            loop_iter = itertools.islice(loop_iter, start_index, stop_index)
 
         # Dictionary - current context variables
         new_vars = ctx.vars
         for key, item in loop_iter:
             pos = pos+1
-            if (start_index is not None and pos < start_index) or (stop_index is not None and pos >= stop_index):
-                continue
+
             if v_key:
                 new_vars[v_key] = key
 
             if v_value:
                 new_vars[v_value] = item
+            elif FAST_INLINE:
+                # Calling via ctx.set_current is 10X slower
+                ctx.current = item
+                new_vars["_"] = item
             else:
                 ctx.set_current(item)
 
-            cond_result = ctx.eval_bool(v_cond)
-            if isinstance(cond_result, JFTLNotice):
-                return cond_result
-            elif not cond_result:
-                continue
+            if isinstance(v_cond, bool):
+                if not v_cond:
+                    continue
+            else:
+                cond_result = ctx.eval_bool(v_cond)
+                if isinstance(cond_result, JFTLNotice):
+                    return cond_result
+                elif not cond_result:
+                    continue
                 
-            if foreach.out:
-                item = ctx.eval_value(foreach.out)
-                ctx.set_current(item)
+            if v_out:
+                # No point of inlining - v_out is always an expression.
+                item = ctx.eval_value(v_out)
+                if FAST_INLINE:
+                    # Calling via ctx.set_current is 10X slower
+                    ctx.current = item
+                    new_vars["_"] = item
+                else:
+                    ctx.set_current(item)
 
-            if isinstance(item, JFTLNotice):
-                return item
-            elif item is JFTL_SKIP:
-                continue
-            elif item is JFTL_BREAK:
-                break
+                if isinstance(item, JFTLNotice):
+                    return item
+                elif item is JFTL_SKIP:
+                    continue
+                elif item is JFTL_BREAK:
+                    break
 
             if do_dict:
                 dict_result[cast(str, key)] = item
@@ -379,8 +407,8 @@ class LogicStatement(Evaluator):
                 list_result.append(item)
 
             # Build local vars, inside the new frame.
-            if (set_vars := foreach.update):
-                for set_var in set_vars:
+            if (v_update):
+                for set_var in v_update:
                     name = set_var.name
                     value = ctx.eval_value(set_var.expr)
                     if isinstance(value, JFTLNotice):

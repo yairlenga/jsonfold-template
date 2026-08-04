@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/python/scripts/jf_template.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/python",
-            "args": [ "-v", "--all-plugins", "data/country10.jftl.json.json" ],
+            "args": [ "-v", "--all-plugins", "-fjsonl", "--target=tmp", "-map=-", "data/copy.jftl.json", "obj1.jsonl"  ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
             }
@@ -23,7 +23,7 @@
             "program": "${workspaceFolder}/python/scripts/jf_template.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/tests",
-            "args": [ "-v", "--all-plugins", "jqtests/tmp/333-blocks.jftl", "jqtests/tmp/333-blocks.input"],
+            "args": [ "-v", "--all-plugins", "speed/foreach1m-3.jftl.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
             }

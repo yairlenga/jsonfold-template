@@ -10,6 +10,15 @@ from typing import (Any, ClassVar, Final, Optional, TextIO, TypeAlias, TypeVar,
 from template import (MISSING_VALUE, JFTLException, JFTLNotice, Missing,
                       Template)
 
+# Enable inlining for faster performance. Disable for troubleshooting/debug.
+FAST_INLINE = True
+
+try:
+    _profile = profile
+except NameError:
+    def _profile(func):
+        return func
+
 T = TypeVar("T")
 
 Tree: TypeAlias = (
@@ -35,6 +44,7 @@ class NoValueType(_SentialValue):
         return False
 
 JSON_UNSET : Final = NoValueType("JSON_UNSET")
+JFTL_NONE : Final = NoValueType("JFTL_NONE")
 
 JFTL_RAISE : Final = _SentialValue("_RAISE_")
 JFTL_NOTICE : Final = _SentialValue("_NOTICE_")
@@ -140,8 +150,11 @@ class RuntimeContext (Mapping, ABC):
             ctx = ctx.parent if ctx.level > 0 else None
         return " ".join(reversed(paths))
 
+    @_profile
     def set_current(self, current: Any):
+        pass
         self.current = current
+        return
 
     def set_state_data(self, current: Any) -> None: ...
 
@@ -152,6 +165,7 @@ class RuntimeContext (Mapping, ABC):
             return error
         return on
 
+    @_profile
     def eval_value(
         self,
         stmt : Statement,
@@ -162,8 +176,11 @@ class RuntimeContext (Mapping, ABC):
         on_unset: Any = JFTL_RAISE,
     ) -> RUNTIME_DOC:
         
-        self.env.eval_count += 1
-        result = stmt.eval(self) if isinstance(stmt, Evaluator) else cast(RUNTIME_DOC, stmt)
+        if isinstance(stmt, Evaluator):
+            self.env.eval_count += 1
+            result = stmt.eval(self)
+        else:
+            result = cast(RUNTIME_DOC, stmt)
 
         if isinstance(result, JFTLNotice):
             return self._resolve(result, on_error)
@@ -190,6 +207,7 @@ class RuntimeContext (Mapping, ABC):
 
         return result        
 
+    @_profile
     def eval_bool(
         self,
         cond : Condition,
@@ -205,6 +223,8 @@ class RuntimeContext (Mapping, ABC):
         context. Override for engine-specific truthiness."""
 
         self.env.eval_count += 1
+        if isinstance(cond, bool):
+            return cond
 
         if isinstance(cond, NoValueType):
             if on_unset is JFTL_RAISE or on_unset is JFTL_NOTICE:
