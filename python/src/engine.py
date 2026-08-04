@@ -23,7 +23,7 @@ from typing import Any
 @dataclass
 class JFTLCompiler(DocCompiler):
     config: JFTLConfig
-    plugins: dict[str, Any] = field(default_factory=dict)
+    _plugins: dict[str, Any] = field(default_factory=dict)
 
     # List of errors so far
     _fail: bool = False
@@ -37,7 +37,9 @@ class JFTLCompiler(DocCompiler):
     _max_errors = 20
     _max_warn = 20
     _max_debug = 0
-   
+
+    def plugin(self, name:str) -> Any:
+        return self._plugins[name]
 
     def _add_error(self, error: JFTLNotice) -> None:
         keep_msg = False
@@ -102,7 +104,7 @@ class JFTLCompiler(DocCompiler):
             plugin_id = m.group("plugin") or self.config.default_expr_engine
             expr_compiler = self._expr_compilers.get(plugin_id, None)
             if not expr_compiler:
-                plugin = self.plugins.get(plugin_id, None)
+                plugin = self._plugins.get(plugin_id, None)
                 if isinstance(plugin, CompilerPlugin):
                     expr_compiler = self._expr_compilers[plugin_id] = plugin.createCompiler(self)
 

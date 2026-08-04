@@ -379,7 +379,13 @@ class DocCompiler(BaseCompiler):
     def expression(self, source: str, where: str = "") -> Expression:
         return self.compile(source, where)
     
+    # Lookup plugin
+    @abstractmethod
+    def plugin(self, name: str) -> Any: ...
+
+    # Record error (or warning/info) during compilation 
     def record_notice(self, error: JFTLNotice) -> JFTLNotice: ...
+
 
    
 class CompileError(Exception):

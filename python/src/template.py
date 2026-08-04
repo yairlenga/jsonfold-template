@@ -58,6 +58,11 @@ class RenderStatus:
 class Template(ABC):
     valid: bool
 
+plugin_registry: dict[str, Any] = {}
+
+def add_default_plugin(prefix: str, plugin: Any):
+    plugin_registry[prefix] = plugin
+
 @dataclass
 class Engine(ABC):
     _datasets: dict[str, Any] = field(default_factory=dict)
@@ -128,11 +133,19 @@ def create_engine(*, no_plugins: bool = False, all_plugins: bool = False ) -> En
         import navigation
         engine.add_plugin("nav", navigation.NavigationPlugin())
 
+        import logic
+        engine.add_plugin("logic", logic.LoginPlugin())
+
+        import transform
+        for transform_id, transform_class in transform.default_plugins.items():
+            engine.add_plugin(transform_id, transform_class())
+
         if all_plugins :
             import py_run
             engine.add_plugin("pyeval", py_run.PyEvalPlugin())
             engine.add_plugin("pyrun", py_run.PyRunPlugin())
-    
+
+
     # Those are not installed by default.
 
     return engine        

@@ -13,12 +13,12 @@ Run with:  python -m unittest test_logic_compile.py -v
 # pyright: basic
 
 from dataclasses import asdict
-from types import NoneType
 from typing import Any, cast
 import unittest
 
-from model import JSON_UNSET, DocCompiler, Statement
-from logic import _CaseEvaluator, _FlattenningTransformer, _MergeTransformer, _CaseItem, _ForeachPart, LogicCompiler, LogicStatement
+from model import JSON_UNSET, DocCompiler, Statement, Transformer
+from logic import _CaseEvaluator, _CaseItem, _ForeachPart, LogicCompiler, LogicStatement
+from transform import _FlattenningTransformer, _MergeTransformer
 
 
 class Tagged:
@@ -35,6 +35,11 @@ class Tagged:
     def __repr__(self):
         return f"Tagged({self.kind!r}, {self.raw!r})"
 
+
+class FakeTransformer(Transformer, Tagged):
+
+    def transform(self):
+        pass
 
 class FakeCompiler(DocCompiler):
 
@@ -53,6 +58,8 @@ class FakeCompiler(DocCompiler):
     def statement(self, source, where: str = "") -> Statement | Tagged:
         return Tagged("statement", source)
 
+    def plugin(self, name: str) -> Any:
+        return FakeTransformer("plugin", name)
 
 
 def compile_logic(args: dict) -> LogicStatement:
@@ -230,11 +237,11 @@ class TestTransform(unittest.TestCase):
 
     def test_transform_merge(self):
         stmt = compile_logic({"transform": "merge"})
-        self.assertIsInstance(stmt._transformer, _MergeTransformer)
+        self.assertEqual(stmt._transformer, Tagged("plugin", "merge"))
 
     def test_transform_flatten(self):
         stmt = compile_logic({"transform": "flatten"})
-        self.assertIsInstance(stmt._transformer, _FlattenningTransformer)
+        self.assertEqual(stmt._transformer, Tagged("plugin", "flatten"))
 
     def test_missing_transform_is_none(self):
         stmt = compile_logic({})
@@ -265,7 +272,7 @@ class TestFullRealisticBlock(unittest.TestCase):
         assert isinstance(stmt._out.cases, list)
         self.assertEqual(len(stmt._out.cases), 1)
         self.assertEqual(stmt._out.default_case, Tagged("statement", "$.output"))
-        self.assertIsInstance(stmt._transformer, _MergeTransformer)
+        self.assertEqual(stmt._transformer, Tagged("plugin", "merge"))
         self.assertEqual(stmt._error_val, Tagged("statement", "$.onError"))
         self.assertIsNotNone(stmt._set_current)
         self.assertIs(stmt._default_val, JSON_UNSET)

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Union
 
-from model import COMPILE_DOC, FAST_INLINE, RUNTIME_DOC, RUNTIME_LIST_LIKE, CompileError, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_DOC, RUNTIME_LIST_LIKE, CompileError, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 try:
