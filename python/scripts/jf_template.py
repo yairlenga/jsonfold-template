@@ -314,7 +314,6 @@ def _json_stream_reader(fp: TextIO) -> Iterator[tuple[Any, str, dict]]:
 
 def _process_file(args, engine, compiled, input_path: Optional[str], input_label: str) -> Any:
 
-    input_label = "(none)"
     output_path = None
     output_fp = sys.stdout
     input_fp = None
@@ -322,14 +321,12 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
 
     new_name = ""
     if input_path == "-":
-        input_label = "(stdin)"
         input_fp = sys.stdin
         if args.target and not args.split:
             new_name = "stdin.out"
             output_path = Path(args.target) / new_name
 
     elif input_path is not None:
-        input_label = input_path
         try:
             input_fp = open(input_path, mode="r", encoding="utf-8")
             close_input = True
@@ -380,7 +377,7 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
     else:
         if close_input and input_fp is not None:
             input_fp.close()
-        status, summary = _process_single_doc(args, engine, compiled, input, desc, input_label, output_fp, new_name)
+        status, summary = _process_single_doc(args, engine, compiled, input, desc, input_label, output_fp, new_name or "(stdout)")
 
     if output_path:
         output_fp.close()
@@ -606,11 +603,11 @@ def main() -> int:
             inp_ok += 1
         else:
             inp_fail += 1
-            if not args.keep_going:
-                break
             # Capture first error code
             if not exit_code:
                 exit_code = error_code or ExitCode.GENERAL_ERROR
+            if not args.keep_going:
+                break
 
         summary_map[input_id] = item
 
