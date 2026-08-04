@@ -8,7 +8,7 @@ from core import Frame
 from logic import LogicCompiler
 from template import Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_NONE, JFTL_SKIP, JSON_DOC, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 
 from typing import Any
@@ -257,7 +257,7 @@ class JFTLCompiler(DocCompiler):
         # Handle Dictionary objects. Use '$' attribute to classify into logic, literal, macro or other.
         if isinstance(source, dict):
 
-            action = source.get("$", None)
+            action = source.get("$"):
             if action is True:
                 error_count = self._error_count
                 if self._logicCompiler is None:  
@@ -265,11 +265,21 @@ class JFTLCompiler(DocCompiler):
 
                 expr = self._logicCompiler.compile(source, where)
                 if self._error_count > error_count and not isinstance(expr, JFTLNotice):
+                    # If the error_count was breached, we convert the dictionary to 'ErrorStatement'
+                    # which will result in runtime error, should the template be executed, with
+                    # the original template available as attribute.
                     return ErrorStatement(code="BAD-LOGIC", message="Logic Element did not compile", statement=expr)
                 return expr
             
             elif action is False:
-                return LiteralStatement(value=source)
+                value = source.get("out", JFTL_NONE)
+                if not "out" in source:
+                    return JFTLNotice(code="MISSING-VALUE", message="Missing 'out' in Literal statements ('$' = False), value must be provided")
+                return LiteralStatement(value=value)
+                                        
+            else:
+                action_name = f'"{action}"' if isinstance(action, str) else f"type={type(action)}"
+                return JFTLNotice(code="BAD-ACTION", message=f"The actionmust be a string or boolean, got '$=:{action_name}'")
     
             # If the all dict is constant, just use the original
             if all(isinstance(x, (NoneType, bool, int, float)) for x in source.values()):
