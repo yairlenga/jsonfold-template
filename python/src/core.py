@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 from model import JFTL_BREAK, JFTL_NOTICE, JFTL_RAISE, JFTL_SKIP, Environment, RuntimeContext
 from template import ERROR_VALUE, MISSING_VALUE, JFTLException, JFTLNotice
@@ -107,7 +107,7 @@ class Frame (RuntimeContext):
         return key in self.vars
 
     @_profile
-    def lookup_var(self, name: str, *, cache_result: bool = False) -> Any:
+    def lookup_var(self, name: str, *, cache_mode: Optional[bool] = None) -> Any:
         """Search this frame, then parent, then parent's parent, ...
         for `name` in `vars`. Caches the result (or MISSING) at every
         frame walked through, so a repeated lookup from the same frame
@@ -123,7 +123,8 @@ class Frame (RuntimeContext):
             if name in frame.vars:
                 # Found a value - cache at all levels
                 value = frame.vars[name]
-                if cache_result:
+                # TODO: cache by default ?
+                if cache_mode:
                     for f in chain[1:]:
                         f._cache[name] = value
                 return value

@@ -286,7 +286,7 @@ class RuntimeContext (Mapping, ABC):
     def __contains__(self, key: object) -> bool:
         return key in self.vars
 
-    def lookup_var(self, name: str, *, cache_value: bool = False) -> Any:
+    def lookup_var(self, name: str, *, cache_mode: Optional[bool] = None) -> Any:
         """Search this frame, then parent, then parent's parent, ...
         for `name` in `vars`. Caches the result (or MISSING) at every
         frame walked through, so a repeated lookup from the same frame
