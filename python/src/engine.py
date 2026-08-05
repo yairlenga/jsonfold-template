@@ -345,7 +345,7 @@ class JFTLCompiler(DocCompiler):
                 self._add_error(compiled)
         except CompileError as ex:
             self._fail = True
-            self._errors.append(ex.error)
+            self._errors.append(ex.notice)
             self._error_count += 1
         return compiled
 
@@ -426,7 +426,10 @@ class JFTLEngine(Engine):
     
     _plugins: dict[str, Any] = field(default_factory=dict)
 
-    def add_plugin(self, prefix: str, plugin: Any) -> None:
+    def add_plugin(self, prefix: str, plugin: object) -> None:
+        if prefix in self._plugins:
+            raise RenderError(notice=JFTLNotice(code="DUP-PLUGIN", message=f"Plugin '$(prefix)' already registed"))
+        
         self._plugins[prefix] = plugin
 
     def compile(self, source: str | dict | list, *, main_only: bool = False, where: str = "",  **kwargs) -> tuple[JFTLTemplate, list[JFTLNotice]]:

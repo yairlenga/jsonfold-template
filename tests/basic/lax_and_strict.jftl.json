@@ -1,0 +1,24 @@
+{
+    "main": {
+        "$": true,
+        "data": {
+            "a.b.c = d": { "a" : { "b": { "c": "d"} }},
+            "{}": {},
+            "[]": [],
+            "a = {}": { "a": {} },
+            "a[2].c = d": { "a": [null, null, { "c": "d" }, null]} ,
+            "out-of-range": { "a": [null, { "c": "d" }, null]} ,
+            "_": "_'"
+        },
+        "foreach": {
+            "out": {
+                "string": { "$": true, "out": "$.a.b.c", "error": "ERROR" },
+                "str-lax": { "$": true, "out": "$nav=$.a.b.c", "default": "MISSING", "error": "ERROR" },
+                "str-strict": { "$": true, "out": "$strict=$.a.b.c", "default": "MISSING", "error": "ERROR" },
+                "num": { "$": true, "out": "$.a[2].c", "error": "ERROR" },
+                "num-lax": { "$": true, "out": "$nav=$.a[2].c", "default": "MISSING", "error": "ERROR" },
+                "num-strict": { "$": true, "out": "$strict=$.a[2].c", "default": "MISSING", "error": "ERROR" }
+            }            
+        }
+    }
+}

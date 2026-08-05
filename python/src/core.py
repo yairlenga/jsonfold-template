@@ -1,16 +1,18 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Callable, Optional, cast
 
-from model import JFTL_BREAK, JFTL_NOTICE, JFTL_RAISE, JFTL_SKIP, Environment, RuntimeContext
-from template import ERROR_VALUE, MISSING_VALUE, JFTLException, JFTLNotice
+from model import JFTL_BREAK, JFTL_SKIP, Environment, RuntimeContext
+from template import ERROR_VALUE, MISSING_VALUE
 
+# try:
+#     _profile = profile
+# except NameError:
 
-try:
-    _profile = profile
-except NameError:
-    def _profile(func):
-        return func
+if callable( _ := globals().get("profile")):
+    _profile = cast(Callable, _)
+else:
+    def _profile(func): return func
 
 # Runtime Objects
 
@@ -21,13 +23,6 @@ class Frame (RuntimeContext):
     _cache:  dict[str, Any] = field(default_factory=dict)
     _full_path: str = ""
     _initial_current: str = ""
-
-    def _resolve(self, error: JFTLNotice, on: Any) -> Any:
-        if on is JFTL_RAISE:
-            raise JFTLException(error)
-        if on is JFTL_NOTICE:
-            return error
-        return on
 
     @_profile
     def _update_current(self):

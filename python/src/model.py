@@ -4,20 +4,23 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import NoneType
-from typing import (Any, ClassVar, Final, Optional, TextIO, TypeAlias, TypeVar,
+from typing import (Any, Callable, ClassVar, Final, Optional, TextIO, TypeAlias, TypeVar,
                     cast)
 
-from template import (MISSING_VALUE, JFTLException, JFTLNotice, Missing,
+from template import (MISSING_VALUE, JFTLError, JFTLNotice, Missing,
                       Template)
 
 # Enable inlining for faster performance. Disable for troubleshooting/debug.
 FAST_INLINE = True
 
-try:
-    _profile = profile
-except NameError:
-    def _profile(func):
-        return func
+# try:
+#     _profile = profile
+# except NameError:
+if callable( _ := globals().get("profile")):
+    _profile = cast(Callable, _)
+else:
+    def _profile(func): return func
+
 
 T = TypeVar("T")
 
@@ -158,11 +161,11 @@ class RuntimeContext (Mapping, ABC):
 
     def set_state_data(self, current: Any) -> None: ...
 
-    def _resolve(self, error: JFTLNotice, on: Any) -> Any:
+    def _resolve(self, notice: JFTLNotice, on: Any) -> Any:
         if on is JFTL_RAISE:
-            raise JFTLException(error)
+            raise JFTLError(notice)
         if on is JFTL_NOTICE:
-            return error
+            return notice
         return on
 
     @_profile
@@ -386,21 +389,16 @@ class DocCompiler(BaseCompiler):
     # Record error (or warning/info) during compilation 
     def record_notice(self, error: JFTLNotice) -> JFTLNotice: ...
 
-
-   
-class CompileError(Exception):
+ 
+class CompileError(JFTLError):
     """Raised for any defect discovered while compiling a template.
     Carries the actual Error to report — no separate/duplicate fields.
     Caught by the compiler and appended directly to compile()'s error list."""
-    def __init__(self, error: JFTLNotice):
-        super().__init__(error.message)
-        self.error = error
 
-class RenderError(Exception):
-    def __init__(self, notice: JFTLNotice):
-        super().__init__(notice.message)
-        self.notice = notice
-
+class RenderError(JFTLError):
+    """Raised for any defect discovered while Rendering a template.
+    Carries the actual Error to report — no separate/duplicate fields.
+    Caught by the compiler and appended directly to compile()'s error list."""
 
            
 # Helper to transform Literal values
@@ -422,5 +420,4 @@ class Transformer(ABC):
 class CompilerPlugin(ABC):
 
     @abstractmethod
-    def createCompiler(self, DocCompiler) -> StatementCompiler : ...
-
+    def createCompiler(self, docCompiler: DocCompiler) -> StatementCompiler : ...

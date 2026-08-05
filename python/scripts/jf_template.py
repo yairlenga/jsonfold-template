@@ -494,7 +494,7 @@ def main() -> int:
                         help="Fully compact, single-line output. Wins over --indent if both given.")
 
     # Configuration
-    parser.add_argument("--no-plugins", "-N", action="store_true",
+    parser.add_argument("--no-plugins", "-N", action="store_false", dest="plugins",
                         help="Start with no registered plugins")
     parser.add_argument("--all-plugins", "-A", action="store_true",
                         help="Start with All registered plugins enabled, INCLUDES PYEVAL, PYRUN !")
@@ -522,7 +522,7 @@ def main() -> int:
         error(f"Failed to read template '{template_path}': {_exception_summary(ex, args.verbose)}")
         return ExitCode.TEMPLATE_IO
 
-    engine = create_engine(all_plugins = args.all_plugins, no_plugins = args.no_plugins)
+    engine = create_engine(all_plugins = args.all_plugins, plugins = args.plugins)
 
     t0 = time.perf_counter()
     try:

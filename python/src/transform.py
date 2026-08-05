@@ -1,15 +1,14 @@
 
 from types import NoneType
-from typing import Any, cast
+from typing import Any, Callable, cast
 
 from model import RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, Transformer
 from template import JFTLNotice, Missing
 
-try:
-    _profile = profile
-except NameError:
-    def _profile(func):
-        return func
+if callable( _ := globals().get("profile")):
+    _profile = cast(Callable, _)
+else:
+    def _profile(func): return func
 
 
     # List[list] -> List

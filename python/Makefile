@@ -75,7 +75,7 @@ publish:
 	twine upload dist/jsonfold-$(VERSION)[.-]*
 
 benchmark:
-	./run_benchmark.sh
+	 ./benchmark.sh ../tests/speed/foreach1m-3.jftl.json
 
 clean:
 	rm -rf dist *.egg-info

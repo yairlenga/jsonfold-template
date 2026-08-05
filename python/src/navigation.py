@@ -2,16 +2,15 @@
 # runtime.py
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Literal, Union
+from typing import Any, Callable, Literal, Union, cast
 
-from model import COMPILE_DOC, RUNTIME_DOC, RUNTIME_LIST_LIKE, CompileError, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompileError, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
 from template import MISSING_VALUE, JFTLNotice, Missing
 
-try:
-    _profile = profile
-except NameError:
-    def _profile(func):
-        return func
+if callable( _ := globals().get("profile")):
+    _profile = cast(Callable, _)
+else:
+    def _profile(func): return func
 
 @dataclass
 class Key:
@@ -57,12 +56,13 @@ class VariableStatement(Evaluator):
 class NavigationStatement(Evaluator):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
-    def __init__(self, path: str, start: Literal["_data", "_parent.data", "_input"] | str= "_data", where: str = "" ):
+    def __init__(self, path: str, start: Literal["_data", "_parent.data", "_input"] | str= "_data", where: str = "", strict: bool = False ):
         super().__init__(where, path)
         self._path = path
         self.where = where   # for diagnostics, e.g. "user.items[0].name"
         self._start = start
         self._segments = self._compile(path)
+        self._strict = strict
 
     def _compile(self, path_text: str) -> list[PathSegment]:
 
@@ -119,27 +119,42 @@ class NavigationStatement(Evaluator):
                 return value  # already failed upstream — propagate, stop walking
 
             if isinstance(seg, Key):
-                value = value.get(seg.name, MISSING_VALUE) if isinstance(value, Mapping) else MISSING_VALUE
+                value = (
+                    value.get(seg.name, MISSING_VALUE) if isinstance(value, Mapping)
+                    else JFTLNotice(code="NAV-NOT-OBJECT", message=f"string keys can only be used on objects/null, at {type(value)}") if self._strict
+                    else MISSING_VALUE
+                )
                 traveled += f".{seg.name}"
 
             elif isinstance(seg, Index):
-                if isinstance(value, RUNTIME_LIST_LIKE) and -len(value) <= seg.i < len(value):
-                    value = value[seg.i]
-                else:
-                    return MISSING_VALUE
+                value = (
+                    value[seg.i] if isinstance(value, RUNTIME_LIST_LIKE) and -len(value) <= seg.i < len(value)
+                    else JFTLNotice(code="NAV-NOT-ARRAY", message=f"integer indices can only be used on array/null, at {type(value)}") if self._strict
+                    else MISSING_VALUE
+                )
                 traveled += f"[{seg.i}]"
 
             elif isinstance(seg, Var): # pyright: ignore[reportUnnecessaryIsInstance]
                 key = ctx.lookup_var(seg.name)
-                if isinstance(key, Missing):
-                    return key
-                elif isinstance(key, str):
-                    value = value.get(key, MISSING_VALUE) if isinstance(value, Mapping) else MISSING_VALUE
+                if isinstance(key, str):
+                    value = (
+                        value.get(key, MISSING_VALUE) if isinstance(value, Mapping)
+                        else JFTLNotice(code="NAV-VAR-STR", message=f"string key '{str}` can only be used on objects/null, got {type(value)}") if self._strict
+                        else MISSING_VALUE
+                    )
+                    traveled += f'.["{key}"]'
                 elif isinstance(key, int) and not isinstance(key, bool) and isinstance(value, RUNTIME_LIST_LIKE) and -len(value) <= key < len(value):
-                    value = value[key]
+                    value = (
+                        value[key] if -len(value) <= key < len(value)
+                        else JFTLNotice(code="NAV-NOT-ARRAY", message=f"integer index '{int}` can only be used on array/null, got {type(value)}") if self._strict
+                        else MISSING_VALUE
+                    )
+                    traveled += f"[{key}]"
+                elif not self._strict or isinstance(key, RUNTIME_NULL_LIKE):
+                    value = MISSING_VALUE
                 else:
-                    return MISSING_VALUE
-                traveled += f".{key}"
+                    value = JFTLNotice(code="NAV-VAR-KEY", message=f"Key type '{type(key)}' can not be used to access elements of type {type(value)}")
+
 
         return value
 
@@ -148,8 +163,11 @@ NAV_RE_STR = r"""
     (?P<start> \$ | \$\^ | \$< | \$% | \$(?P<vars>\w+ ) )
     (?P<segments> (\[.* | \..* )? )
 """
+
+@dataclass
 class NavigationCompiler(StatementCompiler):
 
+    strict: bool = False
     _NAV_RE = re.compile("^" + NAV_RE_STR + "$", re.VERBOSE)
 
     def parse_nav(self, m: re.Match[str], where) -> NavigationStatement | VariableStatement | JFTLNotice:
@@ -174,7 +192,7 @@ class NavigationCompiler(StatementCompiler):
         if not start:
             return JFTLNotice(code="BAD-NAV-SYNTAX", message=f"Unknown start: '${head}", where=where)
         
-        expr = NavigationStatement(segments, start=start, where=where)
+        expr = NavigationStatement(segments, start=start, where=where, strict=self.strict)
         return expr
 
     def parse(self, source, where):
@@ -196,5 +214,9 @@ class NavigationCompiler(StatementCompiler):
     
 
 class NavigationPlugin(CompilerPlugin):
-    def createCompiler(self, DocCompiler) -> StatementCompiler:
-        return NavigationCompiler(DocCompiler)
+    def createCompiler(self, docCompiler: DocCompiler) -> StatementCompiler:
+        return NavigationCompiler(docCompiler, strict=False)
+
+class StrictNavPlugin(CompilerPlugin):
+    def createCompiler(self, docCompiler: DocCompiler) -> StatementCompiler:
+        return NavigationCompiler(docCompiler, strict=True)

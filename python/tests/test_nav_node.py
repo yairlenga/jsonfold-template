@@ -14,7 +14,7 @@ Assumes the bug fixes discussed:
 import unittest
 
 from core import Frame, Environment
-from model import _NULL_TEMPLATE, CompileError
+from model import _NULL_TEMPLATE, CompileError # pyright: ignore[reportPrivateUsage]
 from navigation import NavigationStatement
 from template import Missing
 
@@ -91,12 +91,12 @@ class TestMalformedPaths(unittest.TestCase):
     def test_malformed_path_stray_character(self):
         with self.assertRaises(CompileError) as ctx:
             nav(".foo!bar")
-        self.assertEqual(ctx.exception.error.code, "INVALID_PATH")
+        self.assertEqual(ctx.exception.notice.code, "INVALID_PATH")
 
     def test_up_not_at_start_is_rejected(self):
         with self.assertRaises(CompileError) as ctx:
             nav(".foo.^.bar")
-        self.assertEqual(ctx.exception.error.code, "INVALID_PATH")
+        self.assertEqual(ctx.exception.notice.code, "INVALID_PATH")
 
 class TestEvalBool(unittest.TestCase):
 

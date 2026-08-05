@@ -1,0 +1,58 @@
+{
+  "a.b.c = d": {
+    "string": "d",
+    "str-lax": "d",
+    "str-strict": "d",
+    "num": null,
+    "num-lax": "MISSING",
+    "num-strict": "ERROR"
+  },
+  "{}": {
+    "string": null,
+    "str-lax": "MISSING",
+    "str-strict": "MISSING",
+    "num": null,
+    "num-lax": "MISSING",
+    "num-strict": "MISSING"
+  },
+  "[]": {
+    "string": null,
+    "str-lax": "MISSING",
+    "str-strict": "ERROR",
+    "num": null,
+    "num-lax": "MISSING",
+    "num-strict": "ERROR"
+  },
+  "a = {}": {
+    "string": null,
+    "str-lax": "MISSING",
+    "str-strict": "MISSING",
+    "num": null,
+    "num-lax": "MISSING",
+    "num-strict": "ERROR"
+  },
+  "a[2].c = d": {
+    "string": null,
+    "str-lax": "MISSING",
+    "str-strict": "ERROR",
+    "num": "d",
+    "num-lax": "d",
+    "num-strict": "d"
+  },
+  "out-of-range": {
+    "string": null,
+    "str-lax": "MISSING",
+    "str-strict": "ERROR",
+    "num": null,
+    "num-lax": "MISSING",
+    "num-strict": "ERROR"
+  },
+  "_": {
+    "string": null,
+    "str-lax": "MISSING",
+    "str-strict": "ERROR",
+    "num": null,
+    "num-lax": "MISSING",
+    "num-strict": "ERROR"
+  }
+}

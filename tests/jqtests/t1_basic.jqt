@@ -372,6 +372,7 @@ INPUT = {{{
 {"a":1, "b":2, "c":3, "a$2":4}
 }}}
 GOLD = {{{
+
 {"a":1, "b":2, "a$2":4}
 }}}
 JFTL= {{{
@@ -509,7 +510,9 @@ INPUT = {{{
 GOLD = {{{
 [3,null,5]
 }}}
-SKIP=jq's "?" drops non-matching items from output entirely; foreach always emits one result per iteration.
+JFTL = {{{
+{ "main": { "$": true, "foreach": {"out": { "$": true, "out": "$strict=$.foo", "error": "$_skip" } } } }
+}}}
 
 [030-basic]
 JQ = {{{
@@ -521,7 +524,10 @@ INPUT = {{{
 GOLD = {{{
 [4,null]
 }}}
-SKIP=same output-suppression gap as 029.
+JFTL = {{{
+{ "main": { "$": true, "foreach": {"out": { "$": true, "out": "$strict=$.foo.bar", "error": "$_skip" } } } }
+}}}
+
 
 [031-basic]
 JQ = {{{

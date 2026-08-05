@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes
 
-from model import COMPILE_DOC, RUNTIME_DOC, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_DOC, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
 from template import JFTLNotice, Missing
 
 def _create_simple_eval() -> SimpleEval:
@@ -116,6 +116,6 @@ class SimpleEvalCompiler(StatementCompiler):
 
 class SimpleEvalPlugin(CompilerPlugin):
 
-    def createCompiler(self, DocCompiler) -> StatementCompiler:
-        return SimpleEvalCompiler(DocCompiler)
+    def createCompiler(self, docCompiler: DocCompiler) -> StatementCompiler :
+        return SimpleEvalCompiler(docCompiler)
 

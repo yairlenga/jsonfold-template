@@ -1,6 +1,6 @@
 from enum import StrEnum
 from io import TextIOBase
-from typing import Any, Final, Optional, TextIO, Literal
+from typing import Any, Callable, Final, Iterable, Optional, TextIO, Literal
 from abc import ABC, abstractmethod
 from pathlib import Path
 from dataclasses import dataclass, field
@@ -26,10 +26,10 @@ class JFTLNotice():
 
 ERROR_VALUE = JFTLNotice(code='GENERIC-ERROR', message="Unspecific Error")
 
-class JFTLException(Exception):
-    def __init__(self, error: JFTLNotice):
-        super().__init__(error.message)
-        self.notice = error
+class JFTLError(Exception):
+    def __init__(self, notice: JFTLNotice):
+        super().__init__(notice.message)
+        self.notice = notice
 
 @dataclass
 class Missing():
@@ -58,10 +58,17 @@ class RenderStatus:
 class Template(ABC):
     valid: bool
 
-plugin_registry: dict[str, Any] = {}
+plugin_registry: dict[str, Callable] = {}
 
-def add_default_plugin(prefix: str, plugin: Any):
-    plugin_registry[prefix] = plugin
+# Registry of default plugins. Each one will be called to get
+# an instance of the plugin if/when used in an engine.
+def add_default_plugin(name: str, plugin: Callable, replace: Optional[bool] = False) -> None:
+    registered = name in plugin_registry
+    if replace is not None and replace != registered:
+        raise JFTLError( JFTLNotice(code="PLUGIN-REGISTRY", message=f"Error registering plugin {name} (registered={registered}, replace={replace}"))
+    elif not isinstance(plugin, Callable): # pyright: ignore[reportUnnecessaryIsInstance]
+        raise TypeError(f"Expecting callable, got {type(plugin)}")
+    plugin_registry[name] = plugin
 
 @dataclass
 class Engine(ABC):
@@ -113,7 +120,7 @@ class Engine(ABC):
     def add_dataset(self, name: str, data: Any) -> None:
         self._datasets[name] = data
 
-def create_engine(*, no_plugins: bool = False, all_plugins: bool = False ) -> Engine:
+def create_engine(*, plugins: Optional[bool | Iterable]= None, all_plugins: bool = False ) -> Engine:
     """Creates a JFTLEngine with default plugins registered.
 
     By default, registers the always-safe 'py' (simpleeval) and 'nav'
@@ -126,12 +133,16 @@ def create_engine(*, no_plugins: bool = False, all_plugins: bool = False ) -> En
     from engine import JFTLEngine
     engine = JFTLEngine()
 
-    if not no_plugins:
+    if plugins is None:
+        plugins = plugin_registry.keys()
+
+    if plugins is not False:
         import py_expr
         engine.add_plugin("py", py_expr.SimpleEvalPlugin())
 
         import navigation
         engine.add_plugin("nav", navigation.NavigationPlugin())
+        engine.add_plugin("strict", navigation.StrictNavPlugin())
 
         import logic
         engine.add_plugin("logic", logic.LoginPlugin())
@@ -139,6 +150,10 @@ def create_engine(*, no_plugins: bool = False, all_plugins: bool = False ) -> En
         import transform
         for transform_id, transform_class in transform.default_plugins.items():
             engine.add_plugin(transform_id, transform_class())
+
+        if isinstance(plugins, Iterable):
+            for plugin in plugins:
+                engine.add_plugin(plugin, plugin_registry[plugin])
 
         if all_plugins :
             import py_run

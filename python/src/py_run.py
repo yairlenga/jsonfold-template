@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import types
 from typing import Any, Callable, Optional, cast
 
-from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompilerPlugin, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
 from template import JFTLNotice, Missing, MISSING_VALUE
 
 def _build_env(ctx: RuntimeContext) -> dict[str, Any]:
@@ -97,8 +97,8 @@ class PyEvalCompiler(StatementCompiler):
 
 
 class PyEvalPlugin(CompilerPlugin):
-    def createCompiler(self, DocCompiler) -> StatementCompiler:
-        return PyEvalCompiler(DocCompiler)
+    def createCompiler(self, docCompiler: DocCompiler) -> StatementCompiler :
+        return PyEvalCompiler(docCompiler)
 
 from types import CodeType
 from typing import Any
@@ -226,5 +226,5 @@ class PyRunCompiler(StatementCompiler):
 
 
 class PyRunPlugin(CompilerPlugin):
-    def createCompiler(self, DocCompiler) -> StatementCompiler:
-        return PyRunCompiler(DocCompiler)
+    def createCompiler(self, docCompiler: DocCompiler) -> StatementCompiler :
+        return PyRunCompiler(docCompiler)

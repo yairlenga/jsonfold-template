@@ -1,17 +1,16 @@
 import itertools
 import re
 from types import NoneType
-from typing import Any, Optional, cast
+from typing import Any, Callable, Optional, cast
 from dataclasses import dataclass
 
-from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompilerPlugin, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
+from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompilerPlugin, DocCompiler, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
 from template import MISSING_VALUE, JFTLNotice, Missing
 
-try:
-    _profile = profile
-except NameError:
-    def _profile(func):
-        return func
+if callable( _ := globals().get("profile")):
+    _profile = cast(Callable, _)
+else:
+    def _profile(func): return func
 
 @dataclass
 class _DefineVar:
@@ -312,11 +311,13 @@ class LogicCompiler(StatementCompiler):
     def compile_str(self, source: str, where: str = "" ) -> COMPILE_DOC :
         return JFTLNotice(code="LOGIC-NO-STR", message="Logic Plugin does not accept strings")
 
-    def _compile_expr(self, args: dict[str, JSON_DOC], tag: str, unset_value: Expression = JSON_UNSET ) -> Expression:
+    def _compile_expr(self, args: dict[str, JSON_DOC], tag: str, unset_value: Expression = JSON_UNSET, *, record: bool = False ) -> Expression:
         if not tag in args:
             return unset_value
         
         expr = self.compiler.statement(args[tag], tag)
+        if isinstance(expr, JFTLNotice) and record:
+            self.compiler.record_notice(expr)
         return expr
     
     def _compile_cond(self, args: dict[str, JSON_DOC], tag: str, unset_value: Expression = JSON_UNSET ) -> Condition:
@@ -337,7 +338,7 @@ class LogicCompiler(StatementCompiler):
             if not cases in (None, []):
                 return JFTLNotice(code="OUT-CASE-CONFLICT", message="Either 'out' or 'case' are allowed, but not both")
 
-            return self._compile_expr(source, "out")
+            return self._compile_expr(source, "out", record=True)
         
         if cases in (None, []):
             return None
@@ -482,5 +483,5 @@ class LogicCompiler(StatementCompiler):
 
 class LoginPlugin(CompilerPlugin):
 
-    def createCompiler(self, DocCompiler) -> StatementCompiler:
-        return LogicCompiler(DocCompiler)
+    def createCompiler(self, docCompiler: DocCompiler) -> StatementCompiler :
+        return LogicCompiler(docCompiler)
