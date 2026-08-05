@@ -1,0 +1,69 @@
+{
+  "config": {
+    "default_expr_engine": "py"
+  },
+  "main": {
+    "$": true,
+    "foreach": {
+      "in": "$",
+      "value": "order",
+      "out": {
+        "$": true,
+        "set": {
+          "customer_id": "$.customer_id",
+          "customer": "$_datasets.customers[$customer_id]",
+          "lines": {
+            "$": true,
+            "set": {
+              "subtotal": 0,
+              "total_weight": 0
+            },
+            "foreach": {
+              "in": "$.items",
+              "value": "item",
+              "out": {
+                "$": true,
+                "set": {
+                  "product_id": "$item.product_id",
+                  "product": "$_datasets.products[$product_id]"
+                },
+                "out": {
+                  "product_id": "$item.product_id",
+                  "description": "$product.description",
+                  "quantity": "$item.quantity",
+                  "unit_price": "$product.unit_price",
+                  "unit_weight": "$product.weight",
+                  "line_total": "$=item[\"quantity\"] * product[\"unit_price\"]",
+                  "line_weight": "$=item[\"quantity\"] * product[\"weight\"]"
+                }
+              },
+              "update": {
+                "subtotal": "$=subtotal + _[\"line_total\"]",
+                "total_weight": "$=total_weight + _[\"line_weight\"]"
+              }
+            },
+            "out": {
+              "items": "$",
+              "subtotal": "$subtotal",
+              "total_weight": "$total_weight"
+            }
+          }
+        },
+        "out": {
+          "title": "Invoice Report",
+          "order_id": "$.order_id",
+          "date": "$.date",
+          "customer": {
+            "company": "$customer.company",
+            "contact": "${customer.contact.first_name} ${customer.contact.last_name}",
+            "address": "${customer.address.street}, ${customer.address.city}, ${customer.address.state} ${customer.address.zip}, ${customer.address.country}"
+          },
+          "items": "$lines.items",
+          "subtotal": "$lines.subtotal",
+          "total_weight": "$lines.total_weight"
+        },
+        "data": "$order"
+      }
+    }
+  }
+}

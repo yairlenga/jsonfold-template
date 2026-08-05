@@ -1,0 +1,17 @@
+{
+  "P-100": {
+    "description": "USB-C Dock",
+    "unit_price": 129.95,
+    "weight": 0.85
+  },
+  "P-205": {
+    "description": "Wireless Keyboard",
+    "unit_price": 74.5,
+    "weight": 0.62
+  },
+  "P-310": {
+    "description": "27-inch Monitor",
+    "unit_price": 289.0,
+    "weight": 4.8
+  }
+}

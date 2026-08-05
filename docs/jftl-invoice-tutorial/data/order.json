@@ -1,0 +1,19 @@
+{
+  "order_id": "ORD-1001",
+  "date": "2026-08-01",
+  "customer_id": "C-101",
+  "items": [
+    {
+      "product_id": "P-100",
+      "quantity": 2
+    },
+    {
+      "product_id": "P-205",
+      "quantity": 1
+    },
+    {
+      "product_id": "P-310",
+      "quantity": 1
+    }
+  ]
+}
