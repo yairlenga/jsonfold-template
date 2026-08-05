@@ -1,0 +1,28 @@
+{
+    "main": {
+        "$": {
+            "set": { "pets" : [ { "class": "dog", "name": "Pluto" }, { "class": "mouse", "name": "Micky" }, { "class": "mouse", "name": "Minnie" } ]}
+        },
+        "names": [
+            { "$": { "data": "$pets", "foreach": {} }},
+            "$.name"
+        ],
+        "Using $x": [
+            { "$": { "foreach": { "var": "x", "in": "$pets" } }},
+            "$x.name"
+        ],
+        "If-False": [
+            { "$": { "if": false, "data": "$pets", "foreach": {}}},
+            "$.name"
+        ],
+        "If-Missing": [
+            { "$": { "if": false, "data": "$pets", "foreach": {}, "default": "MISSING"}},
+            "$.name"
+        ],
+        "ERROR": [
+            { "$": { "data": "$pets", "foreach": {}, "default": "MISSING", "error": "ERROR"}},
+            "$_error"
+        ],
+        "_": "_"
+    }
+}

@@ -1,0 +1,15 @@
+{
+  "Using $": {
+    "foo": "bar",
+    "price": 42,
+    "lazy": "dog"
+  },
+  "Using $x": {
+    "foo": "bar",
+    "price": 42,
+    "lazy": "dog"
+  },
+  "If-False": "MISSING",
+  "With-Error": "ERROR",
+  "_": "_"
+}

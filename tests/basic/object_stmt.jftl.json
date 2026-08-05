@@ -1,0 +1,36 @@
+{
+    "main": {
+        "$": {
+            "data": {
+                "foo": "bar",
+                "price": 42,
+                "lazy": "dog"
+            }
+        },
+        "Using $": {
+            "$": {},
+            "foo": "$.foo",
+            "price": "$.price",
+            "lazy": "$.lazy"
+        },
+        "Using $x": {
+            "$": { "set": { "x": "$_" } },
+            "foo": "$x.foo",
+            "price": "$x.price",
+            "lazy": "$x.lazy"
+        },
+        "If-False": {
+            "$": { "if": false, "default": "MISSING", "error": "ERROR" },
+            "foo": "$.foo",
+            "price": "$.price",
+            "lazy": "$.lazy"
+        },
+        "With-Error": {
+            "$": { "default": "MISSING", "error": "ERROR" },
+            "foo": "$.foo",
+            "price": "$_error",
+            "lazy": "$.lazy"
+        },
+        "_": "_"
+    }
+}

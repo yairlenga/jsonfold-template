@@ -65,6 +65,7 @@ RUNTIME_DOC = Tree[RUNTIME_LEAFS]
 RUNTIME_BOOL = bool | Missing | JFTLNotice | NoneType
 
 RUNTIME_LIST_LIKE = (list, tuple)
+RUNTIME_DICT_LIKE = (dict)
 RUNTIME_NULL_LIKE = (NoneType, Missing)
 
 # Template Class - represent compiled templates

@@ -7,7 +7,7 @@ Run with:  python -m unittest test_compile.py -v
 import unittest
 
 from navigation import NavigationStatement
-from engine import JFTLEngine, LiteralStatement, ObjectStatement, ArrayStatement
+from engine import JFTLEngine, LiteralStatement, ObjectEvaluator, ArrayEvaluator
 
 
 def template_of(source, where = ""):
@@ -89,13 +89,13 @@ class TestObjectStatements(unittest.TestCase):
 
     def test_dict_value_with_path_expression(self):
         stmt = compile({"name": "$.user.name"})
-        assert isinstance(stmt, ObjectStatement)
+        assert isinstance(stmt, ObjectEvaluator)
 
     def test_nested_dict(self):
         stmt = compile({"outer": {"inner": "$.x"}})
-        assert isinstance(stmt, ObjectStatement)
+        assert isinstance(stmt, ObjectEvaluator)
         inner_stmt = stmt.entries["outer"]
-        assert isinstance(inner_stmt, ObjectStatement)
+        assert isinstance(inner_stmt, ObjectEvaluator)
         self.assertIsInstance(inner_stmt.entries["inner"], NavigationStatement)
 
     def test_malformed_path_inside_nested_dict_raises(self):
@@ -104,8 +104,8 @@ class TestObjectStatements(unittest.TestCase):
 
     def test_where_includes_key_path(self):
         stmt = compile({"a": {"b": "$.x"}}, where="root")
-        assert isinstance(stmt, ObjectStatement)
-        assert isinstance(stmt.entries["a"], ObjectStatement)
+        assert isinstance(stmt, ObjectEvaluator)
+        assert isinstance(stmt.entries["a"], ObjectEvaluator)
         assert isinstance(stmt.entries["a"].entries["b"], NavigationStatement)
         inner = stmt.entries["a"].entries["b"]
         self.assertEqual(inner.where, "root.a.b")
@@ -120,17 +120,17 @@ class TestArrayStatements(unittest.TestCase):
 
     def test_flat_list(self):
         stmt = compile([1, "x", "$.y"])
-        assert isinstance(stmt, ArrayStatement)
+        assert isinstance(stmt, ArrayEvaluator)
         self.assertIsInstance(stmt.items[0], int)
         self.assertIsInstance(stmt.items[1], str)
         self.assertIsInstance(stmt.items[2], NavigationStatement)
 
     def test_list_of_dicts(self):
         stmt = compile([{"a": "$.x"}, {"b": "$.y"}])
-        assert isinstance(stmt, ArrayStatement)
+        assert isinstance(stmt, ArrayEvaluator)
         self.assertEqual(len(stmt.items), 2)
-        self.assertIsInstance(stmt.items[0], ObjectStatement)
-        self.assertIsInstance(stmt.items[1], ObjectStatement)
+        self.assertIsInstance(stmt.items[0], ObjectEvaluator)
+        self.assertIsInstance(stmt.items[1], ObjectEvaluator)
 
     def test_malformed_path_inside_list_raises(self):
         template = template_of(["ok", "$.foo!bar"])
@@ -138,7 +138,7 @@ class TestArrayStatements(unittest.TestCase):
 
     def test_where_includes_index(self):
         stmt = compile(["a", "$.x"], where="root")
-        assert isinstance(stmt, ArrayStatement)
+        assert isinstance(stmt, ArrayEvaluator)
         assert isinstance(stmt.items[1], NavigationStatement)
         self.assertEqual(stmt.items[1].where, "root[1]")
 
@@ -155,12 +155,12 @@ class TestMixedNesting(unittest.TestCase):
             },
         }
         stmt = compile(source)
-        assert isinstance(stmt, ObjectStatement)
+        assert isinstance(stmt, ObjectEvaluator)
         self.assertIsInstance(stmt.entries["name"], NavigationStatement)
-        assert isinstance(stmt.entries["tags"], ArrayStatement)
+        assert isinstance(stmt.entries["tags"], ArrayEvaluator)
         self.assertIsInstance(stmt.entries["tags"].items[0], str)
         self.assertIsInstance(stmt.entries["tags"].items[1], NavigationStatement)
-        assert isinstance(stmt.entries["address"], ObjectStatement)
+        assert isinstance(stmt.entries["address"], ObjectEvaluator)
         self.assertIsInstance(stmt.entries["address"].entries["city"], NavigationStatement)
         self.assertIsInstance(stmt.entries["address"].entries["zip"], str)
 

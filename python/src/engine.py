@@ -250,9 +250,68 @@ class JFTLCompiler(DocCompiler):
     
     _logicCompiler : Optional[LogicCompiler] = None
 
+    def _parse_object_statement(self, source: dict, where: str, action: dict) -> dict | JFTLNotice:
+
+        # Validate object constructor
+        # 1. no foreach
+        # 2. len(source) > 1
+        # 3. no out,
+        # 4. last element of cases (if any) does not have "else"
+        cases = action.get("cases")
+        if len(source) == 1:
+            return JFTLNotice(code="BAD-OBJECT-LOGIC", message=f'Object Statement must have additional attributes, not just { "$": { ... }}')
+
+        if ( "foreach" in action
+            or "transform" in action
+            or "output" in action
+            or (isinstance(cases, list) and cases and cases[-1].get("else") is not None)
+        ):
+            return JFTLNotice(code="BAD-OBJECT-STATEMENT", message=f"Object logic can not have 'foreach', 'transform', 'output', or 'cases' with 'else')")
+
+        # Rebuild the logic statement, setting out/cases
+        stmt = dict(action)
+        stmt["$"] = True
+        new_out = dict(source)
+        new_out.pop("$")
+        if isinstance(cases, list):
+            stmt["cases"] = cases + [{ "else": new_out }]
+        else:
+            stmt["out"]  = new_out
+        return stmt
+
+    def _parse_array_statement(self, source: list, where: str, action: dict, out: Any) -> dict | JFTLNotice:
+        foreach = action.get("foreach")
+        if not isinstance(foreach, dict):
+            return JFTLNotice(code="BAD-ARRAY-FOREACH", message=f"Must have 'foreach' when using building arrays)")
+        
+        cases = foreach.get("cases")
+        if ( "transform" in action
+            or "output" in action
+            or (isinstance(cases, list) and cases and cases[-1].get("else") is not None)
+        ):
+            return JFTLNotice(code="BAD-ARRAY-STATEMENT", message=f"Object logic can not have 'foreach', 'transform', 'output', or 'cases' with 'else')")
+
+        stmt = dict(action)
+        new_foreach = dict(foreach)
+        stmt["$"] = True
+        stmt["foreach"] = new_foreach
+        if isinstance(cases, list):
+            new_foreach["cases"] = cases  +[{ "else": out }]
+        else:
+            new_foreach["out"] = out
+        return stmt
+
+
     def _compile_action(self, source: dict, where: str = "") -> COMPILE_DOC:
 
         action = source.get("$", JSON_UNSET)
+        if isinstance(action, dict):
+            new_source = self._parse_object_statement(source, where, action)
+            if isinstance(new_source, JFTLNotice):
+                return new_source
+            source = new_source            
+            action = source.get('$', JSON_UNSET)
+
         if action is True:
             error_count = self._error_count
             if self._logicCompiler is None:  
@@ -283,7 +342,17 @@ class JFTLCompiler(DocCompiler):
         # Simple Literal returned here
         if isinstance(source, (int, float, bool, NoneType)):
             return source
-                                   
+
+        # Special case - array constructor
+        if (isinstance(source, list)
+            and len(source) == 2
+            and isinstance((first := source[0]), dict)
+            and len(first) == 1
+            and isinstance(action := first.get('$'), dict)
+        ):
+            new_source = self._parse_array_statement(source, where, action, source[1])
+            source = new_source
+
         # Handle Dictionary objects. Use '$' attribute to classify into logic, literal, macro or other.
         if isinstance(source, dict):
 
@@ -303,7 +372,7 @@ class JFTLCompiler(DocCompiler):
             if all(isinstance(x, (NoneType, bool, int, float, str, LiteralStatement)) for x in entries.values()):
                 return LiteralStatement( value= dict({ k: self._unliteral(v) for k,v in source.items() }) )
 
-            return ObjectStatement(entries=dict(entries))
+            return ObjectEvaluator(entries=dict(entries))
 
 
         if isinstance(source, list):
@@ -311,6 +380,8 @@ class JFTLCompiler(DocCompiler):
             # Unnested tree can be converted to literal quickly
             if all(isinstance(x, (NoneType, bool, int, float)) for x in source):
                 return LiteralStatement(value=source)
+
+
 
             items = [self._compile(v, where=f"{where}[{i}]") for i, v in enumerate(source)]
             for err in ( e for e in items if isinstance(e, JFTLNotice)):
@@ -320,7 +391,7 @@ class JFTLCompiler(DocCompiler):
             if all(isinstance(x, (NoneType, bool, int, float, str, LiteralStatement)) for x in items):
                 return LiteralStatement(value=list(self._unliteral(x) for x in items))
 
-            return ArrayStatement(items=items)
+            return ArrayEvaluator(items=items)
 
         # Scalar Cases - string
         if isinstance(source, str):
@@ -338,16 +409,15 @@ class JFTLCompiler(DocCompiler):
         return self._compile_str(source, where)
 
     def compile(self, source: Any, where: str = "", record: bool = False) -> COMPILE_DOC:
-        compiled = None
         try:
             compiled = self._compile(source, where)
             if isinstance(compiled, JFTLNotice) and record:
                 self._add_error(compiled)
+            return compiled
         except CompileError as ex:
             self._fail = True
             self._errors.append(ex.notice)
             self._error_count += 1
-        return compiled
 
     def compile_root(self, source: Any, where: str = "") -> tuple[Any, bool, list[JFTLNotice]]:
         self._fail = False
@@ -389,13 +459,13 @@ class JFTLRenderer():
         # or "mixed" literal/statement, which get converted to ObjectStatement. This is kept in case the
         # compiler will decide to keep a dictionary in "unknown" state.
         if isinstance(source, dict):
-            return ObjectStatement.eval_object(frame, source)
+            return ObjectEvaluator.eval_object(frame, source)
 
         # Most liekly, below not used, and arrays are either "all-lieteral" (converted into LiteralStatement),
         # or "mixed" literal/statement, which get converted to ArrayStatement. This is kept in case the
         # compiler will decide to keep array ni "unknown" state.
         if isinstance(source, RUNTIME_LIST_LIKE):
-            return ArrayStatement.eval_array(frame, source)
+            return ArrayEvaluator.eval_array(frame, source)
        
         return source
     
@@ -502,7 +572,7 @@ class JFTLEngine(Engine):
 
 
 @dataclass(kw_only=True)
-class ObjectStatement(Evaluator):
+class ObjectEvaluator(Evaluator):
     entries: dict[str, COMPILE_DOC]
 
     @staticmethod
@@ -523,7 +593,7 @@ class ObjectStatement(Evaluator):
         return self.eval_object(ctx, self.entries)
 
 @dataclass(kw_only=True)
-class ArrayStatement(Evaluator):
+class ArrayEvaluator(Evaluator):
     items: list[COMPILE_DOC]
 
     @staticmethod
