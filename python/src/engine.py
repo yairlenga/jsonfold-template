@@ -6,10 +6,10 @@ import re
 
 from core import Frame
 from logic import LogicCompiler
+from navigation import NAV_RE_STR, NavigationCompiler
 from template import Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
 from model import COMPILE_DOC, JFTL_BREAK, JFTL_NONE, JFTL_SKIP, JSON_DOC, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler
-from navigation import NAV_RE_STR, NavigationCompiler
 
 from typing import Any
 

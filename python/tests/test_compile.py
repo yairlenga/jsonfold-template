@@ -4,6 +4,7 @@ No eval() calls here; that's a separate concern (step 2: Evaluate).
 
 Run with:  python -m unittest test_compile.py -v
 """
+from typing import Any
 import unittest
 
 from navigation import NavigationStatement
@@ -56,7 +57,11 @@ class TestPathStatements(unittest.TestCase):
         stmt = compile("$.user.name")
         assert(isinstance(stmt, NavigationStatement))
         self.assertIsInstance(stmt, NavigationStatement)
-        self.assertEqual(stmt._path, ".user.name")
+        self.assertEqual(stmt._start, "_data") # pyright: ignore[reportPrivateUsage]
+        segments : list[Any] = stmt._segments # pyright: ignore[reportPrivateUsage]
+        assert len(segments) == 2
+        self.assertEqual(segments[0].name, "user") 
+        self.assertEqual(segments[1].name, "name")
 
     def test_bare_dollar_dot_is_ok(self):
         # "$." alone — a dot with nothing after it is not a valid path segment

@@ -56,44 +56,18 @@ class VariableStatement(Evaluator):
 class NavigationStatement(Evaluator):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
-    def __init__(self, path: str, start: Literal["_data", "_parent.data", "_input"] | str= "_data", where: str = "", strict: bool = False ):
-        super().__init__(where, path)
-        self._path = path
+    def __init__(self, where: str, source_code: str, *,
+                 start: Literal["_data", "_frame", "_parent.data", "_input"] | str, 
+                 segments: list[PathSegment],
+                 strict: bool
+                 ):
+        super().__init__(where, source_code)
         self.where = where   # for diagnostics, e.g. "user.items[0].name"
         self._start = start
-        self._segments = self._compile(path)
+        self._segments = segments
         self._strict = strict
 
-    def _compile(self, path_text: str) -> list[PathSegment]:
 
-        segments: list[PathSegment] = []
-
-        pos = 0
-
-        for m in _SEGMENT_RE.finditer(path_text):
-            if m.start() != pos:
-                raise CompileError(JFTLNotice(
-                    code="INVALID_PATH", where=self.where, location=None,
-                    message=f"unexpected text at position {pos} in {path_text!r}"))
-            pos = m.end()
-
-            if m.group("word") is not None:
-                segments.append(Key(m.group("word")))
-            elif m.group("index") is not None:
-                segments.append(Index(int(m.group("index"))))
-            elif m.group("dq") is not None:
-                segments.append(Key(m.group("dq")))
-            elif m.group("sq") is not None:
-                segments.append(Key(m.group("sq")))
-            elif m.group("var") is not None:
-                segments.append(Var(m.group("var")))
-
-        if pos != len(path_text):
-            raise CompileError(JFTLNotice(
-                code="INVALID_PATH",where=self.where, location=None,
-                message=f"trailing unparsed text at position {pos} in {path_text!r}"))
-
-        return segments
     
     @_profile
     def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
@@ -170,38 +144,73 @@ class NavigationCompiler(StatementCompiler):
     strict: bool = False
     _NAV_RE = re.compile("^" + NAV_RE_STR + "$", re.VERBOSE)
 
-    def parse_nav(self, m: re.Match[str], where) -> NavigationStatement | VariableStatement | JFTLNotice:
+    @staticmethod
+    def _parse_segments(where: str, path_text: str) -> list[PathSegment]:
 
-        start = None
-        head = m.group("start")
-        segments = m.group("segments")
-        if head == "$":
+        segments: list[PathSegment] = []
+
+        pos = 0
+
+        for m in _SEGMENT_RE.finditer(path_text):
+            if m.start() != pos:
+                raise CompileError(JFTLNotice(
+                    code="INVALID_PATH", where=where, location=None,
+                    message=f"unexpected text at position {pos} in {path_text!r}"))
+            pos = m.end()
+
+            if m.group("word") is not None:
+                segments.append(Key(m.group("word")))
+            elif m.group("index") is not None:
+                segments.append(Index(int(m.group("index"))))
+            elif m.group("dq") is not None:
+                segments.append(Key(m.group("dq")))
+            elif m.group("sq") is not None:
+                segments.append(Key(m.group("sq")))
+            elif m.group("var") is not None:
+                segments.append(Var(m.group("var")))
+
+        if pos != len(path_text):
+            raise CompileError(JFTLNotice(
+                code="INVALID_PATH",where=where, location=None,
+                message=f"trailing unparsed text at position {pos} in {path_text!r}"))
+
+        return segments    
+
+    @classmethod
+    def parse_nav(cls, m: re.Match[str], where, *, strict: bool = False) -> NavigationStatement | VariableStatement | JFTLNotice:
+
+        start_part = m.group("start")
+        segments_part = m.group("segments")
+        start = ""
+        if start_part == "$":
             start = "_data"
-        elif head == "$^":
+        elif start_part == "$^":
             start = "_input"
-        elif head == "$%":
+        elif start_part == "$%":
             start = "_frame"
-        elif head == "$<":
+        elif start_part == "$<":
             start = "_parent._data"
-        elif (vars := m.group("vars")) != "":
+        elif (vars := m.group("vars")):
             # Convert $foo.bar to .foo.bar, starting with implied "_.vars"
-            start = vars
-            if not segments:
+            start : str = vars
+            if not segments_part:
                 return VariableStatement(name=vars)                
 
         if not start:
-            return JFTLNotice(code="BAD-NAV-SYNTAX", message=f"Unknown start: '${head}", where=where)
+            return JFTLNotice(code="BAD-NAV-SYNTAX", message=f"Unknown start: '${start_part}", where=where)
         
-        expr = NavigationStatement(segments, start=start, where=where, strict=self.strict)
+        segments = cls._parse_segments(where, segments_part)
+        source_code : str = m[0]
+        expr = NavigationStatement(where, source_code, start=start, segments=segments, strict=strict)
         return expr
 
-    def parse(self, source, where):
+    def _parse(self, source, where):
 
         m = self._NAV_RE.match(source)
         if not m:
             return JFTLNotice(code="BAD-NAV-SYNTAX", message=f"Unknown navigation: '${source}", where=where)
         
-        expr = self.parse_nav(m, where)
+        expr = self.parse_nav(m, where, strict = self.strict)
         if not expr:
             return JFTLNotice(code="BAD-NAV-EXPR", message=f"Unknown navigation: '${source}", where=where)
         
@@ -209,7 +218,7 @@ class NavigationCompiler(StatementCompiler):
 
     def compile_str(self, source: Any | str, where: str = "") -> COMPILE_DOC:
         assert isinstance(source, str)
-        expr = self.parse(source, where)
+        expr = self._parse(source, where)
         return expr
     
 

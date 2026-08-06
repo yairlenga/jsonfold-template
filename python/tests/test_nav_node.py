@@ -15,7 +15,7 @@ import unittest
 
 from core import Frame, Environment
 from model import _NULL_TEMPLATE, CompileError # pyright: ignore[reportPrivateUsage]
-from navigation import NavigationStatement
+from navigation import NavigationCompiler, NavigationStatement
 from template import Missing
 
 
@@ -32,57 +32,62 @@ def make_child(parent: Frame, current):
 
 
 def nav(text: str, where="nav") -> NavigationStatement:
-    return NavigationStatement(text, where=where)
+    m = NavigationCompiler._NAV_RE.match(text) # pyright: ignore[reportPrivateUsage]
+    assert m
+    stmt = NavigationCompiler.parse_nav(m, None)
+    assert isinstance(stmt, NavigationStatement)
+    return stmt
+
 
 
 class TestBasicNavigation(unittest.TestCase):
 
     def test_bare_nested_key(self):
         root = make_root({"user": {"name": "Alice"}})
-        self.assertEqual(nav(".user.name").eval(root), "Alice")
+        self.assertEqual(nav("$.user.name").eval(root), "Alice")
 
     def test_array_index(self):
         root = make_root({"items": [10, 20, 30]})
-        self.assertEqual(nav(".items[1]").eval(root), 20)
+        self.assertEqual(nav("$.items[1]").eval(root), 20)
 
     def test_negative_index(self):
         root = make_root({"items": [10, 20, 30]})
-        self.assertEqual(nav(".items[-1]").eval(root), 30)
+        self.assertEqual(nav("$.items[-1]").eval(root), 30)
 
 
 class TestQuotedKeys(unittest.TestCase):
 
     def test_single_quoted_key_with_space(self):
         root = make_root({"first name": "Alice"})
-        self.assertEqual(nav("['first name']").eval(root), "Alice")
+        self.assertEqual(nav("$['first name']").eval(root), "Alice")
 
     def test_double_quoted_key_with_apostrophe(self):
         root = make_root({"O'brien": "yes"})
-        self.assertEqual(nav("[\"O'brien\"]").eval(root), "yes")
+        self.assertEqual(nav("$[\"O'brien\"]").eval(root), "yes")
 
 
 class TestMissingValues(unittest.TestCase):
 
     def test_missing_key_returns_missing(self):
         root = make_root({"user": {"name": "Alice"}})
-        result = nav(".user.age").eval(root)
+        result = nav("$.user.age").eval(root)
         self.assertIsInstance(result, Missing)
 
     def test_missing_index_returns_missing(self):
         root = make_root({"items": [1, 2]})
-        result = nav(".items[5]").eval(root)
+        result = nav("$.items[5]").eval(root)
         self.assertIsInstance(result, Missing)
 
     def test_missing_is_falsy(self):
         root = make_root({"items": [1, 2]})
-        result = nav(".items[5]").eval(root)
+        result = nav("$.items[5]").eval(root)
         self.assertFalse(bool(result))
 
     def test_missing_propagates_through_further_navigation(self):
         # Once `value` becomes Missing mid-chain, eval() must short-circuit
         # rather than attempting dict/list indexing on it.
         root = make_root({"user": {}})
-        result = nav(".user.address.zip").eval(root)
+        result = nav("$.user.address.zip").eval(root)
         self.assertIsInstance(result, Missing)
 
 
@@ -90,23 +95,23 @@ class TestMalformedPaths(unittest.TestCase):
 
     def test_malformed_path_stray_character(self):
         with self.assertRaises(CompileError) as ctx:
-            nav(".foo!bar")
+            nav("$.foo!bar")
         self.assertEqual(ctx.exception.notice.code, "INVALID_PATH")
 
     def test_up_not_at_start_is_rejected(self):
         with self.assertRaises(CompileError) as ctx:
-            nav(".foo.^.bar")
+            nav("$.foo.^.bar")
         self.assertEqual(ctx.exception.notice.code, "INVALID_PATH")
 
 class TestEvalBool(unittest.TestCase):
 
     def test_eval_bool_true_for_present_truthy_value(self):
         root = make_root({"flag": True})
-        self.assertIs(nav(".flag").eval_bool(root), True)
+        self.assertIs(nav("$.flag").eval_bool(root), True)
 
     def test_eval_bool_false_for_missing(self):
         root = make_root({})
-        result = nav(".flag").eval(root)
+        result = nav("$.flag").eval(root)
         # eval_bool currently propagates Missing rather than coercing to bool —
         # confirm this is the intended contract (Missing IS falsy, but is not `False`).
         self.assertIsInstance(result, Missing)
