@@ -13,7 +13,7 @@ A logic element is a JSON object with `"$": true` that drives JFTL's non-literal
 
 A logic element runs in its own child frame — variables set via `set` (and the loop variables from `foreach`) are local to that element and anything nested inside it. See `variables.md` for full scoping rules.
 
-Expressions inside a logic element (`"if"`, `"out"`, `"data"`, etc.) can be navigation (`navigation.md`), interpolated strings (`interpolation.md`), or expression-engine calls (`expression-engines.md`). This page only describes the logic pipeline itself — the keys, their order, and what each stage does.
+Expressions inside a logic element (`"check"`, `"out"`, `"data"`, etc.) can be navigation (`navigation.md`), interpolated strings (`interpolation.md`), or expression-engine calls (`expression-engines.md`). This page only describes the logic pipeline itself — the keys, their order, and what each stage does.
 
 ---
 
@@ -23,22 +23,22 @@ A logic element is evaluated in four stages, in order. Every stage is optional �
 
 | Stage | Key(s) | Purpose |
 |---|---|---|
-| 1 — Setup | `set`, `if`, `data` | Declare local variables, gate execution, replace current data |
+| 1 — Setup | `set`, `check`, `data` | Declare local variables, gate execution, replace current data |
 | 2 — Foreach | `foreach` | Iterate over an array, object, or numeric range |
 | 3 — Output | `case` / `out`, `transform` | Select/produce and reshape the final value |
-| 4 — Fallback | `default` / `error` | Fallback values if the pipeline produced missing/error |
+| 4 — Fallback | `fallback` / `error` | Fallback values if the pipeline produced missing/error |
 
 If any stage produces `Missing` or an error, evaluation stops early and falls through to Stage 4 — later stages are skipped.
 
 ---
 
-## Stage 1 — Setup: `set`, `if`, `data`
+## Stage 1 — Setup: `set`, `check`, `data`
 
 These three run in order, in the same frame, before any iteration or output logic.
 
 ### `set`
 
-An object mapping variable names to expressions. Each is evaluated in order and bound as a local variable, visible for the rest of this logic element (including `if`, `data`, `foreach`, `case`, `out`) and to nested logic elements.
+An object mapping variable names to expressions. Each is evaluated in order and bound as a local variable, visible for the rest of this logic element (including `check`, `data`, `foreach`, `case`, `out`) and to nested logic elements.
 
 ```json
 {
@@ -50,19 +50,19 @@ An object mapping variable names to expressions. Each is evaluated in order and 
 
 The **first** frame containing user-defined variables establishes the render’s global variable scope. See `variables.md`.
 
-### `if`
+### `check`
 
-A condition, checked right after `set`. If it evaluates false, the entire logic element evaluates to `Missing` and **every later stage is skipped — including `data`**. If omitted, `if` defaults to `true`.
+A condition, checked right after `set`. If it evaluates false, the entire logic element evaluates to `Missing` and **every later stage is skipped — including `data`**. If omitted, `check` defaults to `true`.
 
 ```json
-{ "$": true, "if": "$py=_.age >= 18", "out": true, "default": false }
+{ "$": true, "check": "$py=_.age >= 18", "out": true, "fallback": false }
 ```
 
-If `if` itself evaluates to an error notice, that error propagates to `error` handling (Stage 4), not `default`.
+If `check` itself evaluates to an error notice, that error propagates to `error` handling (Stage 4), not `fallback`.
 
 ### `data`
 
-Only runs if `if` passed. Replaces the "current" value (`_`) used by the rest of the pipeline — `foreach`'s default source and anything downstream that reads `_`. If omitted, `_` stays whatever it already was on entry to this logic element.
+Only runs if `check` passed. Replaces the "current" value (`_`) used by the rest of the pipeline — `foreach`'s default source and anything downstream that reads `_`. If omitted, `_` stays whatever it already was on entry to this logic element.
 
 ```json
 {
@@ -92,7 +92,7 @@ Only runs if `if` passed. Replaces the "current" value (`_`) used by the rest of
     "in": "$.items",
     "var": "item",
     "key": "k",
-    "if": "$py=item['active']",
+    "where": "$py=item['active']",
     "out": "$item.sku",
     "update": { "count": "$py=(count or 0) + 1" }
   }
@@ -103,7 +103,7 @@ Only runs if `if` passed. Replaces the "current" value (`_`) used by the rest of
 
 - `in` — the collection to iterate. If omitted, defaults to the current `_` (i.e. Stage 1's result).
 - Accepts an **array** (iterates by position), an **object** (iterates key/value pairs, result is an object), or a non-negative **integer** (iterates the numeric range `start` .. `in-1`, like Pthons rnage `range(start, in)`).
-- If the source is **`null`/`Missing`**, `foreach` produces `Missing` for the whole logic element — falling through to Stage 4's `default`, the same as a false `if`. This is a "soft" outcome, not an error: a missing/absent collection is treated as an expected, recoverable case.
+- If the source is **`null`/`Missing`**, `foreach` produces `Missing` for the whole logic element — falling through to Stage 4's `fallback`, the same as a false `check`. This is a "soft" outcome, not an error: a missing/absent collection is treated as an expected, recoverable case.
 - If the source is anything else (a string, a float, a boolean, etc.), it's a hard error (`FOREACH_IN`), falling through to Stage 4's `error` instead.
 
 
@@ -111,8 +111,8 @@ Only runs if `if` passed. Replaces the "current" value (`_`) used by the rest of
 
 - `start` (default `0`), `stop` (default: end), `limit` (max number of *output* items).
 - Negative `start`/`stop` resolve against the total item count (array length, object item count, or range bound) — like Python negative slicing.
-- `start`/`stop` windowing applies to raw source positions, *before* the per-item `if` filter runs. An item excluded by `start`/`stop` is skipped outright; an item excluded by `if` is skipped only after being counted toward the window. These are independent — `start`/`stop` doesn't count only condition-matching items.
-- `limit` caps the number of items actually included in the *result* (after `if` filtering), and stops iteration early once reached. In particular, `limit: 1` efficiently implements “find the first item that matches,” because iteration stops after the first accepted output.
+- `start`/`stop` windowing applies to raw source positions, *before* the per-item `check` filter runs. An item excluded by `start`/`stop` is skipped outright; an item excluded by `check` is skipped only after being counted toward the window. These are independent — `start`/`stop` doesn't count only condition-matching items.
+- `limit` caps the number of items actually included in the *result* (after `check` filtering), and stops iteration early once reached. In particular, `limit: 1` efficiently implements “find the first item that matches,” because iteration stops after the first accepted output.
 
 When iterating over **array** or **object**, `start` and `stop` negative indices indicate position from the tail, therefore stop=-2 will not iterate over the last 2 elements, and start=-5 will start from the 5th element from the tail. 
 
@@ -128,7 +128,7 @@ When iterating over **array**, the key variable (or the default `_key`) is the (
 Note that when `start` is used on an **object** or **array**, the key references the position of the item in the original source. If `start` is used over integer range, it reduces the range, and the first key will be 0.
 
 
-### Per-item filter (`if`)
+### Per-item filter (`where`)
 
 Same truthiness rule used throughout JFTL: `false`, `null`, and `Missing` are falsy, everything else truthy. An item failing this condition is skipped — not included in the result, doesn't count against `limit`.
 
@@ -214,11 +214,11 @@ Names a structural transformation applied to the `case`/`out` result. See `trans
 
 ---
 
-## Stage 4 — Fallback: `default` / `error`
+## Stage 4 — Fallback: `fallback` / `error`
 
 Checked at the very end, and also whenever an earlier stage produces missing/error (short-circuiting the rest of the pipeline):
 
-- `default` — used whenever the pipeline's result is `Missing` at any point (a false `if`, an unset `out`, etc.).
+- `fallback` — used whenever the pipeline's result is `Missing` at any point (a false `check`, an unset `out`, etc.).
 - `error` — used whenever the pipeline's result is an error at any point.
 
 ```json
@@ -226,7 +226,7 @@ Checked at the very end, and also whenever an earlier stage produces missing/err
   "$": true,
   "data": "$.optional_field",
   "out": "$py=_.upper()",
-  "default": "N/A",
+  "fallback": "N/A",
   "error": "invalid"
 }
 ```
@@ -242,14 +242,14 @@ Both are plain expressions (not case/out blocks) — evaluated fresh, in the sam
   "$": true,
 
   "set": { "VAR": "EXPR" },
-  "if": "COND",
+  "check": "COND",
   "data": "EXPR",
 
   "foreach": {
     "in": "EXPR",
     "var": "VAR", "key": "VAR",
     "start": "EXPR", "stop": "EXPR", "limit": "EXPR",
-    "if": "COND",
+    "where": "COND",
     "case": [ { "when": "COND", "then": "EXPR" } ..., { "else": "EXPR" } ],
     "out": "EXPR",
     "update": { "VAR": "EXPR" }
@@ -260,7 +260,7 @@ Both are plain expressions (not case/out blocks) — evaluated fresh, in the sam
 
   "transform": "merge",
 
-  "default": "EXPR",
+  "fallback": "EXPR",
   "error": "EXPR"
 }
 ```
@@ -277,7 +277,7 @@ Both are plain expressions (not case/out blocks) — evaluated fresh, in the sam
 ```
 **Template**
 ```json
-{ "main": { "$": true, "if": "$py=_.age >= 18", "out": true, "default": false } }
+{ "main": { "$": true, "check": "$py=_.age >= 18", "out": true, "fallback": false } }
 ```
 **Output**
 ```json
@@ -345,7 +345,7 @@ Windowing starts at position 1 (skips the first order), takes 2 items (`25`, `5`
 
 ## See Also
 
-- `navigation.md` — `$`, `.foo`, `[...]` path expressions used throughout `if`/`out`/`data`/etc.
+- `navigation.md` — `$`, `.foo`, `[...]` path expressions used throughout `check`/`out`/`data`/etc.
 - `interpolation.md` — `${...}` string interpolation.
 - `variables.md` — full list of built-in variables (`_`, `_input`, `_top`, `_global`, foreach specific vars, ...) and frame/scoping rules.
 - `expression-engines.md` — `$py=`, `$pyeval=`, `$pyrun=` and how to choose one.

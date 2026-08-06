@@ -23,8 +23,8 @@ can be applied by nesting Logic Statements if you need more than one).
 Two things worth knowing about when it runs:
 
 - **It's skipped if the value is `Missing`.** `transform` only runs when
-  something was generated — so a failed `if`, an empty `foreach` short-circuit,
-  etc., bypass `transform` entirely and fall straight through to `default`.
+  something was generated — so a failed `check`, an empty `foreach` short-circuit,
+  etc., bypass `transform` entirely and fall straight through to `fallback`.
 - **A transform's own errors are still recoverable via `error`.** If the
   transformer itself returns an error notice (wrong input shape, bad item
   type, ...), that flows into Stage 6 exactly like any other mid-pipeline
@@ -282,21 +282,14 @@ object; `TO_OBJECT_ITEM` if an entry isn't a valid pair/`{key,value}` shape;
 **Examples**
 
 ```json
-{ "$": true, "out": "$.pairs", "transform": "to_object" }
+{ "$": true, "out": "$.pairs", "transform": "from_pairs" }
 ```
 Input: `{"pairs": [["a", 1], ["b", 2]]}`
 Output: `{"a": 1, "b": 2}`
 
 ```json
-{ "$": true, "out": "$.entries", "transform": "to_object" }
+{ "$": true, "out": "$.entries", "transform": "from_kv" }
 ```
 Input: `{"entries": [{"key": "a", "value": 1}, {"key": "b", "value": 2}]}`
 Output: `{"a": 1, "b": 2}`
 
-```json
-{ "$": true, "out": "$.by_id", "transform": "to_object" }
-```
-Input: `{"by_id": {"row1": ["a", 1], "row2": ["b", 2]}}`
-(a object input — only the values `["a", 1]` / `["b", 2]` are used as
-entries; `row1`/`row2` themselves are discarded)
-Output: `{"a": 1, "b": 2}`

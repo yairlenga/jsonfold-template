@@ -41,7 +41,7 @@ Represents the absence of a value.
 Unlike JSON `null`, `_missing` indicates that no value existed or no value was produced. In the final template result they get converted to null, but until that point, they remain distinct, making it possible to distinguish between the `null` value no-value present. They are similar to the JavaScript `undefined`. The `_missing` value is treated as false in conditions (similar to `null`),
 
 #### Examples
-In the following example, both "missing" and "nonexisting" will show "Nothing" is the output. Both the $nonexisting expression, and the explicit `_missing` variable resolve to the missing value, which is converted to the string "Nothing" by the `default` clause. Without the `default` clause, they `_missing` value will be converted to `null` in the final output.
+In the following example, both "missing" and "nonexisting" will show "Nothing" is the output. Both the $nonexisting expression, and the explicit `_missing` variable resolve to the missing value, which is converted to the string "Nothing" by the `fallback` clause. Without the `fallback` clause, they `_missing` value will be converted to `null` in the final output.
 
 ```json
 // Template
@@ -49,7 +49,7 @@ In the following example, both "missing" and "nonexisting" will show "Nothing" i
     "main": {
         "$": true,
         "data": { "foo": "bar", "null": null, "missing": "$_missing", "nonexisting": "$nonexisting" },
-        "foreach": { "out": { "$": true, "default": "Nothing" }}
+        "foreach": { "out": { "$": true, "fallback": "Nothing" }}
     }
 }
 // Output
@@ -67,14 +67,14 @@ In the following example, both "missing" and "nonexisting" will show "Nothing" i
 * an array index outside the array bounds;
 * lookup of an undefined variable;
 * navigation through a `null` or `missing` value;
-* Failed `if` condition, which are used to guard complete statement;
+* Failed `check` condition, which are used to guard complete statement;
 * a `case` with no matching branch and no `else`;
 * a `for` statement that iterate thru a `null` or `_missing` container;
 * an explicit `$_missing`.
 
 `Missing` is treated as false in JFTL conditions.
 
-A logic element may replace `Missing` using `default`.
+A logic element may replace `Missing` using `fallback`.
 
 ---
 
@@ -170,7 +170,7 @@ In the following example, `_error` is unhandled. Since `main` here is a plain ob
 [ERROR] GENERIC-ERROR: Unspecific Error
 ```
 
-In the next example, the same failure occurs one level deeper — inside `data` — but this time the enclosing logic element has an `error` clause, which intercepts the error and supplies a replacement value instead. This mirrors how `default` recovers from `Missing`.
+In the next example, the same failure occurs one level deeper — inside `data` — but this time the enclosing logic element has an `error` clause, which intercepts the error and supplies a replacement value instead. This mirrors how `fallback` recovers from `Missing`.
 
 ```json
 // Template

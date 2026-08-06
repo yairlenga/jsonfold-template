@@ -4,20 +4,20 @@
 
 JFTL navigation implement a subset of the JSONPath grammar, extended with variables inspired by the SQL/JSON standard.
 
-Every navigation expression in JFTL resolve to a single JSON Value (from the original document, from the template, from external data, or calculated) — like a street address, customer object. If you need to work over many items — filtering, selecting, looping — that's what `foreach`, `if`, and `case` are for (see logic.md).
+Every navigation expression in JFTL resolve to a single JSON Value (from the original document, from the template, from external data, or calculated) — like a street address, customer object. If you need to work over many items — filtering, selecting, looping — that's what `foreach`, `check`, and `case` are for (see logic.md).
 
 Tactically, JFTL navigation expressions are singular queries, in the sense defined by the JSONPath standard (RFC 9535 §2.3.5.1): the grammar is restricted so that every valid expression is guaranteed, by construction, to resolve to at most one value — never a list of matches. There is no filtering, recursive descent, wildcards, slices, or unions; navigation is not a general query language, and isn't intended as one.
 
 If any path component cannot be resolved, the result is `Missing`.
 
-JFTL navigation does not support filters, recursive descent, wildcards, slices, unions, or any other JSONPath constructs that may select multiple nodes. Conditional logic and iteration are instead provided by JFTL's `if`, `case`, and `foreach` constructs (see `logic.md`).
+JFTL navigation does not support filters, recursive descent, wildcards, slices, unions, or any other JSONPath constructs that may select multiple nodes. Conditional logic and iteration are instead provided by JFTL's `check`, `case`, and `foreach` constructs (see `logic.md`).
 
 Every navigation expression resolves to **exactly one value**:
 
 * the referenced JSON value, if the path exists;
 * `Missing`, if any component of the path cannot be resolved.
 
-Navigation expressions never return lists of matching nodes. More complex selection and filtering are performed using JFTL's `foreach`, `if`, and `case` constructs (see `logic.md`).
+Navigation expressions never return lists of matching nodes. More complex selection and filtering are performed using JFTL's `foreach`, `check`, and `case` constructs (see `logic.md`).
 
 ---
 
@@ -259,7 +259,7 @@ Navigation expressions never fail simply because a path cannot be resolved.
 
 Instead, a missing object member, array element, variable, or computed key evaluates to `Missing`.
 
-This allows navigation expressions to compose naturally with JFTL's `if`, `default`, `case`, and other language constructs.
+This allows navigation expressions to compose naturally with JFTL's `check`, `fallback`, `case`, and other language constructs.
 
 ---
 

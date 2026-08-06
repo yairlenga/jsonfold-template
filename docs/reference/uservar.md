@@ -34,7 +34,7 @@ farther ones (`_build_env` in `py_run.py`, `_build_env` in `py_expr.py`).
 
 A Frame is *not* created for every statement — only specific constructs
 create one. Everything else (plain literals, navigation, interpolation,
-`if`/`data` inside a Logic Statement, etc.) evaluates against the Frame it
+`check`/`data` inside a Logic Statement, etc.) evaluates against the Frame it
 was given.
 
 ---
@@ -43,7 +43,7 @@ was given.
 
 Every time a Logic element (`{"$": true, ...}`) is evaluated, it calls
 `child_state()` on its enclosing Frame, producing a **new child Frame**
-before Stage 1 (`set`/`if`) runs:
+before Stage 1 (`set`/`check`) runs:
 
 - The new Frame's `vars` starts essentially empty (just internal
   bookkeeping entries like `_parent`/`_local`).
@@ -212,9 +212,9 @@ Input: `{"a": 3, "b": 4}` → Output: `7`
   "set": {
     "label": {
       "$": true,
-      "if": "$.active",
+      "check": "$.active",
       "out": "Active",
-      "default": "Inactive"
+      "fallback": "Inactive"
     }
   },
   "out": "$label"
