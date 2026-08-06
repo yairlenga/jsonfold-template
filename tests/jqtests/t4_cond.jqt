@@ -689,10 +689,10 @@ GOLD = {{{
 2
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": { "out": { "$": true, "if": "$", "out": "$", "fallback": "NULL-DETECTED" }}}}
+{"main": {"$": true, "foreach": { "out": { "$": true, "check": "$", "out": "$", "fallback": "NULL-DETECTED" }}}}
 }}}
 OUT_MODE=stream
-COMMENT=error with no message raises the current value itself as the payload, and catch immediately returns it — net effect is identity per item, so this degrades to the same no-var foreach + "$." pattern used throughout, needing no try/catch modeling at all. Streaming collected into one array instead of 3 outputs.
+COMMENT=error with no message raises the current value itself as the payload, and catch immediately returns it — net effect is identity per item, so this degrades to the same no-var foreach + "$" pattern used throughout, needing no try/catch modeling at all. Streaming collected into one array instead of 3 outputs.
 
 [283-cond]
 SKIP = JFTL does not catch source location yet

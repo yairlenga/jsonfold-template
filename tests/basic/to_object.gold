@@ -9,32 +9,8 @@
     "key2": "VALUE-2",
     "key3": "VALUE-3"
   },
-  "mixed": {
-    "list1": "LIST-1",
-    "key1": "VALUE-1",
-    "key2": "VALUE-2",
-    "list2": "LIST-2",
-    "key3": "VALUE-3",
-    "list3": "LIST-3"
-  },
-  "skip-null": {
-    "list1": "LIST-1",
-    "key1": "VALUE-1",
-    "key2": "VALUE-2",
-    "list2": "LIST-2",
-    "null": null,
-    "key3": "VALUE-3",
-    "list3": "LIST-3"
-  },
-  "skip-missing": {
-    "list1": "LIST-1",
-    "key1": "VALUE-1",
-    "key2": "VALUE-2",
-    "list2": "LIST-2",
-    "null": null,
-    "Missing": null,
-    "key3": "VALUE-3",
-    "list3": "LIST-3"
-  },
+  "mixed": "ERROR",
+  "skip-null": "ERROR",
+  "skip-missing": "ERROR",
   "_": "_"
 }

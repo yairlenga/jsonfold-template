@@ -39,7 +39,7 @@ class JFTLCompiler(DocCompiler):
     _max_debug = 0
 
     def plugin(self, name:str) -> Any:
-        return self._plugins[name]
+        return self._plugins.get(name)
 
     def _add_error(self, error: JFTLNotice) -> None:
         keep_msg = False

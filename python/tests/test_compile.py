@@ -64,7 +64,7 @@ class TestPathStatements(unittest.TestCase):
         self.assertEqual(segments[1].name, "name")
 
     def test_bare_dollar_dot_is_ok(self):
-        # "$." alone — a dot with nothing after it is not a valid path segment
+        # "$" alone — a dot with nothing after it is not a valid path segment
         stmt = compile("$")
         self.assertIsInstance(stmt, NavigationStatement)
 

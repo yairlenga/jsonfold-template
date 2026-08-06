@@ -68,8 +68,9 @@ do
 	shopt -u nullglob
         X= ; $JSONFOLD -q $jftl "${files[@]}" 2>&1 > $out || X=$?
 	if [ "$X" ] ; then
-		echo "FAIL $label (template status=$X)" >&2
-		continue
+            failed=$((failed+1))
+	    echo "FAIL $label (template status=$X)" >&2
+	    continue
 	fi
 
         if diff "$gold" "$out"

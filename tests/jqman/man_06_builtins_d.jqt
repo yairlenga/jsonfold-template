@@ -5,7 +5,7 @@ LEVEL=logic
 JQ = floor
 INPUT = 3.14159
 GOLD = 3
-JFTL = {"main": {"$": true, "body": "$pyrun= int(_ // 1)"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= int(_ // 1)"}}
 COMMENT=PYRUN. Python's `//` already rounds toward -inf like jq's floor (verified against negative numbers too), no math import needed.
 
 [BD-002-sqrt]
@@ -13,7 +13,7 @@ LEVEL=logic
 JQ = sqrt
 INPUT = 9
 GOLD = 3
-JFTL = {"main": {"$": true, "body": "$pyrun= _ ** 0.5"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= _ ** 0.5"}}
 COMMENT=PYRUN, no import needed.
 
 [BD-003-tonumber]
@@ -22,7 +22,7 @@ OUT_FMT=stream
 JQ = .[] | tonumber
 INPUT = [1, "1"]
 GOLD = [1, 1]
-JFTL = {"main": {"$": true, "body": "$pyrun= [int(x) if isinstance(x,str) else x for x in _]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [int(x) if isinstance(x,str) else x for x in _]"}}
 COMMENT=PYRUN+STREAM, simplified: only handles integer-looking strings (fine for this example's data), not jq's full numeric-string grammar.
 
 [BD-004-toboolean]
@@ -31,7 +31,7 @@ OUT_FMT=stream
 JQ = .[] | toboolean
 INPUT = ["true", "false", true, false]
 GOLD = [true, false, true, false]
-JFTL = {"main": {"$": true, "body": "$pyrun= [x if isinstance(x,bool) else (x == 'true') for x in _]"}}
+JFTL = {"main": {"$": true, "out" "$pyrun= [x if isinstance(x,bool) else (x == 'true') for x in _]"}}
 COMMENT=PYRUN+STREAM.
 
 [BD-005-tostring]
@@ -40,7 +40,7 @@ OUT_FMT=stream
 JQ = .[] | tostring
 INPUT = [1, "1", [1]]
 GOLD = ["1", "1", "[1]"]
-JFTL = {"main": {"$": true, "body": "$pyrun= [x if isinstance(x,str) else str(x) for x in _]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [x if isinstance(x,str) else str(x) for x in _]"}}
 COMMENT=PYRUN+STREAM, weak generalization: Python's str() happens to render this specific array the same as JSON would ("[1]"), but str() and JSON encoding diverge in general (None vs null, quote style, etc.) -- fine for this exact test, not a real tostring.
 
 [BD-006-type]
@@ -48,7 +48,7 @@ LEVEL=logic
 JQ = map(type)
 INPUT = [0, false, [], {}, null, "hello"]
 GOLD = ["number", "boolean", "array", "object", "null", "string"]
-JFTL = {"main": {"$": true, "body": "$pyrun= [('null' if x is None else 'boolean' if isinstance(x,bool) else 'number' if isinstance(x,(int,float)) else 'string' if isinstance(x,str) else 'array' if isinstance(x,list) else 'object') for x in _]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [('null' if x is None else 'boolean' if isinstance(x,bool) else 'number' if isinstance(x,(int,float)) else 'string' if isinstance(x,str) else 'array' if isinstance(x,list) else 'object') for x in _]"}}
 COMMENT=PYRUN. Checks bool before number since Python bool subclasses int.
 
 [BD-007-infinite-comparison]
@@ -57,7 +57,7 @@ OUT_FMT=stream
 JQ = .[] | (infinite * .) < 0
 INPUT = [-1, 1]
 GOLD = [true, false]
-JFTL = {"main": {"$": true, "body": "$pyrun= [(float('inf') * x) < 0 for x in _]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [(float('inf') * x) < 0 for x in _]"}}
 COMMENT=PYRUN+STREAM.
 
 [BD-008-infinite-nan-type]
@@ -66,7 +66,7 @@ OUT_FMT=stream
 JQ = infinite, nan | type
 INPUT = null
 GOLD = ["number", "number"]
-JFTL = {"main": {"$": true, "body": "$pyrun= ['number', 'number']"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= ['number', 'number']"}}
 COMMENT=PYRUN, constant (type of both infinite and nan is always "number").
 
 [BD-009-sort]
@@ -74,7 +74,7 @@ LEVEL=logic
 JQ = sort
 INPUT = [8,3,null,6]
 GOLD = [null,3,6,8]
-JFTL = {"main": {"$": true, "body": "$pyrun= sorted(_, key=lambda v: (0 if v is None else 1, v if v is not None else 0))"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= sorted(_, key=lambda v: (0 if v is None else 1, v if v is not None else 0))"}}
 COMMENT=PYRUN. Python can't compare None to int directly, so the sort key maps null to a lower tuple-rank -- only covers the null/number mix in this example, not jq's full type-ordering rules (booleans, strings, arrays, objects all have their own rank).
 
 [BD-010-sort-by-single]
@@ -82,7 +82,7 @@ LEVEL=logic
 JQ = sort_by(.foo)
 INPUT = [{"foo":4, "bar":10}, {"foo":3, "bar":10}, {"foo":2, "bar":1}]
 GOLD = [{"foo":2, "bar":1}, {"foo":3, "bar":10}, {"foo":4, "bar":10}]
-JFTL = {"main": {"$": true, "body": "$pyrun= sorted(_, key=lambda v: v.get('foo'))"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= sorted(_, key=lambda v: v.get('foo'))"}}
 COMMENT=PYRUN. Lambdas are valid inside a single Python expression.
 
 [BD-011-sort-by-multi]
@@ -90,7 +90,7 @@ LEVEL=logic
 JQ = sort_by(.foo, .bar)
 INPUT = [{"foo":4, "bar":10}, {"foo":3, "bar":20}, {"foo":2, "bar":1}, {"foo":3, "bar":10}]
 GOLD = [{"foo":2, "bar":1}, {"foo":3, "bar":10}, {"foo":3, "bar":20}, {"foo":4, "bar":10}]
-JFTL = {"main": {"$": true, "body": "$pyrun= sorted(_, key=lambda v: (v.get('foo'), v.get('bar')))"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= sorted(_, key=lambda v: (v.get('foo'), v.get('bar')))"}}
 COMMENT=PYRUN, tuple key for multi-field sort.
 
 [BD-012-group-by]
@@ -98,7 +98,7 @@ LEVEL=logic
 JQ = group_by(.foo)
 INPUT = [{"foo":1, "bar":10}, {"foo":3, "bar":100}, {"foo":1, "bar":1}]
 GOLD = [[{"foo":1, "bar":10}, {"foo":1, "bar":1}], [{"foo":3, "bar":100}]]
-JFTL = {"main": {"$": true, "body": "$pyrun= [[x for x in _ if x.get('foo')==k] for k in sorted(set(v.get('foo') for v in _))]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [[x for x in _ if x.get('foo')==k] for k in sorted(set(v.get('foo') for v in _))]"}}
 COMMENT=PYRUN. Nested comprehension avoids needing itertools.groupby (unconfirmed import access).
 
 [BD-013-min]
@@ -106,7 +106,7 @@ LEVEL=logic
 JQ = min
 INPUT = [5,4,2,7]
 GOLD = 2
-JFTL = {"main": {"$": true, "body": "$pyrun= min(_)"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= min(_)"}}
 COMMENT=PYRUN.
 
 [BD-014-max-by]
@@ -114,7 +114,7 @@ LEVEL=logic
 JQ = max_by(.foo)
 INPUT = [{"foo":1, "bar":14}, {"foo":2, "bar":3}]
 GOLD = {"foo":2, "bar":3}
-JFTL = {"main": {"$": true, "body": "$pyrun= max(_, key=lambda v: v.get('foo'))"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= max(_, key=lambda v: v.get('foo'))"}}
 COMMENT=PYRUN.
 
 [BD-015-unique]
@@ -122,7 +122,7 @@ LEVEL=logic
 JQ = unique
 INPUT = [1,2,5,3,5,3,1,3]
 GOLD = [1,2,3,5]
-JFTL = {"main": {"$": true, "body": "$pyrun= sorted(set(_))"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= sorted(set(_))"}}
 COMMENT=PYRUN.
 
 [BD-016-unique-by]
@@ -130,7 +130,7 @@ LEVEL=logic
 JQ = unique_by(.foo)
 INPUT = [{"foo": 1, "bar": 2}, {"foo": 1, "bar": 3}, {"foo": 4, "bar": 5}]
 GOLD = [{"foo": 1, "bar": 2}, {"foo": 4, "bar": 5}]
-JFTL = {"main": {"$": true, "body": "$pyrun= [[x for x in _ if x.get('foo')==k][0] for k in sorted(set(v.get('foo') for v in _))]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [[x for x in _ if x.get('foo')==k][0] for k in sorted(set(v.get('foo') for v in _))]"}}
 COMMENT=PYRUN, keeps first element per group (matches jq's documented "one out of every group" behavior for this example).
 
 [BD-017-unique-by-length]
@@ -138,5 +138,5 @@ LEVEL=logic
 JQ = unique_by(length)
 INPUT = ["chunky", "bacon", "kitten", "cicada", "asparagus"]
 GOLD = ["bacon", "chunky", "asparagus"]
-JFTL = {"main": {"$": true, "body": "$pyrun= [[x for x in _ if len(x)==k][0] for k in sorted(set(len(v) for v in _))]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [[x for x in _ if len(x)==k][0] for k in sorted(set(len(v) for v in _))]"}}
 COMMENT=PYRUN, same shape as BD-016 keyed by length instead of a field.

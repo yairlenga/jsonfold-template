@@ -164,7 +164,14 @@ for id in "${id_list[@]}" ; do
 		esac
 		echo "=== jf_template:" >> $err_file
 		out_fmt=${data["$id.OUT_FMT"]:-default}
+		inp_fmt=${data["$id.INP_FMT"]:-default}
 		jq_filter="."
+		case "$inp_fmt" in
+			default) ;;
+			stream) opt+=" --input-format=stream" ;;
+			*) error=${error:+, }"Bad INP_FMT=$inp_fmt" ;;
+		esac
+
 		case "$out_fmt" in
 			default) ;;
 			stream) jq_filter='.[]' ;;

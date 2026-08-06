@@ -107,70 +107,50 @@ class _JoinStrTransformer(Transformer):
         return self._transform(cast(list[str | None | Missing], input))
     
 # List[Pairs] | List[{key,value}] | Dict[Any, Pairs|{key,value}] -> Dict
-class _ToObjectTransformer(Transformer):
-    def _extract(self, entry: RUNTIME_DOC) -> tuple[Any, RUNTIME_DOC] | JFTLNotice:
-        if isinstance(entry, list):
-            if len(entry) != 2:
-                return JFTLNotice(
-                    code="TO_OBJECT_ITEM",
-                    message=f"The 'to_object' transformation expects a [key, value] pair, got list of length {len(entry)}",
-                )
-            return entry[0], entry[1]
-
-        if isinstance(entry, dict):
-            if len(entry) != 2 or "key" not in entry or "value" not in entry:
-                return JFTLNotice(
-                    code="TO_OBJECT_ITEM",
-                    message=f"The 'to_object' transformation expects an object with exactly 'key' and 'value', got {entry!r}",
-                )
-            return entry["key"], entry["value"]
-
-        return JFTLNotice(
-            code="TO_OBJECT_ITEM",
-            message=f"The 'to_object' transformation expects a [key, value] pair or {{key, value}} object, got {type(entry)}",
-        )
-
+class _PairsToObject(Transformer):
     def transform(self, input: RUNTIME_DOC) -> dict[str, RUNTIME_DOC] | JFTLNotice:
-        if isinstance(input, dict):
-            entries = input.values()
-        elif isinstance(input, list):
-            entries = input
-        else:
+        if not isinstance(input, list):
             return JFTLNotice(
                 code="TO_OBJECT_INPUT",
                 message=f"The 'to_object' transformation expects an array or object of entries, got {type(input)}",
             )
 
-        result: dict[str, RUNTIME_DOC] = {}
-        for entry in entries:
-            if isinstance(entry, RUNTIME_NULL_LIKE):
-                continue
+        pairs = [
+            [pair[0], pair[1] ]
+            for pair in input
+            if isinstance(pair, list)
+            and len(pair) == 2
+            and (isinstance(pair[0], str) or isinstance(pair[0], RUNTIME_NULL_LIKE) and isinstance(pair[1], RUNTIME_NULL_LIKE))
+        ]
 
-            pair = self._extract(entry)
-            if isinstance(pair, JFTLNotice):
-                return pair
+        if len(pairs) != len(input):
+            return JFTLNotice(
+                code="FROM-PAIRS-ITEM", message=f"from_pairs expect all items to be 2 element array of [ key, value ]"
+            )
+        
+        result = { k:v for k, v in pairs if isinstance(k, str) }
+        return result
 
-            # Ignore missing/None Entries
-            if isinstance(pair, RUNTIME_NULL_LIKE):
-                continue
+class _KVToObject(Transformer):
 
-            key, value = pair
-            # Silently ignore None/Missing entries
-            if isinstance(key, RUNTIME_NULL_LIKE) and isinstance(value, RUNTIME_NULL_LIKE):
-                continue
+    def transform(self, input: RUNTIME_DOC) -> dict[str, RUNTIME_DOC] | JFTLNotice:
+        if not isinstance(input, list):
+            return JFTLNotice(
+                code="FROM_KV_INPUT",
+                message=f"The 'from_kv' transformation expects an array or object of entries, got {type(input)}",
+            )
 
-            if not isinstance(key, str):
-                # Siltently ignore setting invalid keys to None/Missing
-                if isinstance(value, RUNTIME_NULL_LIKE):
-                    continue
-                return JFTLNotice(
-                    code="TO_MAP_BAD_KEY",
-                    message=f"Invalid key type {type(key)} in 'to_object' entry {entry!r}",
-                )
+        if any(not isinstance(pair, dict) or len(pair) != 2 or not isinstance(pair.get("key"), str) for pair in input):
+            return JFTLNotice(
+                code="FROM_KV-ITEM", message=f"from_pairs expect all items to be 2 element array of [ key, value ]"
+            )
 
-            result[key] = value  # later entries win on collision, matching 'merge'
+        pairs = cast(list[dict], input)
+        result = { pair.get("key"):pair.get("value") for pair in pairs }
 
         return result
+
+
 
 default_plugins : dict[str, type[Transformer]] = {
     "flatten": _FlattenningTransformer,
@@ -179,5 +159,6 @@ default_plugins : dict[str, type[Transformer]] = {
 
     "drop_missing": _DropMissingTransformer,
     "concat": _JoinStrTransformer,
-    "to_object": _ToObjectTransformer,
+    "from_pairs": _PairsToObject,
+    "from_kv": _KVToObject,
 }

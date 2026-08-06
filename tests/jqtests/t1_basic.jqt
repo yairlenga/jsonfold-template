@@ -29,7 +29,7 @@
 #   logic - uses {"$":true} (set/if/foreach/case/data/OUT_MODE/default) but
 #           never reads a named variable's value through an expression
 #           engine. Main trick: foreach with no "value" sets frame.current to
-#           the item each iteration, so body "$." re-emits it for free.
+#           the item each iteration, so body "$" re-emits it for free.
 #   py    - needs $py= and stays inside the whitelist above.
 #   eval  - needs $pyeval= (something outside the whitelist, still one
 #           expression).
@@ -359,7 +359,7 @@ GOLD = {{{
 JFTL= {{{
 { "main": {
     "$": true,
-    "out": [ { "a": "$.a", "b": "$.b" }, { "$": true, "out": [[ "$.d", "$.a" ]], "transform": "to_object"}, {"e": "$.b" }],
+    "out": [ { "a": "$.a", "b": "$.b" }, { "$": true, "out": [[ "$.d", "$.a" ]], "transform": "from_pairs"}, {"e": "$.b" }],
     "transform": "merge"
 }}
 }}}
@@ -381,7 +381,7 @@ JFTL= {{{
     "out": [
         { "a": "$.a" },
         { "b": "$.b" },
-        { "$": true, "set": { "k": "$py= f'a${1+1}'" }, "out": [[ "$k", "$[$k]" ]], "transform": "to_object"}
+        { "$": true, "set": { "k": "$py= f'a${1+1}'" }, "out": [[ "$k", "$[$k]" ]], "transform": "from_pairs"}
     ],
     "transform": "merge"
 }}

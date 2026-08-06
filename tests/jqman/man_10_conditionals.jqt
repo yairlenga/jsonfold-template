@@ -5,7 +5,7 @@ LEVEL=logic
 JQ = . == false
 INPUT = null
 GOLD = false
-JFTL = {"main": {"$": true, "body": "$pyrun= _ == False"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= _ == False"}}
 COMMENT=PYRUN.
 
 [CC-002-equality-object]
@@ -13,7 +13,7 @@ LEVEL=logic
 JQ = . == {"b": {"d": (4 + 1e-20), "c": 3}, "a":1}
 INPUT = {"a":1, "b": {"c": 3, "d": 4}}
 GOLD = true
-JFTL = {"main": {"$": true, "body": "$pyrun= _ == {'b': {'d': 4+1e-20, 'c':3}, 'a':1}"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= _ == {'b': {'d': 4+1e-20, 'c':3}, 'a':1}"}}
 COMMENT=PYRUN. Python dict equality already ignores key order, matches jq's object-equality rule.
 
 [CC-003-equality-stream]
@@ -22,7 +22,7 @@ OUT_FMT=stream
 JQ = .[] == 1
 INPUT = [1, 1.0, "1", "banana"]
 GOLD = [true, true, false, false]
-JFTL = {"main": {"$": true, "body": "$pyrun= [x==1 for x in _]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [x==1 for x in _]"}}
 COMMENT=PYRUN+STREAM. Python's `1.0 == 1` is also True and `"1" == 1` is also False (no implicit coercion) -- happens to match jq's strict-equality rule exactly here.
 
 [CC-004-if-elif-else]
@@ -30,7 +30,7 @@ LEVEL=logic
 JQ = if . == 0 then "zero" elif . == 1 then "one" else "many" end
 INPUT = 2
 GOLD = "many"
-JFTL = {"main": {"$": true, "body": "$pyrun= ('zero' if _==0 else ('one' if _==1 else 'many'))"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= ('zero' if _==0 else ('one' if _==1 else 'many'))"}}
 COMMENT=PYRUN. Python's chained ternary substitutes for if/elif/else -- this resolves the "is if a native JFTL construct" question from curated-batch 110 pragmatically, by not needing one.
 
 [CC-005-comparison]
@@ -38,7 +38,7 @@ LEVEL=logic
 JQ = . < 5
 INPUT = 2
 GOLD = true
-JFTL = {"main": {"$": true, "body": "$pyrun= _ < 5"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= _ < 5"}}
 COMMENT=PYRUN.
 
 [CC-006-and]
@@ -46,7 +46,7 @@ LEVEL=logic
 JQ = 42 and "a string"
 INPUT = null
 GOLD = true
-JFTL = {"main": {"$": true, "body": "$pyrun= bool(42) and bool('a string')"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= bool(42) and bool('a string')"}}
 COMMENT=PYRUN. Wrapped in bool() since jq's and/or always yield true/false, unlike Python's and/or which return one of the operands.
 
 [CC-007-or-stream]
@@ -55,7 +55,7 @@ OUT_FMT=stream
 JQ = (true, false) or false
 INPUT = null
 GOLD = [true, false]
-JFTL = {"main": {"$": true, "body": "$pyrun= [bool(x or False) for x in [True, False]]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [bool(x or False) for x in [True, False]]"}}
 COMMENT=PYRUN+STREAM.
 
 [CC-008-and-cartesian]
@@ -64,7 +64,7 @@ OUT_FMT=stream
 JQ = (true, true) and (true, false)
 INPUT = null
 GOLD = [true, false, true, false]
-JFTL = {"main": {"$": true, "body": "$pyrun= [bool(a and b) for a in [True,True] for b in [True,False]]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [bool(a and b) for a in [True,True] for b in [True,False]]"}}
 COMMENT=PYRUN+STREAM. Nested comprehension reproduces jq's cartesian-product evaluation of two generator operands.
 
 [CC-009-not]
@@ -72,7 +72,7 @@ LEVEL=logic
 JQ = [true, false | not]
 INPUT = null
 GOLD = [false, true]
-JFTL = {"main": {"$": true, "body": "$pyrun= [not x for x in [True,False]]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [not x for x in [True,False]]"}}
 COMMENT=PYRUN.
 
 [CC-010-alt-empty]
@@ -80,7 +80,7 @@ LEVEL=logic
 JQ = empty // 42
 INPUT = null
 GOLD = 42
-JFTL = {"main": {"$": true, "body": "$pyrun= 42"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= 42"}}
 COMMENT=PYRUN, constant (empty never contributes a value, so // always falls through to the right side here).
 
 [CC-011-alt-present]
@@ -88,7 +88,7 @@ LEVEL=logic
 JQ = .foo // 42
 INPUT = {"foo": 19}
 GOLD = 19
-JFTL = {"main": {"$": true, "body": "$pyrun= _.get('foo') if _.get('foo') not in (None, False) else 42"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= _.get('foo') if _.get('foo') not in (None, False) else 42"}}
 COMMENT=PYRUN.
 
 [CC-012-alt-missing]
@@ -96,7 +96,7 @@ LEVEL=logic
 JQ = .foo // 42
 INPUT = {}
 GOLD = 42
-JFTL = {"main": {"$": true, "body": "$pyrun= _.get('foo') if _.get('foo') not in (None, False) else 42"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= _.get('foo') if _.get('foo') not in (None, False) else 42"}}
 COMMENT=PYRUN, same template as CC-011.
 
 [CC-013-alt-generator-single]
@@ -104,7 +104,7 @@ LEVEL=logic
 JQ = (false, null, 1) // 42
 INPUT = null
 GOLD = 1
-JFTL = {"main": {"$": true, "body": "$pyrun= next((v for v in [False, None, 1] if v not in (None, False)), 42)"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= next((v for v in [False, None, 1] if v not in (None, False)), 42)"}}
 COMMENT=PYRUN. generator next()-with-default picks the first non-false/non-null value from the 3-value generator, or falls back to 42 -- matches jq's "// on a generator produces its first non-false/null value" rule.
 
 [CC-014-alt-per-value]
@@ -113,7 +113,7 @@ OUT_FMT=stream
 JQ = (false, null, 1) | . // 42
 INPUT = null
 GOLD = [42, 42, 1]
-JFTL = {"main": {"$": true, "body": "$pyrun= [v if v not in (None, False) else 42 for v in [False, None, 1]]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [v if v not in (None, False) else 42 for v in [False, None, 1]]"}}
 COMMENT=PYRUN+STREAM. Contrast with CC-013: piping through `.` first applies `// 42` independently to each value instead of to the generator as a whole -- exactly the distinction the manual calls out.
 
 [CC-015-try-catch-message]
@@ -121,7 +121,7 @@ LEVEL=logic
 JQ = try .a catch ". is not an object"
 INPUT = true
 GOLD = ". is not an object"
-JFTL = {"main": {"$": true, "body": "$pyrun= (_.get('a') if isinstance(_, dict) else '. is not an object')"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= (_.get('a') if isinstance(_, dict) else '. is not an object')"}}
 COMMENT=PYRUN. Type-check substitutes for exception-based try/catch (no confirmed native try/catch construct, and Python try/except is a statement, not usable inside a single expression).
 
 [CC-016-try-suppressed-drop]
@@ -129,7 +129,7 @@ LEVEL=logic
 JQ = [.[]|try .a]
 INPUT = [{}, true, {"a":1}]
 GOLD = [null, 1]
-JFTL = {"main": {"$": true, "body": "$pyrun= [x.get('a') for x in _ if isinstance(x, dict)]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [x.get('a') for x in _ if isinstance(x, dict)]"}}
 COMMENT=PYRUN. The `true` element would error on `.a` and (with no catch) gets swallowed by `empty`, dropping it entirely from the array -- the `if isinstance(x, dict)` filter reproduces that drop.
 
 [CC-017-try-catch-error-message]
@@ -137,7 +137,7 @@ LEVEL=logic
 JQ = try error("some exception") catch .
 INPUT = true
 GOLD = "some exception"
-JFTL = {"main": {"$": true, "body": "$pyrun= 'some exception'"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= 'some exception'"}}
 COMMENT=PYRUN, constant (this specific try/catch always raises and catches the same literal message regardless of input).
 
 [CC-018-optional-drop]
@@ -145,7 +145,7 @@ LEVEL=logic
 JQ = [.[] | .a?]
 INPUT = [{}, true, {"a":1}]
 GOLD = [null, 1]
-JFTL = {"main": {"$": true, "body": "$pyrun= [x.get('a') for x in _ if isinstance(x, dict)]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [x.get('a') for x in _ if isinstance(x, dict)]"}}
 COMMENT=PYRUN, same template as CC-016 -- `?` is shorthand for `try`, same example restated.
 
 [CC-019-optional-tonumber]
@@ -153,5 +153,5 @@ LEVEL=logic
 JQ = [.[] | tonumber?]
 INPUT = ["1", "invalid", "3", 4]
 GOLD = [1, 3, 4]
-JFTL = {"main": {"$": true, "body": "$pyrun= [int(x) if isinstance(x,str) else x for x in _ if (isinstance(x,str) and x.lstrip('-').isdigit()) or isinstance(x,(int,float))]"}}
+JFTL = {"main": {"$": true, "out": "$pyrun= [int(x) if isinstance(x,str) else x for x in _ if (isinstance(x,str) and x.lstrip('-').isdigit()) or isinstance(x,(int,float))]"}}
 COMMENT=PYRUN. Filters out values that would fail tonumber (here, "invalid") before converting the rest -- same drop-on-error pattern as CC-016/018.

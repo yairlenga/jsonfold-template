@@ -44,9 +44,7 @@
       {
         "left": "a1",
         "right": "skip-falsy",
-        "result": {
-          "a": 1
-        }
+        "result": "ERROR"
       }
     ],
     [
@@ -93,9 +91,7 @@
       {
         "left": "b2",
         "right": "skip-falsy",
-        "result": {
-          "b": 2
-        }
+        "result": "ERROR"
       }
     ],
     [
@@ -141,9 +137,7 @@
       {
         "left": "ax",
         "right": "skip-falsy",
-        "result": {
-          "a": "x"
-        }
+        "result": "ERROR"
       }
     ],
     [
@@ -198,11 +192,7 @@
       {
         "left": "nested",
         "right": "skip-falsy",
-        "result": {
-          "nested": {
-            "x": 1
-          }
-        }
+        "result": "ERROR"
       }
     ],
     [
@@ -244,49 +234,39 @@
       {
         "left": "skip-null",
         "right": "skip-falsy",
-        "result": {}
+        "result": "ERROR"
       }
     ],
     [
       {
         "left": "skip-falsy",
         "right": "a1",
-        "result": {
-          "a": 1
-        }
+        "result": "ERROR"
       },
       {
         "left": "skip-falsy",
         "right": "b2",
-        "result": {
-          "b": 2
-        }
+        "result": "ERROR"
       },
       {
         "left": "skip-falsy",
         "right": "ax",
-        "result": {
-          "a": "x"
-        }
+        "result": "ERROR"
       },
       {
         "left": "skip-falsy",
         "right": "nested",
-        "result": {
-          "nested": {
-            "x": 1
-          }
-        }
+        "result": "ERROR"
       },
       {
         "left": "skip-falsy",
         "right": "skip-null",
-        "result": {}
+        "result": "ERROR"
       },
       {
         "left": "skip-falsy",
         "right": "skip-falsy",
-        "result": {}
+        "result": "ERROR"
       }
     ]
   ],

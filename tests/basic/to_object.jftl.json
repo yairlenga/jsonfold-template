@@ -7,7 +7,8 @@
                 [ "list2", "LIST-2" ],
                 [ "list3", "LIST-3" ]
             ],
-            "transform": "to_object"
+            "transform": "from_pairs",
+            "error": "ERROR"
         },
         "from-kv": {
             "$": true,
@@ -16,7 +17,8 @@
                 { "key": "key2", "value": "VALUE-2"},
                 { "key": "key3", "value": "VALUE-3"}
             ],
-            "transform": "to_object"
+            "transform": "from_kv",
+            "error": "ERROR"
         },
         "mixed": {
             "$": true,
@@ -28,7 +30,8 @@
                 { "key": "key3", "value": "VALUE-3"},
                 [ "list3", "LIST-3" ]
             ],
-            "transform": "to_object"
+            "transform": "from_pairs",
+            "error": "ERROR"
         },
         "skip-null": {
             "$": true,
@@ -43,7 +46,8 @@
                 { "key": "key3", "value": "VALUE-3"},
                 [ "list3", "LIST-3" ]
             ],
-            "transform": "to_object"
+            "transform": "from_kv",
+            "error": "ERROR"
         },
         "skip-missing": {
             "$": true,
@@ -62,7 +66,8 @@
                 { "key": "key3", "value": "VALUE-3"},
                 [ "list3", "LIST-3" ]
             ],
-            "transform": "to_object"
+            "transform": "from_pairs",
+            "error": "ERROR"
         },
 
 
