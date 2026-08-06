@@ -35,7 +35,7 @@ GOLD = {{{
 ["yep","yep","yep","yep","nope","nope","yep","nope"]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"out": {"$": true, "if": "$.foo", "out": "yep", "default": "nope"}}}}
+{"main": {"$": true, "foreach": {"out": {"$": true, "check": "$.foo", "out": "yep", "fallback": "nope"}}}}
 }}}
 COMMENT=JFTL's falsy rule (only false/null/MISSING) matches jq's exactly, so "if $.foo" against the no-var foreach's current item reproduces this natively — no expression engine needed at all.
 
@@ -221,7 +221,7 @@ GOLD = {{{
 {"x":1}
 }}}
 JFTL = {{{
-{"main": {"x": {"$": true, "if": true, "out": 1, "default": 2}}}
+{"main": {"x": {"$": true, "if": true, "out": 1, "fallback": 2}}}
 }}}
 
 [253-cond]
@@ -652,7 +652,7 @@ GOLD = {{{
 {"x":1,"y":2,"z":3}
 }}}
 JFTL = {{{
-{"main": {"x": 1, "y": 2, "z": {"$": true, "if": true, "out": 3}}}
+{"main": {"x": 1, "y": 2, "z": {"$": true, "check": true, "out": 3}}}
 }}}
 COMMENT=x and y are both deterministic regardless of try/catch (try 1 never fails; error always fires so the catch branch always wins) — only z genuinely needs a logic construct (native if/body), so this whole test needs no expression engine at all.
 
@@ -689,7 +689,7 @@ GOLD = {{{
 2
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": { "out": { "$": true, "if": "$", "out": "$", "default": "NULL-DETECTED" }}}}
+{"main": {"$": true, "foreach": { "out": { "$": true, "if": "$", "out": "$", "fallback": "NULL-DETECTED" }}}}
 }}}
 OUT_MODE=stream
 COMMENT=error with no message raises the current value itself as the payload, and catch immediately returns it — net effect is identity per item, so this degrades to the same no-var foreach + "$." pattern used throughout, needing no try/catch modeling at all. Streaming collected into one array instead of 3 outputs.

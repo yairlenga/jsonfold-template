@@ -16,7 +16,7 @@
                 "data": "$v",
                 "all_even": {
                     "$": true,
-                    "foreach": { "var": "d", "in": "$v", "limit": 1, "if": "$= not d % 2 == 0", "out": true  },
+                    "foreach": { "var": "d", "in": "$v", "limit": 1, "where": "$= not d % 2 == 0", "out": true  },
                     "out": "$= not bool(_)"
                 }
             }

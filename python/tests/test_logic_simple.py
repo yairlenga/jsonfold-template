@@ -56,7 +56,7 @@ class TestBodyPlusIf(unittest.TestCase):
     """2. body + if — condition gates whether body runs at all."""
 
     def test_if_true_runs_body(self):
-        template = {"$": True, "if": "$.enabled", "out": "$.name"}
+        template = {"$": True, "check": "$.enabled", "out": "$.name"}
         status, result = compile_and_render(
             template, {"enabled": True, "name": "Alice"}
         )
@@ -64,7 +64,7 @@ class TestBodyPlusIf(unittest.TestCase):
         self.assertEqual(result, "Alice")
 
     def test_if_false_skips_body_and_returns_none(self):
-        template = {"$": True, "if": "$.enabled", "out": "$.name"}
+        template = {"$": True, "check": "$.enabled", "out": "$.name"}
         status, result = compile_and_render(
             template, {"enabled": False, "name": "Alice"}
         )
@@ -74,9 +74,9 @@ class TestBodyPlusIf(unittest.TestCase):
     def test_if_false_with_default_returns_default(self):
         template = {
             "$": True,
-            "if": "$.enabled",
+            "check": "$.enabled",
             "out": "$.name",
-            "default": "$.fallbackName",
+            "fallback": "$.fallbackName",
         }
         status, result = compile_and_render(
             template, {"enabled": False, "name": "Alice", "fallbackName": "Guest"}

@@ -109,7 +109,7 @@ class TestSet(unittest.TestCase):
 class TestIf(unittest.TestCase):
 
     def test_if_compiled_as_condition(self):
-        stmt = compile_logic({"if": "$.flag"})
+        stmt = compile_logic({"check": "$.flag"})
         self.assertEqual(stmt._if, Tagged("condition", "$.flag"))
 
     def test_missing_if_is_none(self):
@@ -132,7 +132,7 @@ class TestForeach(unittest.TestCase):
 
     def test_full_foreach_block(self):
         stmt = compile_logic({
-            "foreach": {"key": "idx", "var": "item", "in": "$.items", "if": "$.item.active"}
+            "foreach": {"key": "idx", "var": "item", "in": "$.items", "where": "$.item.active"}
         })
         assert isinstance(stmt._foreach, _ForeachPart)
         self.assertEqual(stmt._foreach.key_var, "idx")
@@ -142,7 +142,7 @@ class TestForeach(unittest.TestCase):
 
     def test_full_foreach_block_with_default_key(self):
         stmt = compile_logic({
-            "foreach": {"var": "item", "in": "$.items", "if": "$.item.active"}
+            "foreach": {"var": "item", "in": "$.items", "where": "$.item.active"}
         })
         assert isinstance(stmt._foreach, _ForeachPart)
         self.assertEqual(stmt._foreach.key_var, "_key")
@@ -218,7 +218,7 @@ class TestBodyDefaultError(unittest.TestCase):
         self.assertEqual(stmt._set_current, Tagged("statement", "$.result"))
 
     def test_default_compiled_as_statement(self):
-        stmt = compile_logic({"default": "$.fallback"})
+        stmt = compile_logic({"fallback": "$.fallback"})
         self.assertEqual(stmt._default_val, Tagged("statement", "$.fallback"))
 
     def test_error_compiled_as_statement(self):
@@ -253,7 +253,7 @@ class TestFullRealisticBlock(unittest.TestCase):
     def test_everything_together(self):
         args = {
             "set": {"total": "$.price"},
-            "if": "$.enabled",
+            "check": "$.enabled",
             "foreach": {"key": "idx", "var": "row", "in": "$.rows"},
             "case": [{"when": "$.a", "then": "$.x"}, { "else": "$.output"}],
             "transform": "merge",

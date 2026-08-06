@@ -15,9 +15,9 @@
     },
     "orderTotal": {
       "$": true,
-      "if": "$.hasOrder",
+      "check": "$.hasOrder",
       "out": "$.order.amount",
-      "default": "$.noOrderMessage"
+      "fallback": "$.noOrderMessage"
     },
     "itemNames": {
       "$": true,

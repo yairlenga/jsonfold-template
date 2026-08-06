@@ -20,13 +20,13 @@
             "lazy": "$x.lazy"
         },
         "If-False": {
-            "$": { "if": false, "default": "MISSING", "error": "ERROR" },
+            "$": { "check": false, "fallback": "MISSING", "error": "ERROR" },
             "foo": "$.foo",
             "price": "$.price",
             "lazy": "$.lazy"
         },
         "With-Error": {
-            "$": { "default": "MISSING", "error": "ERROR" },
+            "$": { "fallback": "MISSING", "error": "ERROR" },
             "foo": "$.foo",
             "price": "$_error",
             "lazy": "$.lazy"

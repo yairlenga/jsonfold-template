@@ -60,7 +60,7 @@ class _ForeachPart():
 @dataclass(slots=True)
 class LogicStatement(Evaluator):
 
-    # Stage 1: setup "set", "if")
+    # Stage 1: setup "set", "check")
     _defines: Optional[list[_DefineVar]] = None
     _if: Optional[Condition] = None
     # Stage 2: current object selection "case", "data"
@@ -396,7 +396,7 @@ class LogicCompiler(StatementCompiler):
         else:
             compiler.record_notice(JFTLNotice(code="LOGIC-BAD-SET", message=f"Logic 'set' expecting dictionary, got {type(defines)}"))
             
-        v_if = self._compile_cond(source, "if", True)
+        v_if = self._compile_cond(source, "check", True)
         v_set_data = self._compile_expr(source, "data")
         
         v_loop = source.get("foreach", None)
@@ -413,7 +413,7 @@ class LogicCompiler(StatementCompiler):
             v_foreach_stop = self._compile_expr(v_loop, "stop", None)
             v_foreach_limit = self._compile_expr(v_loop, "limit", None)
 
-            v_foreach_cond = self._compile_cond(v_loop, "if", True)
+            v_foreach_cond = self._compile_cond(v_loop, "where", True)
             v_foreach_out = self._compile_out_or_case(v_loop, "out")
             v_foreach_update = None
             update = v_loop.get("update")
@@ -459,7 +459,7 @@ class LogicCompiler(StatementCompiler):
                 ))
 
         v_out = self._compile_out_or_case(source, "out")
-        v_default =  self._compile_expr(source, "default")
+        v_default =  self._compile_expr(source, "fallback")
         v_error =  self._compile_expr(source, "error")
 
 
