@@ -74,9 +74,12 @@ RUNTIME_NULL_LIKE = (NoneType, Missing)
 
 @dataclass
 class JFTLConfig:
-    # Default engine to use for '$=...'
+        # Default engine to use for '$=...'
     default_expr_engine: str = ""
+        # At exit will remove attributes with null/missing values
     drop_null_attributes: bool = False
+        # Name of attribute that trigger actions. Default to '$'.
+    action_tag :str = "$"
 
 @dataclass(slots=True)
 class JFTLTemplate(Template):

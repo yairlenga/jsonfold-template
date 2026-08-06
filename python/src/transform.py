@@ -98,7 +98,7 @@ class _JoinStrTransformer(Transformer):
             elif isinstance(item, (bool, int, str, float)):
                 item_str = str(item)
             else:
-                return JFTLNotice(code='JOIN-STR-TYPE', message=f"Result contained unknown type {type(item)}")
+                return JFTLNotice(code="JOIN-STR-TYPE", message=f"Result contained unknown type {type(item)}")
 
             result.append(item_str)
         return "".join(result)

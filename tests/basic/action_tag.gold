@@ -1,0 +1,39 @@
+{
+  "pass": {
+    "block": {
+      "is": "OK"
+    },
+    "object": {
+      "is": "OK"
+    },
+    "array": [
+      "is",
+      "OK"
+    ]
+  },
+  "ignore": {
+    "block": {
+      "$": true,
+      "out": {
+        "is": "OK"
+      }
+    },
+    "object": {
+      "$": {},
+      "is": "OK"
+    },
+    "array": [
+      {
+        "$": {
+          "foreach": {
+            "in": [
+              "is",
+              "OK"
+            ]
+          }
+        }
+      },
+      null
+    ]
+  }
+}

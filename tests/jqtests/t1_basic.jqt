@@ -958,7 +958,23 @@ INPUT = {{{
 GOLD = {{{
 [0,1,"hi!"]
 }}}
-SKIP=no label/break early-exit construct.
+JFTL = {{{
+{
+    "main": {
+        "$": true,
+        "out": [
+            {
+                "$": true,
+                "foreach": {
+                    "out": "$py= _break if _ > 1 else _"
+                }
+            },
+            [ "hi!" ]
+        ],
+        "transform": "flatten"
+    }
+}
+}}}
 
 [060-basic]
 JQ = {{{
@@ -970,7 +986,23 @@ INPUT = {{{
 GOLD = {{{
 [0,"hi!"]
 }}}
-SKIP=no label/break early-exit construct.
+JFTL = {{{
+{
+    "main": {
+        "$": true,
+        "out": [
+            {
+                "$": true,
+                "foreach": {
+                    "out": "$py= _break if _ > 1 else _"
+                }
+            },
+            [ "hi!" ]
+        ],
+        "transform": "flatten"
+    }
+}
+}}}
 
 [061-basic]
 LEVEL=eval
@@ -984,9 +1016,23 @@ GOLD = {{{
 [1,2,6,24,120]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"out": "$pyeval=__import__('math').factorial(_)"}}}
+{
+    "main": {
+        "$": true,
+        "foreach": {
+            "$": true,
+            "out": {
+                "$": true,
+                "set": { "factorial": 1 },
+                "foreach": {
+                    "update": { "factorial": "$py=factorial*(_+1)"}
+                },
+                "out": "$factorial"
+            }
+        }
+    }
+}
 }}}
-COMMENT=This specific until() loop happens to compute a factorial — doesn't generalize to arbitrary until() usage.
 
 [062-basic]
 JQ = {{{
@@ -998,7 +1044,12 @@ INPUT = {{{
 GOLD = {{{
 [11,22,33]
 }}}
-SKIP=combines label/break (missing) and foreach state-threading (missing).
+JFTL = {{{
+{
+    "main": { "$": true, "foreach": { "limit": 3 }}
+}
+}}}
+COMMENT=Pick first 3 elements, combines label/break (missing) and foreach state-threading (missing).
 
 [063-basic]
 LEVEL=logic
@@ -1012,7 +1063,24 @@ GOLD = {{{
 [0,1,2,3,4]
 }}}
 JFTL = {{{
-{"main": {"$": true, "foreach": {"in": 5}, "out": "$"}}
+{"main":
+    {
+        "$": true,
+        "foreach": {
+            "var": "item",
+            "in": 5,
+            "out": {
+                "$": true,
+                "set": { "v": 0 },
+                "foreach": {
+                    "in": 1,
+                    "update": { "v": "$item" }
+                },
+            "out": "$v"
+            }
+        }
+    }
+}
 }}}
 COMMENT=This foreach's update just re-emits the item, so it degrades to plain range iteration — coincidence, not a general foreach/reduce translation.
 

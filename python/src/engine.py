@@ -72,7 +72,7 @@ class JFTLCompiler(DocCompiler):
         return error
 
     # Call to natigation: 
-    _NAV_RE = re.compile('^' + NAV_RE_STR + "$", re.VERBOSE)
+    _NAV_RE = re.compile("^" + NAV_RE_STR + "$", re.VERBOSE)
 
     # Call to expression engine: $prefix=expression
     EXPR_RE = re.compile(r"""
@@ -229,7 +229,7 @@ class JFTLCompiler(DocCompiler):
 
         # Check if this is potential interpolation:
         int_pos = source.find("${")
-        if int_pos == 0 or int_pos > 0 and not source.startswith('$'):
+        if int_pos == 0 or int_pos > 0 and not source.startswith("$"):
             interpolated = self._compile_interpolated(source, where)
             if interpolated:
                 return interpolated
@@ -259,7 +259,7 @@ class JFTLCompiler(DocCompiler):
         # 4. last element of cases (if any) does not have "else"
         cases = action.get("cases")
         if len(source) == 1:
-            return JFTLNotice(code="BAD-OBJECT-LOGIC", message=f'Object Statement must have additional attributes, not just { "$": { ... }}')
+            return JFTLNotice(code="BAD-OBJECT-LOGIC", message=f'Object Statement must have additional attributes, not just {{ "$": {{ ... }}')
 
         if ( "foreach" in action
             or "transform" in action
@@ -270,9 +270,9 @@ class JFTLCompiler(DocCompiler):
 
         # Rebuild the logic statement, setting out/cases
         stmt = dict(action)
-        stmt["$"] = True
+        stmt[self.config.action_tag] = True
         new_out = dict(source)
-        new_out.pop("$")
+        new_out.pop(self.config.action_tag)
         if isinstance(cases, list):
             stmt["cases"] = cases + [{ "else": new_out }]
         else:
@@ -293,7 +293,7 @@ class JFTLCompiler(DocCompiler):
 
         stmt = dict(action)
         new_foreach = dict(foreach)
-        stmt["$"] = True
+        stmt[self.config.action_tag] = True
         stmt["foreach"] = new_foreach
         if isinstance(cases, list):
             new_foreach["cases"] = cases  +[{ "else": out }]
@@ -304,13 +304,13 @@ class JFTLCompiler(DocCompiler):
 
     def _compile_action(self, source: dict, where: str = "") -> COMPILE_DOC:
 
-        action = source.get("$", JSON_UNSET)
+        action = source.get(self.config.action_tag, JSON_UNSET)
         if isinstance(action, dict):
             new_source = self._parse_object_statement(source, where, action)
             if isinstance(new_source, JFTLNotice):
                 return new_source
             source = new_source            
-            action = source.get('$', JSON_UNSET)
+            action = source.get(self.config.action_tag, JSON_UNSET)
 
         if action is True:
             error_count = self._error_count
@@ -333,7 +333,7 @@ class JFTLCompiler(DocCompiler):
             return LiteralStatement(value=value)
                                     
         else:
-            action_name = f'"{action}"' if isinstance(action, str) else f"type={type(action)}"
+            action_name = f"'{action}'" if isinstance(action, str) else f"type={type(action)}"
             return JFTLNotice(code="LOGIC-ACTION", message=f"The action must be a string or boolean, got '$=:{action_name}'")
 
 
@@ -348,7 +348,7 @@ class JFTLCompiler(DocCompiler):
             and len(source) == 2
             and isinstance((first := source[0]), dict)
             and len(first) == 1
-            and isinstance(action := first.get('$'), dict)
+            and isinstance(action := first.get(self.config.action_tag), dict)
         ):
             new_source = self._parse_array_statement(source, where, action, source[1])
             source = new_source
@@ -357,7 +357,7 @@ class JFTLCompiler(DocCompiler):
         if isinstance(source, dict):
 
             # If there is '$', this is action/call
-            if "$" in source:
+            if self.config.action_tag in source:
                 return self._compile_action(source, "")
     
             # If the all dict is constant, just use the original
@@ -431,7 +431,7 @@ class JFTLCompiler(DocCompiler):
             else:
                 compiled = JFTLNotice(code="COMPILE-ERROR", message="Compile Error")
 
-        return compiled, not self._fail and self._error_count == 0, self._errors
+        return compiled, not self._fail and self._error_count == 0 and not isinstance(compiled, JFTLNotice), self._errors
    
 @dataclass
 class JFTLRenderer():
@@ -489,7 +489,7 @@ class JFTLRenderer():
             return value
 
         raise RenderError(
-            JFTLNotice(code='BAD-RESULT', message=f"Result contained unknown type {type(value)}"))
+            JFTLNotice(code="BAD-RESULT", message=f"Result contained unknown type {type(value)}"))
 
 @dataclass
 class JFTLEngine(Engine):
@@ -513,7 +513,7 @@ class JFTLEngine(Engine):
 
         if not isinstance((datasets := top.get("datasets", {}) or {}) , dict):
             raise CompileError(
-                JFTLNotice(code='BAD-DATASET', message=f"Dataset must be dictionary, got {type(datasets)}")
+                JFTLNotice(code="BAD-DATASET", message=f"Dataset must be dictionary, got {type(datasets)}")
                 )
 
         return JFTLTemplate(main_entry=compiled, config=config, datasets=datasets, valid=valid, error=first_error ), errors
@@ -625,7 +625,7 @@ class ValueFormatStatement(Evaluator):
         if isinstance(value, Missing):
             return "null"
         if not isinstance(value, (NoneType, bool, int, float, str)):
-            return JFTLNotice(code='CANT-STRINGIFY', message=f"Result contained unknown type {type(value)}")
+            return JFTLNotice(code="CANT-STRINGIFY", message=f"Result contained unknown type {type(value)}")
         formatted = format(value, self.format_spec) if self.format_spec else str(value)
         return formatted
 
@@ -648,7 +648,7 @@ class StringJoinStatement(Evaluator):
                 value = str(value)
 
             if not isinstance(value, str):
-                return JFTLNotice(code='JOIN-STR-VALUE', message=f"Expecting string got {type(value)}")
+                return JFTLNotice(code="JOIN-STR-VALUE", message=f"Expecting string got {type(value)}")
 
             result.append(value)
         return "".join(result)

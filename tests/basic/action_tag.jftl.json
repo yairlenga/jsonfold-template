@@ -1,0 +1,23 @@
+{
+    "main": {
+        "pass": {
+            "block": { "+++": true, "out": { "is": "OK" }},
+            "object": { "+++": { }, "is": "OK" },
+            "array": [
+                { "+++": { "foreach": { "in": [ "is", "OK" ]}}},
+                "$_"
+            ]
+        },
+        "ignore": {
+            "block": { "$": true, "out": { "is": "OK" }},
+            "object": { "$": { }, "is": "OK" },
+            "array": [
+                { "$": { "foreach": { "in": [ "is", "OK" ]}}},
+                "$_"
+            ]
+        }
+    },
+    "config": {
+        "action_tag": "+++"
+    }
+}

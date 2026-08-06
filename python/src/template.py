@@ -24,7 +24,7 @@ class JFTLNotice():
     location: Optional[str] = None               # Location in the data tree
     details: Optional[list["JFTLNotice"]] = None
 
-ERROR_VALUE = JFTLNotice(code='GENERIC-ERROR', message="Unspecific Error")
+ERROR_VALUE = JFTLNotice(code="GENERIC-ERROR", message="Unspecific Error")
 
 class JFTLError(Exception):
     def __init__(self, notice: JFTLNotice):
