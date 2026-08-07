@@ -18,7 +18,6 @@
 			"empty-array": {}
 		},
 		"foreach": {
-			"$": true,
 			"out": {
 				"$": true,
 				"transform": "drop_missing",

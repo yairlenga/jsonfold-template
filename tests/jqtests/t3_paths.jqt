@@ -174,7 +174,6 @@ JFTL = {{{
 { "main": {
     "$": true,
     "foreach": {
-        "$": true,
         "out": {
             "$": true,
             "foreach": {

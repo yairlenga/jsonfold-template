@@ -1,0 +1,18 @@
+{
+    "main": {
+        "$": true,
+        "out": {
+            "$": true,
+            "set": { "primes": [ ]  },
+            "foreach": {
+                "in": 100, "start": 2,
+                "if": "$= all( _%p  for p in primes)",
+                "update": { "primes": "$=primes + [_]" }
+            },
+            "out": "$primes"
+        }
+    },
+    "config": {
+        "default_expr_engine": "py"
+    }
+}

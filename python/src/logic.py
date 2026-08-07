@@ -407,10 +407,12 @@ class LogicCompiler(StatementCompiler):
         
         return self._parse_set_var(source.pop(tag), tag)
 
+    def _record_notice(self, notice: JFTLNotice):
+        return self.compiler.record_notice(notice)
 
+    def _compile_foreach(self, source_elem: dict[str, JSON_DOC]) -> _ForeachPart:
 
-    def _compile_foreach(self, source: dict[str, JSON_DOC]) -> _ForeachPart:
-
+        source = dict(source_elem)
         v_foreach_key = self._get_named_var(source, "key", "_key")
         v_foreach_value = self._get_named_var(source, "var")
 #            v_foreach_iter = self._get_named_var(v_loop, "var")
@@ -439,11 +441,17 @@ class LogicCompiler(StatementCompiler):
             out = v_foreach_out,
             update = v_foreach_update,
         )
+
+        if source:
+            self._record_notice(JFTLNotice(
+                    code="FOREACH-UNKNOWN-TAGS",
+                    message=f"Found {len(source)} unknown attributes: { list(source.keys())[:3] }",
+                ))
+
         return v_foreach
 
 
     def _compile_object(self, source_elem: dict[str, JSON_DOC], where: str = "") -> LogicStatement:
-        compiler = self.compiler
 
         source = dict(source_elem)
 
@@ -458,7 +466,7 @@ class LogicCompiler(StatementCompiler):
         if isinstance(v_loop, dict):
             v_foreach = self._compile_foreach(v_loop)
         elif v_loop is not None:
-            compiler.record_notice(JFTLNotice(
+            self._record_notice(JFTLNotice(
                     code="BAD_FOREACH",
                     message=f"foreach should be an object, got {type(v_loop)}",
             ))
@@ -468,7 +476,7 @@ class LogicCompiler(StatementCompiler):
             plugin = self.compiler.plugin(transform)
             v_transformer = plugin if isinstance(plugin, Transformer) else None
             if not v_transformer:
-                compiler.record_notice(JFTLNotice(
+                self._record_notice(JFTLNotice(
                         code="BAD_TRANSFORM",
                         message=f"Unknown transformation {transform}",
                 ))
@@ -478,7 +486,7 @@ class LogicCompiler(StatementCompiler):
         v_error =  self._compile_expr(source, "error")
 
 
-        self = LogicStatement(
+        stmt = LogicStatement(
             _defines = v_defines,
             _if = v_if,
             _set_current = v_set_data,
@@ -489,13 +497,14 @@ class LogicCompiler(StatementCompiler):
             _out = v_out,
         )
 
-             # Make sure no unprocessed attributes
         if source:
-            compiler.record_notice(JFTLNotice(
+            self._record_notice(JFTLNotice(
                     code="LOGIC-UNKNOWN-TAGS",
                     message=f"Found {len(source)} unknown attributes: { list(source.keys())[:3] }",
                 ))
-        return self
+
+             # Make sure no unprocessed attributes
+        return stmt
     
     def compile(self, source: JSON_DOC, where: str = "") -> LogicStatement | JFTLNotice:
         if not isinstance(source, dict):
