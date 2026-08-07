@@ -30,6 +30,9 @@ pyrun-test:
 advanced-test:
 	(cd ../tests/advanced && ../run_tests.sh -mpyrun)
 
+speed-test:
+	(cd ../tests/speed && ../run_tests.sh -mpy)
+
 jqman-test:
 	(cd ../tests/jqman && cat *.jqt | ../run_jqt.sh)
 

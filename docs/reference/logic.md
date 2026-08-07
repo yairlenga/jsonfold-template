@@ -128,7 +128,7 @@ When iterating over **array**, the key variable (or the default `_key`) is the (
 Note that when `start` is used on an **object** or **array**, the key references the position of the item in the original source. If `start` is used over integer range, it reduces the range, and the first key will be 0.
 
 
-### Per-item filter (`where`)
+### Per-item filter (`if`)
 
 Same truthiness rule used throughout JFTL: `false`, `null`, and `Missing` are falsy, everything else truthy. An item failing this condition is skipped — not included in the result, doesn't count against `limit`.
 

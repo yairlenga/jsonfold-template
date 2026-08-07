@@ -21,7 +21,8 @@
 - 0.3.5: (2026-08-07): 1.07
 
 ### foreach1m-6 (iterate 1M times, return 3 element object with variables)
-- 0.3.5: (2026-08-07): 2.41
+- 0.3.4: (2026-08-07): 2.41
+
 
 ### foreach1m-7 (iterate 1M times, return 5 element object: including array nav, obj nav)
 - 0.3.5: (2026-08-07): 5.25

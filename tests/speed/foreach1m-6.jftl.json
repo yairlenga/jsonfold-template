@@ -2,13 +2,13 @@
     "main": {
         "$": true,
         "set": {
+            "flag": { "item": 1 },
             "n": 1000,
             "m": 1000,
             "t": "$py=n*m",
             "v": 1
         },
-	"where": "$.item",
-        "foreach": { "in": "$t", "out": { "v": "$v", "t": "$_", "z": "z" } },
-	"out": "T=${t}"
+        "foreach": { "in": "$t", "if": "$flag.item", "out": { "v": "$v", "t": "$_", "z": "z" } },
+        "out": [ "T=${t}", "$_[-1]" ]
     }
 }
