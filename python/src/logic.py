@@ -174,7 +174,11 @@ class LogicStatement(Evaluator):
 
             if not v_cond is True:
                 cond_result = ctx.eval_bool(v_cond) if cond_expr else v_cond
-                if isinstance(cond_result, JFTLNotice):
+                if cond_result is True:
+                    pass
+                elif cond_result is False:
+                    continue
+                elif isinstance(cond_result, JFTLNotice):
                     return cond_result
                 elif not cond_result:
                     continue
