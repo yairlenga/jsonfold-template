@@ -1,0 +1,21 @@
+{
+    "main": {
+        "$": {
+            "set": {
+                "db": {
+                    "US": { "code": "USA", "country": "United States", "currency": "USD", "captial": "Washington DC" },
+                    "UK": { "code": "GBR", "country": "Great Britian", "currency": "GBP", "captial": "London" },
+                    "JP": { "code": "JPN", "country": "Japan", "currency": "JPY", "captial": "Tokyo"}
+                },
+                "currency_of": { "$": true, "data": "$db", "foreach": { "out": [ "$.code", "$.currency"]}, "transform": "values_to_map" },
+                "country_of": { "$": true, "data": "$db", "foreach": { "out": [ "$.currency", "$.country"]}, "transform": "values_to_map" },
+                "globus": { "$": true, "data": "$db", "foreach": { "out": [ "$.code", "$"]}, "transform": "values_to_map" }
+            }
+        },
+        "JP currrency": "$db.JP.currency",
+        "currency of USA": "$currency_of.USA",
+        "country of JPY": "$country_of.JPY",
+        "Captial of UK": "$globus.GBR.captial",
+        "_": "_"
+    }
+}

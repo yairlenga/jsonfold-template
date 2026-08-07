@@ -99,7 +99,7 @@ COMMENT=NAV, same template as BF-007.
 JQ = [.foo?]
 INPUT = [1,2]
 GOLD = []
-JFTL = {"main": {"$": true, "foreach": { "where": "$.foo", "out": "$.foo" }}}
+JFTL = {"main": {"$": true, "foreach": { "if": "$.foo", "out": "$.foo" }}}
 COMMENT=PYRUN, revised, lower confidence than most: type-checks before indexing since Python has no null-safe .foo-on-a-list concept. Sidesteps curated-108's array-literal-body question by building the collect result in Python.
 
 [BF-010-array-index]

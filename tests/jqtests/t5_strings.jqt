@@ -233,6 +233,7 @@ SKIP=same as 296.
 
 [298-strings]
 LEVEL=py
+OUT_FMT=stream
 COMMENT = {{{
 trim
  is vertical tab (\v not supported by json)
@@ -241,7 +242,7 @@ JQ = {{{
 map(trim), map(ltrim), map(rtrim)
 }}}
 INPUT = {{{
-[" \n\t\r\f", "","  ", "a", " a ", "abc", "  abc  ", "  abc", "abc  "]
+[" \n\t\r\f\u000b", "","  ", "a", " a ", "abc", "  abc  ", "  abc", "abc  "]
 }}}
 GOLD = {{{
 ["", "", "", "a", "a", "abc", "abc", "abc", "abc"]
@@ -249,10 +250,13 @@ GOLD = {{{
 ["", "", "", "a", " a", "abc", "  abc", "  abc", "abc"]
 }}}
 JFTL = {{{
-{"main": ["$py=[v.strip() for v in _]", "$py=[v[::-1].rstrip()[::-1] for v in _]", "$py=[v.rstrip() for v in _]"]}
+{"main": [
+    [ { "$": { "foreach": { } } }, "$py= _.strip()" ],
+    [ { "$": { "foreach": { } } }, "$py= _.lstrip()" ],
+    [ { "$": { "foreach": { } } }, "$py= _.rstrip()" ]
+]}
 }}}
 OUT_MODE=stream
-SKIP=JQ 1.7 does not have trim,ltrim,rtrim
 COMMENT=No lstrip in the whitelist — ltrim done via reverse/rstrip/reverse-back instead. Streaming 3 outputs collected into one array.
 
 [299-strings]

@@ -2,13 +2,13 @@
 from types import NoneType
 from typing import cast
 
-from model import RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, Transformer
+from model import RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, Transformer
 from template import JFTLNotice, Missing
 
     # List[list] -> List
 class _FlattenningTransformer(Transformer):
     def transform(self, input: RUNTIME_DOC ) -> list[RUNTIME_DOC] | JFTLNotice:
-        if not isinstance(input, RUNTIME_LIST_LIKE):
+        if not isinstance(input, RUNTIME_LIST_TYPES):
             return JFTLNotice(
                     code="FLATTEN_INPUT",
                     message=f"The 'flatten' transform input is array of array, got non-list",
@@ -17,7 +17,7 @@ class _FlattenningTransformer(Transformer):
         for pos, item in enumerate(input):
             if item is None:
                 continue
-            if not isinstance(item, RUNTIME_LIST_LIKE):
+            if not isinstance(item, RUNTIME_LIST_TYPES):
                 return JFTLNotice(
                     code="FLATTEN_ITEM",
                     message=f"The 'flatten' transformation input is array of array, got non list items in position {pos}",
@@ -32,7 +32,7 @@ class _FlattenningTransformer(Transformer):
     # list[dict] -> dict
 class _MergeTransformer(Transformer):
     def transform(self, input: RUNTIME_DOC) -> dict[str, RUNTIME_DOC] | JFTLNotice:
-        if not isinstance(input, RUNTIME_LIST_LIKE):
+        if not isinstance(input, RUNTIME_LIST_TYPES):
             return JFTLNotice(
                     code="MERGE_INPUT",
                     message=f"The 'merge' transformation input is array of objects, got non-list input",
@@ -73,7 +73,7 @@ class _DropMissingTransformer (Transformer):
             return None
         if isinstance(input, dict):
             return { k:v for k, v in input.items() if not isinstance(v, Missing) }
-        elif isinstance(input, RUNTIME_LIST_LIKE):
+        elif isinstance(input, RUNTIME_LIST_TYPES):
             return [x for x in input if not isinstance(x, Missing)]
 
         return JFTLNotice(
@@ -114,7 +114,7 @@ class _PairsToObject(Transformer):
             for pair in input
             if isinstance(pair, list)
             and len(pair) == 2
-            and (isinstance(pair[0], str) or isinstance(pair[0], RUNTIME_NULL_LIKE) and isinstance(pair[1], RUNTIME_NULL_LIKE))
+            and (isinstance(pair[0], str) or isinstance(pair[0], RUNTIME_NULL_TYPES) and isinstance(pair[1], RUNTIME_NULL_TYPES))
         ]
 
         if len(pairs) != len(input):
@@ -144,15 +144,38 @@ class _KVToObject(Transformer):
 
         return result
 
+class _PairValuesToMap(Transformer):
+
+    def transform(self, input: RUNTIME_DOC) -> dict[str, RUNTIME_DOC] | JFTLNotice:
+        if not isinstance(input, dict):
+            return JFTLNotice(
+                code="VALUES_TO_MAP_INPUT",
+                message=f"The 'from_kv' transformation expects an array or object of entries, got {type(input)}",
+            )
+
+        if any(not isinstance(pair, list) or len(pair) != 2 or not isinstance(pair[0], str) for pair in input.values()):
+            return JFTLNotice(
+                code="VALUES_TO_MAP_ITEM", message=f"values_to_map expect all values to be 2 element array of [ key, value ]"
+            )
+
+        result = { map_key: map_value
+                  for [map_key, map_value]
+                  in cast(list[list], input.values())
+                  if isinstance(map_key, str)
+        }
+
+        return result
 
 
 default_plugins : dict[str, type[Transformer]] = {
     "flatten": _FlattenningTransformer,
     "merge": _MergeTransformer,
-    "to_pairs": _ToPairsTransformer,
+    "join": _JoinStrTransformer,
 
     "drop_missing": _DropMissingTransformer,
-    "concat": _JoinStrTransformer,
-    "from_pairs": _PairsToObject,
-    "from_kv": _KVToObject,
+
+    "object_to_pairs": _ToPairsTransformer,
+    "pairs_to_object": _PairsToObject,
+    "kvs_to_object": _KVToObject,
+    "values_to_map": _PairValuesToMap,
 }

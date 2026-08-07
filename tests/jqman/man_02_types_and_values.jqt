@@ -30,7 +30,7 @@ LEVEL=logic
 JQ = {(.user): .titles}
 INPUT = {"user":"stedolan","titles":["JQ Primer", "More JQ"]}
 GOLD = {"stedolan": ["JQ Primer", "More JQ"]}
-JFTL = { "main": { "$": true, "out": [[ "$.user", "$.titles" ]] , "transform": "from_pairs" } }
+JFTL = { "main": { "$": true, "out": [[ "$.user", "$.titles" ]] , "transform": "pairs_to_object" } }
 COMMENT=NOT PORTABLE BY DESIGN, same example and reasoning as curated-batch 109 (JFTL keys are structural constants).
 
 [TV-005-recursive-descent]

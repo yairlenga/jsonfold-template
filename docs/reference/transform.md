@@ -282,7 +282,7 @@ object; `TO_OBJECT_ITEM` if an entry isn't a valid pair/`{key,value}` shape;
 **Examples**
 
 ```json
-{ "$": true, "out": "$.pairs", "transform": "from_pairs" }
+{ "$": true, "out": "$.pairs", "transform": "pairs_to_object" }
 ```
 Input: `{"pairs": [["a", 1], ["b", 2]]}`
 Output: `{"a": 1, "b": 2}`

@@ -178,7 +178,7 @@ GOLD = {{{
 [{"key":"a", "value":1}, {"key":"b", "value":2}]
 }}}
 JFTL = {{{
-{"main": {"$": true, "data": { "$": true, "out": "$", "transform": "to_pairs" }, "foreach": { "out": {"key": "$_[0]", "value": "$_[1]" }}}}
+{"main": {"$": true, "data": { "$": true, "out": "$", "transform": "object_to_pairs" }, "foreach": { "out": {"key": "$_[0]", "value": "$_[1]" }}}}
 }}}
 COMMENT=Native foreach key+var, avoiding dict.items() (not whitelisted) entirely.
 

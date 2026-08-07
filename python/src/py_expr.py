@@ -16,6 +16,7 @@ def _create_simple_eval() -> SimpleEval:
         "lower",
         "upper",
         "strip",
+        "lstrip",
         "rstrip",
         "startswith",
         "endswith",

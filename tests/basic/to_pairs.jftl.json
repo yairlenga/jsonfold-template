@@ -4,20 +4,20 @@
       "null input": {
         "$": true,
         "out": null,
-        "transform": "to_pairs",
+        "transform": "object_to_pairs",
 	"error": "Error: null Input"
       },
       "empty object": {
         "$": true,
         "out": {},
-        "transform": "to_pairs"
+        "transform": "object_to_pairs"
       },
       "single entry": {
         "$": true,
         "out": {
           "a": 1
         },
-        "transform": "to_pairs"
+        "transform": "object_to_pairs"
       },
       "multiple entries": {
         "$": true,
@@ -26,7 +26,7 @@
           "b": 2,
           "c": 3
         },
-        "transform": "to_pairs"
+        "transform": "object_to_pairs"
       },
       "null value": {
         "$": true,
@@ -34,7 +34,7 @@
           "a": null,
           "b": 2
         },
-        "transform": "to_pairs"
+        "transform": "object_to_pairs"
       },
       "nested value": {
         "$": true,
@@ -44,7 +44,7 @@
             "b": 2
           }
         },
-        "transform": "to_pairs"
+        "transform": "object_to_pairs"
       },
       "array value": {
         "$": true,
@@ -55,7 +55,7 @@
             3
           ]
         },
-        "transform": "to_pairs"
+        "transform": "object_to_pairs"
       },
       "mixed values": {
         "$": true,
@@ -72,7 +72,7 @@
             "x": 3
           }
         },
-        "transform": "to_pairs"
+        "transform": "object_to_pairs"
       }
     }
   }

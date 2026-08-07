@@ -359,7 +359,7 @@ GOLD = {{{
 JFTL= {{{
 { "main": {
     "$": true,
-    "out": [ { "a": "$.a", "b": "$.b" }, { "$": true, "out": [[ "$.d", "$.a" ]], "transform": "from_pairs"}, {"e": "$.b" }],
+    "out": [ { "a": "$.a", "b": "$.b" }, { "$": true, "out": [[ "$.d", "$.a" ]], "transform": "pairs_to_object"}, {"e": "$.b" }],
     "transform": "merge"
 }}
 }}}
@@ -381,7 +381,7 @@ JFTL= {{{
     "out": [
         { "a": "$.a" },
         { "b": "$.b" },
-        { "$": true, "set": { "k": "$py= f'a${1+1}'" }, "out": [[ "$k", "$[$k]" ]], "transform": "from_pairs"}
+        { "$": true, "set": { "k": "$py= f'a${1+1}'" }, "out": [[ "$k", "$[$k]" ]], "transform": "pairs_to_object"}
     ],
     "transform": "merge"
 }}
