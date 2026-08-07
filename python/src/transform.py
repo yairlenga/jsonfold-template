@@ -1,15 +1,9 @@
 
 from types import NoneType
-from typing import Any, Callable, cast
+from typing import cast
 
 from model import RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, Transformer
 from template import JFTLNotice, Missing
-
-if callable( _ := globals().get("profile")):
-    _profile = cast(Callable, _)
-else:
-    def _profile(func): return func
-
 
     # List[list] -> List
 class _FlattenningTransformer(Transformer):
@@ -146,7 +140,7 @@ class _KVToObject(Transformer):
             )
 
         pairs = cast(list[dict], input)
-        result = { pair.get("key"):pair.get("value") for pair in pairs }
+        result = { k:pair.get("value") for pair in pairs if isinstance(k := pair.get("key"), str)  }
 
         return result
 

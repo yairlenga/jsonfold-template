@@ -1,18 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional, cast
+from typing import Any, Optional
 
-from model import JFTL_BREAK, JFTL_SKIP, Environment, RuntimeContext
+from model import JFTL_BREAK, JFTL_SKIP, Environment, RuntimeContext, my_profile
 from template import ERROR_VALUE, MISSING_VALUE
-
-# try:
-#     _profile = profile
-# except NameError:
-
-if callable( _ := globals().get("profile")):
-    _profile = cast(Callable, _)
-else:
-    def _profile(func): return func
 
 # Runtime Objects
 
@@ -24,13 +15,13 @@ class Frame (RuntimeContext):
     _full_path: str = ""
     _initial_current: str = ""
 
-    @_profile
+    @my_profile
     def _update_current(self):
         pass
         self.vars["_"] = self.current
         return
 
-    @_profile
+    @my_profile
     def set_current(self, current: Any):
         pass
         super().set_current(current)
@@ -101,7 +92,7 @@ class Frame (RuntimeContext):
     def __contains__(self, key: object) -> bool:
         return key in self.vars
 
-    @_profile
+    @my_profile
     def lookup_var(self, name: str, *, cache_mode: Optional[bool] = None) -> Any:
         """Search this frame, then parent, then parent's parent, ...
         for `name` in `vars`. Caches the result (or MISSING) at every

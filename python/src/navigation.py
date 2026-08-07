@@ -2,15 +2,10 @@
 # runtime.py
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Callable, Literal, Union, cast
+from typing import Any, Literal, Union
 
-from model import COMPILE_DOC, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompileError, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompileError, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler, my_profile
 from template import MISSING_VALUE, JFTLNotice, Missing
-
-if callable( _ := globals().get("profile")):
-    _profile = cast(Callable, _)
-else:
-    def _profile(func): return func
 
 @dataclass
 class Key:
@@ -41,12 +36,12 @@ _SEGMENT_RE = re.compile(r"""
 class VariableStatement(Evaluator):
     name: str
 
-    @_profile
+    @my_profile
     def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
         return ctx.lookup_var(self.name)
 
     # TODO: Profile, and decide if useful.
-    @_profile
+    @my_profile
     def eval_inline(self, ctx: RuntimeContext) -> RUNTIME_DOC:
         name = self.name
         if name in ctx.vars:
@@ -69,7 +64,7 @@ class NavigationStatement(Evaluator):
 
 
     
-    @_profile
+    @my_profile
     def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
         value = None
         start = self._start

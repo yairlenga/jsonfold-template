@@ -9,7 +9,7 @@ from logic import LogicCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 from template import Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_NONE, JFTL_SKIP, JSON_DOC, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_NONE, JFTL_SKIP, JSON_DOC, JSON_NODES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
 
 from typing import Any
 
@@ -576,19 +576,29 @@ class ObjectEvaluator(Evaluator):
     entries: dict[str, COMPILE_DOC]
 
     @staticmethod
+    @my_profile
     def eval_object(ctx:RuntimeContext, dict: dict[str, COMPILE_DOC]) -> RUNTIME_DOC:
         result = {}
         for key, item in dict.items():
-            value = item.eval(ctx) if isinstance(item, Evaluator) else item
-            if isinstance(value, JFTLNotice):
+            value = (
+                item.eval(ctx)
+                if
+                isinstance(item, Evaluator)
+                else
+                item
+            )
+            if isinstance(value, JSON_NODES):
+                pass
+            elif isinstance(value, JFTLNotice):
                 return value
-            if value is JFTL_SKIP:
+            elif value is JFTL_SKIP:
                 continue  # silently dropped from objects, per locked sentinel rules
             elif value is JFTL_BREAK:
                 break
             result[key] = value
         return result
 
+    @my_profile
     def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
         return self.eval_object(ctx, self.entries)
 

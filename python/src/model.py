@@ -10,16 +10,15 @@ from typing import (Any, Callable, ClassVar, Final, Optional, TextIO, TypeAlias,
 from template import (MISSING_VALUE, JFTLError, JFTLNotice, Missing,
                       Template)
 
+
 # Enable inlining for faster performance. Disable for troubleshooting/debug.
 FAST_INLINE = True
 
-# try:
-#     _profile = profile
-# except NameError:
-if callable( _ := globals().get("profile")):
-    _profile = cast(Callable, _)
+# Create @_profile for conditional profiling. NO-OP without it.
+if callable( _ := __builtins__.get("profile")):
+    my_profile = cast(Callable, _)
 else:
-    def _profile(func): return func
+    def my_profile(func): return func
 
 
 T = TypeVar("T")
@@ -58,6 +57,7 @@ JFTL_BREAK : Final = Missing(code="BREAK", message= "Skip entry sentinel")
 JSON_LEAFS : TypeAlias = NoneType | bool | int | float | str
     # Tree of JSON Values.
 JSON_DOC = Tree[JSON_LEAFS]
+JSON_NODES= (bool, int, float, str, dict, list)
 
 RUNTIME_LEAFS : TypeAlias = JSON_LEAFS | Missing | JFTLNotice
     # Tree of RUNTIME Values, may include Missing or Notices (error nodes)
@@ -157,7 +157,7 @@ class RuntimeContext (Mapping, ABC):
             ctx = ctx.parent if ctx.level > 0 else None
         return " ".join(reversed(paths))
 
-    @_profile
+    @my_profile
     def set_current(self, current: Any):
         pass
         self.current = current
@@ -172,7 +172,10 @@ class RuntimeContext (Mapping, ABC):
             return notice
         return on
 
-    @_profile
+    _good_result = ()
+
+
+    @my_profile
     def eval_value(
         self,
         stmt : Statement,
@@ -189,6 +192,9 @@ class RuntimeContext (Mapping, ABC):
         else:
             result = cast(RUNTIME_DOC, stmt)
 
+        if isinstance(result, JSON_NODES):
+            return result
+
         if isinstance(result, JFTLNotice):
             return self._resolve(result, on_error)
 
@@ -202,7 +208,7 @@ class RuntimeContext (Mapping, ABC):
                 return self._resolve(error, on_unset)
             return on_unset
 
-        elif isinstance(result, RUNTIME_NULL_LIKE):
+        elif isinstance(result, RUNTIME_NULL_LIKE): # pyright: ignore[reportUnnecessaryIsInstance]
             if on_null is JFTL_RAISE or on_null is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="MISSING_VALUE",
@@ -214,7 +220,7 @@ class RuntimeContext (Mapping, ABC):
 
         return result        
 
-    @_profile
+    @my_profile
     def eval_bool(
         self,
         cond : Condition,

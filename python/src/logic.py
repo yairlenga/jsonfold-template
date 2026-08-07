@@ -1,16 +1,11 @@
 import itertools
 import re
 from types import NoneType
-from typing import Any, Callable, Optional, cast
+from typing import Any, Optional, cast
 from dataclasses import dataclass
 
-from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompilerPlugin, DocCompiler, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer
+from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_NODES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompilerPlugin, DocCompiler, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer, my_profile
 from template import MISSING_VALUE, JFTLNotice, Missing
-
-if callable( _ := globals().get("profile")):
-    _profile = cast(Callable, _)
-else:
-    def _profile(func): return func
 
 @dataclass
 class _DefineVar:
@@ -74,7 +69,7 @@ class LogicStatement(Evaluator):
     _default_val: Optional[Statement] = None
     _error_val: Optional[Statement] = None
 
-    @_profile
+    @my_profile
     def _eval_foreach(self, ctx: RuntimeContext) -> list[RUNTIME_DOC] | dict[str, RUNTIME_DOC] | JFTLNotice | Missing:
         pass
         foreach = cast(_ForeachPart, self._foreach)
@@ -176,10 +171,7 @@ class LogicStatement(Evaluator):
             else:
                 ctx.set_current(item)
 
-            if isinstance(v_cond, bool):
-                if not v_cond:
-                    continue
-            else:
+            if not v_cond is True:
                 cond_result = ctx.eval_bool(v_cond)
                 if isinstance(cond_result, JFTLNotice):
                     return cond_result
@@ -196,12 +188,14 @@ class LogicStatement(Evaluator):
                 else:
                     ctx.set_current(item)
 
-                if isinstance(item, JFTLNotice):
-                    return item
+                if isinstance(item, JSON_NODES):
+                    pass
                 elif item is JFTL_SKIP:
                     continue
                 elif item is JFTL_BREAK:
                     break
+                elif isinstance(item, JFTLNotice):
+                    return item
 
             if do_dict:
                 dict_result[cast(str, key)] = item
