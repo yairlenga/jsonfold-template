@@ -48,6 +48,10 @@ test:
 	rm -f $@.log
 	($(MAKE) run-test >> $@.log) 2>&1 | tee -a $@.log
 
+check:
+	mkdir -p log
+	make speed-test | tee log/$(shell date +%F).speed.log
+
 package:
 	rm -f dist/jsonfold-$(VERSION)[.-]*
 	$(PYTHON) -m build

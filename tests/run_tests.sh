@@ -11,8 +11,9 @@ mode=
 name=
 
 case "${1-}" in
-	-mpython | -mpy ) shift ; mode=python ; JSONFOLD="$root/python/run.sh" ;;
-	-mpyrun ) shift ; mode=python ; JSONFOLD="$root/python/run.sh --all-plugins" ;;
+	-mpython ) shift ; mode=python ; JSONFOLD="$root/python/run.sh -q" ;;
+	-mpyrun ) shift ; mode=python ; JSONFOLD="$root/python/run.sh --all-plugins -q" ;;
+	-mpy ) shift ; mode=python ; JSONFOLD="$root/python/run.sh" ;;
 esac
 
 
@@ -66,7 +67,7 @@ do
 	shopt -s nullglob
 	files=($base.*.inp.json)
 	shopt -u nullglob
-        X= ; $JSONFOLD -q $jftl "${files[@]}" 2>&1 > $out || X=$?
+        X= ; $JSONFOLD $jftl "${files[@]}" 2>&1 > $out || X=$?
 	if [ "$X" ] ; then
             failed=$((failed+1))
 	    echo "FAIL $label (template status=$X)" >&2

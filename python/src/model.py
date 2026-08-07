@@ -239,7 +239,12 @@ class RuntimeContext (Mapping, ABC):
         if isinstance(cond, bool):
             return cond
 
-        if isinstance(cond, NoValueType):
+        if isinstance(cond, Evaluator):
+            result = cond.eval_bool(self)
+            if isinstance(result, bool):
+                return result
+
+        elif isinstance(cond, NoValueType):
             if on_unset is JFTL_RAISE or on_unset is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="UNSET_CONDITION",
@@ -248,8 +253,11 @@ class RuntimeContext (Mapping, ABC):
                 )
                 return self._resolve(error, on_unset)
             return on_unset
-
-        result = cond.eval_bool(self) if isinstance(cond, Evaluator) else cond
+        
+            # Very unlikely that we will even get there. This compiler
+            # should resolve constants to boolean/error at compile time.
+        else:
+            result = cond
 
         if isinstance(result, JFTLNotice):
             return self._resolve(result, on_error)
