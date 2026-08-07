@@ -6,7 +6,7 @@
             "m": 1000,
             "t": "$py=n*m"
         },
-        "foreach": { "in": "$t", "where": false },
+        "foreach": { "in": "$t", "if": false },
         "out": "T=${t}"
     }
 }

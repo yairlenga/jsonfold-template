@@ -132,7 +132,7 @@ class TestForeach(unittest.TestCase):
 
     def test_full_foreach_block(self):
         stmt = compile_logic({
-            "foreach": {"key": "idx", "var": "item", "in": "$.items", "where": "$.item.active"}
+            "foreach": {"key": "idx", "var": "item", "in": "$.items", "if": "$.item.active"}
         })
         assert isinstance(stmt._foreach, _ForeachPart)
         self.assertEqual(stmt._foreach.key_var, "idx")
@@ -142,7 +142,7 @@ class TestForeach(unittest.TestCase):
 
     def test_full_foreach_block_with_default_key(self):
         stmt = compile_logic({
-            "foreach": {"var": "item", "in": "$.items", "where": "$.item.active"}
+            "foreach": {"var": "item", "in": "$.items", "if": "$.item.active"}
         })
         assert isinstance(stmt._foreach, _ForeachPart)
         self.assertEqual(stmt._foreach.key_var, "_key")

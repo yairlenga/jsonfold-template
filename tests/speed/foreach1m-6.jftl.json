@@ -8,7 +8,7 @@
             "v": 1
         },
 	"where": "$.item",
-        "foreach": { "in": "$t", "out": { "v": "$v", "t": "$t" } },
+        "foreach": { "in": "$t", "out": { "v": "$v", "t": "$_", "z": "z" } },
 	"out": "T=${t}"
     }
 }

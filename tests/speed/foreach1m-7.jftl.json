@@ -1,0 +1,16 @@
+{
+    "main": {
+        "$": true,
+        "set": {
+            "n": 1000,
+            "m": 1000,
+            "t": "$py=n*m",
+            "v": 1,
+	    "obj": { "foo": { "bar": "baz" }},
+	    "arr": { "foo": [ "a", "b", "c", "d", "e" ] }
+        },
+    	"where": "$.item",
+        "foreach": { "in": "$t", "out": { "v": "$v", "t": "$_", "z": "z", "obj": "$obj.foo.bar", "arr": "$arr.foo[2]"  } },
+	    "out": [ "T=${t}", "$_[-1]" ]
+    }
+}

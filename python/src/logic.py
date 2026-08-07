@@ -4,7 +4,7 @@ from types import NoneType
 from typing import Any, Optional, cast
 from dataclasses import dataclass
 
-from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_NODES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompilerPlugin, DocCompiler, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer, my_profile
+from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompilerPlugin, DocCompiler, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer, my_profile
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 @dataclass
@@ -100,7 +100,7 @@ class LogicStatement(Evaluator):
         count = None
 
         do_dict = False
-        if isinstance(items, RUNTIME_LIST_LIKE):
+        if isinstance(items, RUNTIME_LIST_TYPES):
             count = len(items)
             loop_iter = enumerate(items)
 
@@ -116,7 +116,7 @@ class LogicStatement(Evaluator):
             loop_iter = enumerate(range(start_index, items))
             ix_stop = ix_stop - start_index if ix_stop else None
             start_index = 0
-        elif isinstance(items, RUNTIME_NULL_LIKE):
+        elif isinstance(items, RUNTIME_NULL_TYPES):
             return MISSING_VALUE
         else:
             return JFTLNotice(code="FOREACH_IN", message=f"foreach expecting list/dict/int, got {type(items)}")
@@ -188,7 +188,7 @@ class LogicStatement(Evaluator):
                 else:
                     ctx.set_current(item)
 
-                if isinstance(item, JSON_NODES):
+                if isinstance(item, JSON_VALUE_TYPES):
                     pass
                 elif item is JFTL_SKIP:
                     continue
@@ -263,7 +263,7 @@ class LogicStatement(Evaluator):
         # May return Missing, which should result in early exit
         if self._foreach:
             v_foreach = self._eval_foreach(ctx)
-            if isinstance(v_foreach, (RUNTIME_NULL_LIKE, JFTLNotice)):
+            if isinstance(v_foreach, (RUNTIME_NULL_TYPES, JFTLNotice)):
                 return self._return_result(ctx, v_foreach)
             ctx.set_current(v_foreach)
             current = v_foreach
@@ -276,7 +276,7 @@ class LogicStatement(Evaluator):
 
         if self._transformer and not isinstance(current, Missing):
             current = self._transformer.transform(current)
-            if isinstance(current, (RUNTIME_NULL_LIKE, JFTLNotice)):
+            if isinstance(current, (RUNTIME_NULL_TYPES, JFTLNotice)):
                 return self._return_result(ctx, current)
             ctx.set_current(current)
 
@@ -407,7 +407,7 @@ class LogicCompiler(StatementCompiler):
             v_foreach_stop = self._compile_expr(v_loop, "stop", None)
             v_foreach_limit = self._compile_expr(v_loop, "limit", None)
 
-            v_foreach_cond = self._compile_cond(v_loop, "where", True)
+            v_foreach_cond = self._compile_cond(v_loop, "if", True)
             v_foreach_out = self._compile_out_or_case(v_loop, "out")
             v_foreach_update = None
             update = v_loop.get("update")

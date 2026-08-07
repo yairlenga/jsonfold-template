@@ -57,16 +57,16 @@ JFTL_BREAK : Final = Missing(code="BREAK", message= "Skip entry sentinel")
 JSON_LEAFS : TypeAlias = NoneType | bool | int | float | str
     # Tree of JSON Values.
 JSON_DOC = Tree[JSON_LEAFS]
-JSON_NODES= (bool, int, float, str, dict, list)
+JSON_VALUE_TYPES= (bool, int, float, str, dict, list)
 
 RUNTIME_LEAFS : TypeAlias = JSON_LEAFS | Missing | JFTLNotice
     # Tree of RUNTIME Values, may include Missing or Notices (error nodes)
 RUNTIME_DOC = Tree[RUNTIME_LEAFS]
 RUNTIME_BOOL = bool | Missing | JFTLNotice | NoneType
 
-RUNTIME_LIST_LIKE = (list, tuple)
-RUNTIME_DICT_LIKE = (dict)
-RUNTIME_NULL_LIKE = (NoneType, Missing)
+RUNTIME_LIST_TYPES = (list, tuple)
+RUNTIME_DICT_TYPES = (dict)
+RUNTIME_NULL_TYPES = (NoneType, Missing)
 
 # Template Class - represent compiled templates
 
@@ -192,7 +192,7 @@ class RuntimeContext (Mapping, ABC):
         else:
             result = cast(RUNTIME_DOC, stmt)
 
-        if isinstance(result, JSON_NODES):
+        if isinstance(result, JSON_VALUE_TYPES):
             return result
 
         if isinstance(result, JFTLNotice):
@@ -208,7 +208,7 @@ class RuntimeContext (Mapping, ABC):
                 return self._resolve(error, on_unset)
             return on_unset
 
-        elif isinstance(result, RUNTIME_NULL_LIKE): # pyright: ignore[reportUnnecessaryIsInstance]
+        elif isinstance(result, RUNTIME_NULL_TYPES): # pyright: ignore[reportUnnecessaryIsInstance]
             if on_null is JFTL_RAISE or on_null is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="MISSING_VALUE",
@@ -254,7 +254,7 @@ class RuntimeContext (Mapping, ABC):
         if isinstance(result, JFTLNotice):
             return self._resolve(result, on_error)
 
-        elif isinstance(result, RUNTIME_NULL_LIKE):
+        elif isinstance(result, RUNTIME_NULL_TYPES):
             if on_null is JFTL_RAISE or on_null is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="MISSING_VALUE",

@@ -9,7 +9,7 @@ from logic import LogicCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 from template import Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_NONE, JFTL_SKIP, JSON_DOC, JSON_NODES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_NONE, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
 
 from typing import Any
 
@@ -464,7 +464,7 @@ class JFTLRenderer():
         # Most liekly, below not used, and arrays are either "all-lieteral" (converted into LiteralStatement),
         # or "mixed" literal/statement, which get converted to ArrayStatement. This is kept in case the
         # compiler will decide to keep array ni "unknown" state.
-        if isinstance(source, RUNTIME_LIST_LIKE):
+        if isinstance(source, RUNTIME_LIST_TYPES):
             return ArrayEvaluator.eval_array(frame, source)
        
         return source
@@ -483,7 +483,7 @@ class JFTLRenderer():
                 if ( mv := self._materialize(v)) is not None or not drop_nulls
             }
 
-        if isinstance(value, RUNTIME_LIST_LIKE):
+        if isinstance(value, RUNTIME_LIST_TYPES):
             return [ self._materialize(v) for v in value ]
         if isinstance(value, ( NoneType, bool, int, float, str)):
             return value
@@ -570,37 +570,63 @@ class JFTLEngine(Engine):
         return result, status
 
 
-
 @dataclass(kw_only=True)
 class ObjectEvaluator(Evaluator):
+
+    # The 'flag' indicate the status of each entry:
+    # True - Constant, valid JSON output
+    # False - Constant, special value
+    # None - Dynamic, check result type
+
+    ITEM_LIST = list[tuple[str, COMPILE_DOC, Optional[bool]]]
+
     entries: dict[str, COMPILE_DOC]
+    _items: ITEM_LIST = field(default_factory=list)
+
+    @staticmethod
+    def _dict_to_items( entries: dict[str, COMPILE_DOC] ) -> ITEM_LIST :
+       return [
+            (k, v, None if isinstance(v, Evaluator) else isinstance(v, JSON_VALUE_TYPES))
+            for k, v in entries.items()
+        ]
 
     @staticmethod
     @my_profile
-    def eval_object(ctx:RuntimeContext, dict: dict[str, COMPILE_DOC]) -> RUNTIME_DOC:
-        result = {}
-        for key, item in dict.items():
-            value = (
-                item.eval(ctx)
-                if
-                isinstance(item, Evaluator)
-                else
-                item
-            )
-            if isinstance(value, JSON_NODES):
-                pass
-            elif isinstance(value, JFTLNotice):
-                return value
-            elif value is JFTL_SKIP:
-                continue  # silently dropped from objects, per locked sentinel rules
-            elif value is JFTL_BREAK:
-                break
-            result[key] = value
+    def _eval_items(ctx:RuntimeContext, items: ITEM_LIST) -> RUNTIME_DOC:
+        kv_list = []
+        for key, doc, flag in items:
+                # Expression or special constant
+            if flag is None:
+                value = cast(Evaluator, doc).eval(ctx)
+            # Constant potentially, with magic value
+            else:
+                value = cast(RUNTIME_DOC, doc)
+
+            if not flag:
+                # Expression
+                if isinstance(value, JSON_VALUE_TYPES):
+                    pass
+                elif isinstance(value, JFTLNotice):
+                    return value
+                elif value is JFTL_SKIP:
+                    continue  # silently dropped from objects, per locked sentinel rules
+                elif value is JFTL_BREAK:
+                    break
+            kv_list.append((key, value))
+
+        result = dict(kv_list)
         return result
+
+    def __post_init__(self):
+        self._items = self._dict_to_items(self.entries)
+
+    @classmethod
+    def eval_object(cls, ctx: RuntimeContext, doc: dict[str, COMPILE_DOC]) -> RUNTIME_DOC:
+        return cls._eval_items(ctx, cls._dict_to_items(doc))
 
     @my_profile
     def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
-        return self.eval_object(ctx, self.entries)
+        return self._eval_items(ctx, self._items)
 
 @dataclass(kw_only=True)
 class ArrayEvaluator(Evaluator):
@@ -650,7 +676,7 @@ class StringJoinStatement(Evaluator):
             value = item.eval(ctx) if isinstance(item, Evaluator) else item
             if isinstance(value, str):
                 pass
-            elif isinstance(value, RUNTIME_NULL_LIKE):
+            elif isinstance(value, RUNTIME_NULL_TYPES):
                 value = "null"
             elif isinstance(value, bool):
                 value = ["false", "true"][value]

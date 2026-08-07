@@ -7,7 +7,7 @@
             "t": "$py=n*m",
             "v": 1
         },
-	"where": "$.item",
+	    "if": "$.item",
         "foreach": { "in": "$t", "out": "$v" },
 	"out": "T=${t}"
     }

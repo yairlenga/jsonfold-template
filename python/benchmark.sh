@@ -9,13 +9,17 @@ DIR=${ME%/*}
 CODE=$DIR/scripts/jf_template.py
 
 function run () {
+	echo "Base Run"
 	python3 "$CODE" "$@" > benchmark.out
 #	python3 -m trace --count --coverdir=prof "$CODE" "$@" > prof/count.out
+	echo "Running cProfile"
 	python3 -m cProfile -o prof/cprof.prof "$CODE" "$@"
-	printf "sort tottime\nstats 20\nquit\n" | python3 -m pstats prof/cprof.prof > prof/cprof-tot.out
+	printf "sort tottime\nstats 30\nquit\n" | python3 -m pstats prof/cprof.prof > prof/cprof-tot.out
 	printf "sort cumtime\nstats 40\nquit\n" | python3 -m pstats prof/cprof.prof > prof/cprof-cum.out
-	printf "sort ncalls\nstats 20\nquit\n" | python3 -m pstats prof/cprof.prof > prof/cprof-ncalls.out
+	printf "sort ncalls\nstats 30\nquit\n" | python3 -m pstats prof/cprof.prof > prof/cprof-ncalls.out
+	echo "Function Profile"
 	kernprof -v "$CODE" "$@" > prof/kern_prof.out
+	echo "Line Profile Profile"
 	kernprof -l -v "$CODE" "$@" > prof/line_prof.out
 #	python3 -m scalene --cli --cpu-only --profile-only jsonfold "$CODE" "${@-100}" > prof/prof-scalene.out
 }

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, Union
 
-from model import COMPILE_DOC, RUNTIME_DOC, RUNTIME_LIST_LIKE, RUNTIME_NULL_LIKE, CompileError, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler, my_profile
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 @dataclass
@@ -89,7 +89,7 @@ class NavigationStatement(Evaluator):
 
             if isinstance(seg, Key):
                 value = (
-                    value.get(seg.name, MISSING_VALUE) if isinstance(value, Mapping)
+                    value.get(seg.name, MISSING_VALUE) if isinstance(value, (dict, Mapping))
                     else JFTLNotice(code="NAV-NOT-OBJECT", message=f"string keys can only be used on objects/null, at {type(value)}") if self._strict
                     else MISSING_VALUE
                 )
@@ -97,7 +97,7 @@ class NavigationStatement(Evaluator):
 
             elif isinstance(seg, Index):
                 value = (
-                    value[seg.i] if isinstance(value, RUNTIME_LIST_LIKE) and -len(value) <= seg.i < len(value)
+                    value[seg.i] if isinstance(value, RUNTIME_LIST_TYPES) and -len(value) <= seg.i < len(value)
                     else JFTLNotice(code="NAV-NOT-ARRAY", message=f"integer indices can only be used on array/null, at {type(value)}") if self._strict
                     else MISSING_VALUE
                 )
@@ -107,19 +107,19 @@ class NavigationStatement(Evaluator):
                 key = ctx.lookup_var(seg.name)
                 if isinstance(key, str):
                     value = (
-                        value.get(key, MISSING_VALUE) if isinstance(value, Mapping)
+                        value.get(key, MISSING_VALUE) if isinstance(value, (dict, Mapping))
                         else JFTLNotice(code="NAV-VAR-STR", message=f"string key '{str}` can only be used on objects/null, got {type(value)}") if self._strict
                         else MISSING_VALUE
                     )
                     traveled += f'.["{key}"]'
-                elif isinstance(key, int) and not isinstance(key, bool) and isinstance(value, RUNTIME_LIST_LIKE) and -len(value) <= key < len(value):
+                elif isinstance(key, int) and not isinstance(key, bool) and isinstance(value, RUNTIME_LIST_TYPES) and -len(value) <= key < len(value):
                     value = (
                         value[key] if -len(value) <= key < len(value)
                         else JFTLNotice(code="NAV-NOT-ARRAY", message=f"integer index '{int}` can only be used on array/null, got {type(value)}") if self._strict
                         else MISSING_VALUE
                     )
                     traveled += f"[{key}]"
-                elif not self._strict or isinstance(key, RUNTIME_NULL_LIKE):
+                elif not self._strict or isinstance(key, RUNTIME_NULL_TYPES):
                     value = MISSING_VALUE
                 else:
                     value = JFTLNotice(code="NAV-VAR-KEY", message=f"Key type '{type(key)}' can not be used to access elements of type {type(value)}")
