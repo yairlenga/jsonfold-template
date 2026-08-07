@@ -138,6 +138,7 @@ class LogicStatement(Evaluator):
         v_value = foreach.value_var
         v_key = foreach.key_var
         v_cond = foreach.cond
+        cond_expr = isinstance(v_cond, Evaluator)
         v_out = foreach.out
         v_update = foreach.update
 
@@ -172,7 +173,7 @@ class LogicStatement(Evaluator):
                 ctx.set_current(item)
 
             if not v_cond is True:
-                cond_result = ctx.eval_bool(v_cond)
+                cond_result = ctx.eval_bool(v_cond) if cond_expr else v_cond
                 if isinstance(cond_result, JFTLNotice):
                     return cond_result
                 elif not cond_result:
