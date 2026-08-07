@@ -221,7 +221,7 @@ GOLD = {{{
 {"x":1}
 }}}
 JFTL = {{{
-{"main": {"x": {"$": true, "if": true, "out": 1, "fallback": 2}}}
+{"main": {"x": {"$": true, "check": true, "out": 1, "fallback": 2}}}
 }}}
 
 [253-cond]

@@ -44,6 +44,7 @@ class _ForeachPart():
     key_var: Optional[str] = None
     value_var: Optional[str] = None
 #    iter_var: Optional[str] = None
+    set: Optional[list[_DefineVar]] = None
     items: Optional[Statement] = None
     cond: Optional[Condition] = None
     out: Optional[Statement] = None
@@ -306,15 +307,14 @@ class LogicStatement(Evaluator):
 @dataclass(slots=True)
 class LogicCompiler(StatementCompiler):
 
-
     def compile_str(self, source: str, where: str = "" ) -> COMPILE_DOC :
         return JFTLNotice(code="LOGIC-NO-STR", message="Logic Plugin does not accept strings")
 
     def _compile_expr(self, args: dict[str, JSON_DOC], tag: str, unset_value: Expression = JSON_UNSET, *, record: bool = False ) -> Expression:
         if not tag in args:
             return unset_value
-        
-        expr = self.compiler.statement(args[tag], tag)
+               
+        expr = self.compiler.statement(args.pop(tag))
         if isinstance(expr, JFTLNotice) and record:
             self.compiler.record_notice(expr)
         return expr
@@ -323,7 +323,7 @@ class LogicCompiler(StatementCompiler):
         if not tag in args:
             return unset_value
         
-        expr = self.compiler.condition(args[tag], tag)
+        expr = self.compiler.condition(args.pop(tag))
         return expr
     
 
@@ -331,7 +331,7 @@ class LogicCompiler(StatementCompiler):
     def _compile_out_or_case(self, source: dict[str, JSON_DOC], where="") -> Expression:
 
         # If 'out' is present, make sure no 'case' exists (OK to hav case=None!)
-        cases = source.get("case")
+        cases = source.pop("case", None)
 
         if "out" in source:
             if not cases in (None, []):
@@ -366,81 +366,97 @@ class LogicCompiler(StatementCompiler):
 
     _TOKEN_RE = re.compile(r"^[A-Za-z]\w*$", re.ASCII)
 
+    def _parse_var(self, var_name, label: str) -> str | None:
+        if not isinstance(var_name, str):
+            self.compiler.record_notice(JFTLNotice(code="LOGIC-BAD-ID", message=f"Expecting variable name for '{label}', got '{type(var_name)}'"))
+            return None
+        if not self._TOKEN_RE.fullmatch(var_name):
+            self.compiler.record_notice(JFTLNotice(code="LOGIC-BAD-ID", message=f"Invalid variable name for '{label}', got 'var_name'"))
+            return None
+        return var_name
+
+
     def _get_named_var(self, args: dict[str, JSON_DOC], tag: str, fallback: Optional[str] = None) -> str | None :
         if not tag in args:
             return fallback
-        var_name = args[tag]
-        if not isinstance(var_name, str):
-            self.compiler.record_notice(JFTLNotice(code="LOGIC-BAD-ID", message=f"Expecting variable name for '{tag}', got '{type(var_name)}'"))
+        return self._parse_var(args.pop(tag), tag)
+    
+    def _parse_set_var(self, source: JSON_DOC, label: str) -> Optional[list[_DefineVar]]:
+
+        if source is None:
             return None
-        if not self._TOKEN_RE.fullmatch(var_name):
-            self.compiler.record_notice(JFTLNotice(code="LOGIC-BAD-ID", message=f"Invalid variable name for '{tag}', got 'var_name'"))
+
+        if not isinstance( source, dict ):
+            self.compiler.record_notice(JFTLNotice(code="LOGIC-BAD-SET", message=f"Logic {label} expecting dictionary, got {type(source)}"))
+            return None
+
+        set_list = [
+            (
+                self._parse_var(name, f"{pos+1}"),
+                self.compiler.statement(expr, f"set({name})"),
+            )
+            for pos, [name, expr] in enumerate(source.items())
+        ]
+
+        var_list = [ _DefineVar(name= n, expr= e ) for n, e in set_list if isinstance(n, str)]
+        return var_list
+
+    def _compile_set_vars(self, source: dict[str, JSON_DOC], tag: str) -> Optional[list[_DefineVar]]:
+        if not tag in source:
             return None
         
-        return var_name
+        return self._parse_set_var(source.pop(tag), tag)
 
-    def _compile_object(self, source: dict[str, JSON_DOC], where: str = "") -> LogicStatement:
+
+
+    def _compile_foreach(self, source: dict[str, JSON_DOC]) -> _ForeachPart:
+
+        v_foreach_key = self._get_named_var(source, "key", "_key")
+        v_foreach_value = self._get_named_var(source, "var")
+#            v_foreach_iter = self._get_named_var(v_loop, "var")
+
+        # Runtime expressions
+        v_foreach_in = self._compile_expr(source, "in")
+        v_foreach_start = self._compile_expr(source, "start", 0)
+        v_foreach_stop = self._compile_expr(source, "stop", None)
+        v_foreach_limit = self._compile_expr(source, "limit", None)
+
+        v_foreach_cond = self._compile_cond(source, "if", True)
+        v_foreach_out = self._compile_out_or_case(source, "out")
+        v_foreach_update = self._compile_set_vars(source, "update")
+        
+        v_foreach = _ForeachPart(
+            key_var = v_foreach_key,
+            value_var = v_foreach_value,
+#                iter_var = v_foreach_iter,
+
+            items = v_foreach_in,               
+            start = v_foreach_start,
+            stop = v_foreach_stop,
+            limit = v_foreach_limit,
+
+            cond = v_foreach_cond,
+            out = v_foreach_out,
+            update = v_foreach_update,
+        )
+        return v_foreach
+
+
+    def _compile_object(self, source_elem: dict[str, JSON_DOC], where: str = "") -> LogicStatement:
         compiler = self.compiler
 
+        source = dict(source_elem)
+
         v_defines = None
-        defines = source.get("set", {})
-        if isinstance( defines, dict ):
-            v_defines = [
-                _DefineVar(
-                    name = name,
-                    expr = compiler.statement(expr, f"set({name})")
-                    )
-                for name, expr in defines.items()
-            ]
-        else:
-            compiler.record_notice(JFTLNotice(code="LOGIC-BAD-SET", message=f"Logic 'set' expecting dictionary, got {type(defines)}"))
+        v_defines = self._compile_set_vars(source, "set")
             
         v_if = self._compile_cond(source, "check", True)
         v_set_data = self._compile_expr(source, "data")
         
-        v_loop = source.get("foreach", None)
+        v_loop = source.pop("foreach", None)
         v_foreach = None
         if isinstance(v_loop, dict):
-            # Runtime variables
-            v_foreach_key = self._get_named_var(v_loop, "key", "_key")
-            v_foreach_value = self._get_named_var(v_loop, "var")
-#            v_foreach_iter = self._get_named_var(v_loop, "var")
-
-            # Runtime expressions
-            v_foreach_in = self._compile_expr(v_loop, "in")
-            v_foreach_start = self._compile_expr(v_loop, "start", 0)
-            v_foreach_stop = self._compile_expr(v_loop, "stop", None)
-            v_foreach_limit = self._compile_expr(v_loop, "limit", None)
-
-            v_foreach_cond = self._compile_cond(v_loop, "if", True)
-            v_foreach_out = self._compile_out_or_case(v_loop, "out")
-            v_foreach_update = None
-            update = v_loop.get("update")
-            if isinstance( update, dict ):
-                v_foreach_update = [
-                    _DefineVar(
-                        name = name,
-                        expr = compiler.statement(expr, f"set({name})")
-                        )
-                    for name, expr in update.items()
-                ]
-            elif update is not None:
-                compiler.record_notice(JFTLNotice(code="LOGIC-BAD-SET", message=f"Logic 'set' expecting dictionary, got {type(defines)}"))
-          
-            v_foreach = _ForeachPart(
-                key_var = v_foreach_key,
-                value_var = v_foreach_value,
-#                iter_var = v_foreach_iter,
-
-                items = v_foreach_in,               
-                start = v_foreach_start,
-                stop = v_foreach_stop,
-                limit = v_foreach_limit,
-
-                cond = v_foreach_cond,
-                out = v_foreach_out,
-                update = v_foreach_update,
-            )
+            v_foreach = self._compile_foreach(v_loop)
         elif v_loop is not None:
             compiler.record_notice(JFTLNotice(
                     code="BAD_FOREACH",
@@ -472,6 +488,13 @@ class LogicCompiler(StatementCompiler):
             _transformer = v_transformer,
             _out = v_out,
         )
+
+             # Make sure no unprocessed attributes
+        if source:
+            compiler.record_notice(JFTLNotice(
+                    code="LOGIC-UNKNOWN-TAGS",
+                    message=f"Found {len(source)} unknown attributes: { list(source.keys())[:3] }",
+                ))
         return self
     
     def compile(self, source: JSON_DOC, where: str = "") -> LogicStatement | JFTLNotice:

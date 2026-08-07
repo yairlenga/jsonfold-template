@@ -92,7 +92,7 @@ Only runs if `check` passed. Replaces the "current" value (`_`) used by the rest
     "in": "$.items",
     "var": "item",
     "key": "k",
-    "where": "$py=item['active']",
+    "if": "$py=item['active']",
     "out": "$item.sku",
     "update": { "count": "$py=(count or 0) + 1" }
   }
@@ -249,7 +249,7 @@ Both are plain expressions (not case/out blocks) — evaluated fresh, in the sam
     "in": "EXPR",
     "var": "VAR", "key": "VAR",
     "start": "EXPR", "stop": "EXPR", "limit": "EXPR",
-    "where": "COND",
+    "if": "COND",
     "case": [ { "when": "COND", "then": "EXPR" } ..., { "else": "EXPR" } ],
     "out": "EXPR",
     "update": { "VAR": "EXPR" }

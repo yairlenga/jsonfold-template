@@ -112,11 +112,11 @@ for id in "${id_list[@]}" ; do
 	jq_out=$base.jq.out
 	err_file=$base.err
 	jf_file=$base.jftl
-	jf_out=$base.jf.out
+	jf_out=$base.out
 	# Run from memory
 	error=
 	msg=
-	rm -f $base.{input,gold,jq,jqout,jftl,out,err,ok}
+	rm -f $base.{input,gold,jq,jqout,jftl,out,err,ok,warn}
 	rm -f $err_file
 
 	if [ "$skip_msg" ] ; then
@@ -207,7 +207,7 @@ for id in "${id_list[@]}" ; do
 		echo "OK $id"
         	pass=$((pass+1))
 		mv $err_file $base.ok
-		[ "$KEEP" ] || rm -f $OUTDIR/$id.{input,jq,jftl,gold,jq.out,jf.out,err}
+		[ "$KEEP" ] || rm -f $OUTDIR/$id.{input,jq,jftl,gold,jq.out,out,err,warn}
 	fi
 done
  

@@ -52,7 +52,7 @@ class FakeCompiler(DocCompiler):
     def expression(self, source, where):
         return Tagged("expression", source)
 
-    def condition(self, source, where):
+    def condition(self, source, where = ""):
         return Tagged("condition", source)
 
     def statement(self, source, where: str = "") -> Statement | Tagged:

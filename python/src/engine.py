@@ -317,7 +317,9 @@ class JFTLCompiler(DocCompiler):
             if self._logicCompiler is None:  
                 self._logicCompiler = LogicCompiler(self)
 
-            expr = self._logicCompiler.compile(source, where)
+            logic_elem = dict(source)
+            logic_elem.pop(self.config.action_tag)
+            expr = self._logicCompiler.compile(logic_elem, where)
             if self._error_count > error_count and not isinstance(expr, JFTLNotice):
                 # If the error_count was breached, we convert the dictionary to 'ErrorStatement'
                 # which will result in runtime error, should the template be executed, with

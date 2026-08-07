@@ -18,9 +18,9 @@ function run () {
 	printf "sort cumtime\nstats 40\nquit\n" | python3 -m pstats prof/cprof.prof > prof/cprof-cum.out
 	printf "sort ncalls\nstats 30\nquit\n" | python3 -m pstats prof/cprof.prof > prof/cprof-ncalls.out
 	echo "Function Profile"
-	kernprof -v "$CODE" "$@" > prof/kern_prof.out
+	kernprof -z -b -v "$CODE" "$@" > prof/kern_prof.out
 	echo "Line Profile Profile"
-	kernprof -l -v "$CODE" "$@" > prof/line_prof.out
+	kernprof -z -b -l -v -u0.001 "$CODE" "$@" > prof/line_prof.out
 #	python3 -m scalene --cli --cpu-only --profile-only jsonfold "$CODE" "${@-100}" > prof/prof-scalene.out
 }
 
