@@ -33,6 +33,19 @@ Two things are worth noting:
 
 The built-in transformations fall into four categories.
 
+
+
+## Built-in transformers, at a glance
+
+| Name           | Input | Output | Description |
+|----------------|-------|--------|-------------|
+| `flatten`      | Array of Arrays | Array | concatenate multiple arrays  |
+| `merge`        | Array of objects | Object | concatenate multiple objects |
+| `to_pairs`     | Object | Array of Pairs | Split objects into array of `[key, value]` pairs |
+| `drop_missing` | Array or object | Same | Remove entries with `Missing` |
+| `concat`       | Array of scalars | String | concatenate stringified elements |
+| `to_object`    | Arrays of entries | Object | Create from individual entries, each can be  `[ key, value ]` or `{ "key": ..., "value": ... }`|
+
 | Category            | Transformations                    |
 | ------------------- | ---------------------------------- |
 | Structural          | `flatten`, `merge`, `drop_missing` |
