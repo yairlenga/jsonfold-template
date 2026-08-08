@@ -1218,7 +1218,6 @@ GOLD = {{{
 SKIP=needs try/catch.
 
 [073-basic]
-SKIP = JQ1.7 does not ahve 2 parameters skip
 LEVEL=py
 JQ = {{{
 [skip(3; .[])]
@@ -1230,7 +1229,7 @@ GOLD = {{{
 [4,5,6,7,8,9]
 }}}
 JFTL = {{{
-{"main": "$py=_[3:]"}
+{"main": { "$": true, "foreach": { "start":3 }}}
 }}}
 
 [074-basic]
@@ -1262,7 +1261,7 @@ GOLD = {{{
 []
 }}}
 JFTL = {{{
-{"main": "$py=_[3:]"}
+{"main": { "$": true, "foreach": { "start":3 }}}
 }}}
 
 [076-basic]

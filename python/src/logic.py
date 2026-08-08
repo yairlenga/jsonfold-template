@@ -141,6 +141,7 @@ class LogicStatement(Evaluator):
         v_cond = foreach.cond
         cond_expr = isinstance(v_cond, Evaluator)
         v_out = foreach.out
+        v_out_expr = isinstance(v_out, Evaluator)
         v_update = foreach.update
 
         # Setup output
@@ -186,7 +187,7 @@ class LogicStatement(Evaluator):
                 
             if v_out:
                 # No point of inlining - v_out is always an expression.
-                item = ctx.eval_value(v_out)
+                item = ctx.eval_value(v_out) if v_out_expr else v_out
                 if FAST_INLINE:
                     # Calling via ctx.set_current is 10X slower
                     ctx.current = item

@@ -46,7 +46,6 @@ class NoValueType(_SentialValue):
         return False
 
 JSON_UNSET : Final = NoValueType("JSON_UNSET")
-JFTL_NONE : Final = NoValueType("JFTL_NONE")
 
 JFTL_RAISE : Final = _SentialValue("_RAISE_")
 JFTL_NOTICE : Final = _SentialValue("_NOTICE_")
@@ -65,7 +64,7 @@ RUNTIME_DOC = Tree[RUNTIME_LEAFS]
 RUNTIME_BOOL = bool | Missing | JFTLNotice | NoneType
 
 RUNTIME_LIST_TYPES = (list, tuple)
-RUNTIME_DICT_TYPES = (dict)
+RUNTIME_DICT_TYPES = (dict, Mapping)
 RUNTIME_NULL_TYPES = (NoneType, Missing)
 
 # Template Class - represent compiled templates
@@ -181,7 +180,7 @@ class RuntimeContext (Mapping, ABC):
         stmt : Statement,
         *,
         context: Optional[str] = None,
-        on_null: Any = JSON_UNSET,
+        on_missing: Any = JSON_UNSET,
         on_error: Any = JFTL_NOTICE,
         on_unset: Any = JFTL_RAISE,
     ) -> RUNTIME_DOC:
@@ -189,16 +188,8 @@ class RuntimeContext (Mapping, ABC):
         if isinstance(stmt, Evaluator):
             self.env.eval_count += 1
             result = stmt.eval(self)
-        else:
-            result = cast(RUNTIME_DOC, stmt)
 
-        if isinstance(result, JSON_VALUE_TYPES):
-            return result
-
-        if isinstance(result, JFTLNotice):
-            return self._resolve(result, on_error)
-
-        elif isinstance(result, NoValueType):
+        elif isinstance(stmt, NoValueType):
             if on_unset is JFTL_RAISE or on_unset is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="UNSET_STATEMENT",
@@ -208,15 +199,24 @@ class RuntimeContext (Mapping, ABC):
                 return self._resolve(error, on_unset)
             return on_unset
 
-        elif isinstance(result, RUNTIME_NULL_TYPES): # pyright: ignore[reportUnnecessaryIsInstance]
-            if on_null is JFTL_RAISE or on_null is JFTL_NOTICE:
+        else:
+            result = cast(RUNTIME_DOC, stmt)
+        
+        if isinstance(result, JSON_VALUE_TYPES):
+            return result
+
+        elif isinstance(result, JFTLNotice):
+            return self._resolve(result, on_error)
+
+        elif isinstance(result, Missing):
+            if on_missing is JFTL_RAISE or on_missing is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="MISSING_VALUE",
                     where=self.where(context),
                     message="value is missing or null",
                 )
-                return self._resolve(error, on_null)
-            return result if on_null is JSON_UNSET else on_null
+                return self._resolve(error, on_missing)
+            return result if on_missing is JSON_UNSET else on_missing
 
         return result        
 

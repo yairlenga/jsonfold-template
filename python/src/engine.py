@@ -9,7 +9,7 @@ from logic import LogicCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 from template import Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_NONE, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
 
 from typing import Any
 
@@ -329,10 +329,9 @@ class JFTLCompiler(DocCompiler):
             return expr
         
         if action is False:
-            value = source.get("out", JFTL_NONE)
             if not "out" in source:
                 return JFTLNotice(code="MISSING-VALUE", message="Missing 'out' in Literal statements ('$' = False), value must be provided")
-            return LiteralStatement(value=value)
+            return LiteralStatement(value=source.get("out"))
                                     
         else:
             action_name = f"'{action}'" if isinstance(action, str) else f"type={type(action)}"

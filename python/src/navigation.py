@@ -1,11 +1,11 @@
 
 # runtime.py
-from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum, auto
+from types import NoneType
 from typing import Any, Literal
 
-from model import COMPILE_DOC, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, RUNTIME_DICT_TYPES, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler, my_profile
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 
@@ -82,6 +82,8 @@ class NavigationStatement(Evaluator):
 
         traveled = "_"  # builds up the "location" string as we walk, for diagnostics
 
+        nav_stop_types = (NoneType, Missing, JFTLNotice)
+
         for seg in self._segments:
             if isinstance(value, (JFTLNotice, Missing)):
                 return value  # already failed upstream — propagate, stop walking
@@ -89,7 +91,7 @@ class NavigationStatement(Evaluator):
             match seg.type:
                 case NavType.KEY:
                     value = (
-                        value.get(seg.name, MISSING_VALUE) if isinstance(value, (dict, Mapping))
+                        value.get(seg.name, MISSING_VALUE) if isinstance(value, RUNTIME_DICT_TYPES)
                         else JFTLNotice(code="NAV-NOT-OBJECT", message=f"string keys can only be used on objects/null, at {type(value)}") if self._strict
                         else MISSING_VALUE
                     )
@@ -105,7 +107,7 @@ class NavigationStatement(Evaluator):
 
                 case NavType.VAR:
                     key = ctx.lookup_var(seg.name)
-                    if isinstance(key, str) and isinstance(value, (dict, Mapping)):
+                    if isinstance(key, str) and isinstance(value, RUNTIME_DICT_TYPES):
                         value = value.get(key, MISSING_VALUE)                        
                         traveled += f'.["{key}"]'
 
