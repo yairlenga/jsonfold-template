@@ -7,14 +7,21 @@
             "t": "$py=n*m",
             "v": 1,
 	    "flag": { "item": true },
-	    "obj": { "foo": { "bar": "baz" }},
-	    "arr": { "foo": [ "a", "b", "c", "d", "e" ] }
+	    "obj": { "kv": "=k", "n": [ "=n1", "=n2", "=n3" ],
+            "k": { "kv": "=kk", "n": [ "=kn1", "=kn2", "=kn3" ],
+                "k": { "kv": "=kkv", "n": [ "=kkn1", "=kkn2", "=kkn3" ]}
+            }
+        },
+	    "arr": [ "=1", "=2", "=3", "=4", "=5" ]
         },
     	
         "foreach": {
             "in": "$t",
             "if": "$flag.item",
-            "out": { "v": "$v", "t": "$_", "z": "z", "obj": "$obj.foo.bar", "arr": "$arr.foo[2]"  }
+            "out": { "v": "$v", "t": "$_", "z": "z",
+		    "var.k": "$obj.kv", "var.kk": "$obj.k.kv", "var.kkk": "$obj.k.k.kv",
+		    "var": "$arr[2]", "var.kn": "$obj.n[2]", "var.kkn": "$obj.k.n[2]" 
+	    }
         },
 	    "out": [ "T=${t}", "$_[-1]" ]
     }

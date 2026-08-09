@@ -1,8 +1,8 @@
 
 # runtime.py
+from abc import ABC
 from dataclasses import dataclass
 from enum import Enum, auto
-from types import NoneType
 from typing import Any, Literal
 
 from model import COMPILE_DOC, RUNTIME_DICT_TYPES, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler, my_profile
@@ -47,7 +47,7 @@ class VariableStatement(Evaluator):
             return ctx.vars[name]
         return ctx.lookup_var(name)
 
-class NavigationStatement(Evaluator):
+class NavigationEvaluator(Evaluator, ABC):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
     def __init__(self, where: str, source_code: str, *,
@@ -61,38 +61,48 @@ class NavigationStatement(Evaluator):
         self._segments = segments
         self._strict = strict
 
+    NAV_STOP_TYPES = (Missing, JFTLNotice)
 
-    
+    @staticmethod
     @my_profile
-    def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
+    def _find_head(ctx: RuntimeContext, start) -> Any | RuntimeContext:
         value = None
-        start = self._start
         if start == "_data":
             value = ctx.current
         elif start == "_frame":
             value = ctx
-        elif self._start == "_input":
+        elif start == "_input":
             value = ctx.env.input
-        elif self._start == "_parent._data":
+        elif start == "_parent._data":
             if not ctx.parent:
                 return JFTLNotice(code="NAV-NO-PARENT", message="Using '$%' is not valid at the top frame")
             value = ctx.parent.current
         else:
-            value = ctx.lookup_var(self._start)
+            value = ctx.lookup_var(start)
+    
+        return value
+    
 
-        traveled = "_"  # builds up the "location" string as we walk, for diagnostics
 
-        nav_stop_types = (NoneType, Missing, JFTLNotice)
+class _GenericNavEvaluator(NavigationEvaluator):
+    
+    @my_profile
+    def _eval_nav(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
+
+        value = self._find_head(ctx, self._start)
+
+        traveled = "$"  # builds up the "location" string as we walk, for diagnostics
+        nav_stop_types = (Missing, JFTLNotice)
 
         for seg in self._segments:
-            if isinstance(value, (JFTLNotice, Missing)):
+            if isinstance(value, nav_stop_types):
                 return value  # already failed upstream — propagate, stop walking
 
             match seg.type:
                 case NavType.KEY:
                     value = (
                         value.get(seg.name, MISSING_VALUE) if isinstance(value, RUNTIME_DICT_TYPES)
-                        else JFTLNotice(code="NAV-NOT-OBJECT", message=f"string keys can only be used on objects/null, at {type(value)}") if self._strict
+                        else JFTLNotice(code="NAV-NOT-OBJECT", message=f"string keys can only be used on objects, found {type(value)} path {'traveled'}") if self._strict
                         else MISSING_VALUE
                     )
                     traveled += f".{seg.name}"
@@ -113,7 +123,7 @@ class NavigationStatement(Evaluator):
 
                     elif isinstance(key, int) and not isinstance(key, bool) and isinstance(value, RUNTIME_LIST_TYPES):
                         value = value[key] if -len(value) <= key < len(value) else MISSING_VALUE
-                        traveled += f"[{key}]"
+                        traveled += f"[[key]]"
 
                     elif not self._strict or isinstance(key, RUNTIME_NULL_TYPES):
                         value = MISSING_VALUE
@@ -122,6 +132,91 @@ class NavigationStatement(Evaluator):
 
         return value
 
+    eval = _eval_nav
+
+
+class _KeyNavEvaluator(NavigationEvaluator):
+
+    @my_profile
+    # Evaluate $.key in non-strict mode.
+    def eval_k(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
+        value = self._find_head(ctx, self._start)
+        if isinstance(value, self.NAV_STOP_TYPES):
+            return value
+
+        value = (
+            value.get(self._segments[0].name, MISSING_VALUE)
+            if isinstance(value, RUNTIME_DICT_TYPES)
+            else MISSING_VALUE
+        )
+
+        return value
+    
+    eval = eval_k
+class _IndexNavEvalulator(NavigationEvaluator):
+
+    @my_profile
+    # Evaluate $[123] in non-strict mode.
+    def eval_n(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
+        value = self._find_head(ctx, self._start)
+        if isinstance(value, self.NAV_STOP_TYPES):
+            return value
+
+        traveled = "_"  # builds up the "location" string as we walk, for diagnostics
+        index1 = self._segments[0].index
+        value = value[index1] if isinstance(value, RUNTIME_LIST_TYPES) and -len(value) <= index1 < len(value) else MISSING_VALUE
+        traveled += f"[{index1}]"
+
+        return value
+    
+    eval = eval_n
+
+
+class _KeyKeyNavEvaluator(NavigationEvaluator):
+
+    @my_profile
+    # Evaluate $.key1.keys in non-strict mode.
+    def eval_kk(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
+        value = self._find_head(ctx, self._start)
+        if isinstance(value, self.NAV_STOP_TYPES):
+            return value
+
+        value = (
+            v1.get(self._segments[1].name, MISSING_VALUE)
+            if isinstance((
+                v1:=value.get(self._segments[0].name, MISSING_VALUE)
+                ), RUNTIME_DICT_TYPES)
+            else MISSING_VALUE
+        )
+
+        return value
+
+    eval = eval_kk
+
+
+class _KeyIndexNavEvaluator(NavigationEvaluator):
+
+    @my_profile
+    # Evaluate $.key1[123] in non-strict mode.
+    def eval_kn(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
+        value = self._find_head(ctx, self._start)
+        if isinstance(value, self.NAV_STOP_TYPES):
+            return value
+
+        segments = self._segments
+        result = (
+            v1[index2]
+            if(
+                isinstance( value, RUNTIME_DICT_TYPES)
+                and isinstance( (v1:=value.get(segments[0].name, MISSING_VALUE)), RUNTIME_LIST_TYPES)
+                and -len(value) <= (index2:=segments[1].index) < len(v1)
+            )
+            else MISSING_VALUE
+        )
+
+        return result
+    
+    eval = eval_kn
 
 NAV_RE_STR = r"""
     (?P<start> \$ | \$\^ | \$< | \$% | \$(?P<vars>\w+ ) )
@@ -173,7 +268,7 @@ class NavigationCompiler(StatementCompiler):
         return segments    
 
     @classmethod
-    def parse_nav(cls, m: re.Match[str], where, *, strict: bool = False) -> NavigationStatement | VariableStatement | JFTLNotice:
+    def parse_nav(cls, m: re.Match[str], where, *, strict: bool = False) -> NavigationEvaluator | VariableStatement | JFTLNotice:
 
         start_part = m.group("start")
         segments_part = m.group("segments")
@@ -197,7 +292,22 @@ class NavigationCompiler(StatementCompiler):
         
         segments = cls._parse_segments(where, segments_part)
         source_code : str = m[0]
-        expr = NavigationStatement(where, source_code, start=start, segments=segments, strict=strict)
+
+        if len(segments) == 1 and segments[0].type == NavType.KEY and not strict:
+            return _KeyNavEvaluator(where, source_code, start=start, segments=segments, strict=strict)
+        elif len(segments) == 1 and segments[0].type == NavType.INDEX and not strict:
+            return _IndexNavEvalulator(where, source_code, start=start, segments=segments, strict=strict)
+        elif len(segments) == 2 and segments[0].type == NavType.KEY and segments[1].type == NavType.KEY and not strict:
+            return _KeyKeyNavEvaluator(where, source_code, start=start, segments=segments, strict=strict)
+        elif len(segments) == 2 and segments[0].type == NavType.KEY and segments[1].type == NavType.INDEX and not strict:
+            return _KeyIndexNavEvaluator(where, source_code, start=start, segments=segments, strict=strict)
+#        elif len(segments) == 3 and segments[0].type == NavType.KEY and segments[1].type == NavType.KEY and segments[2].type == NavType.KEY and not strict:
+#            return _KeyKeyKeyNavEvaluator(where, source_code, start=start, segments=segments, strict=strict)
+#        elif len(segments) == 2 and segments[0].type == NavType.KEY and segments[1].type == NavType.INDEX and not strict:
+#            return _KeyKeyIndexNavEvaluator(where, source_code, start=start, segments=segments, strict=strict)
+           
+        # Fallback - does not match any existinng pattern
+        expr = _GenericNavEvaluator(where, source_code, start=start, segments=segments, strict=strict)
         return expr
 
     def _parse(self, source, where):

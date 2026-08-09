@@ -15,7 +15,7 @@ import unittest
 
 from core import Frame, Environment
 from model import _NULL_TEMPLATE, CompileError # pyright: ignore[reportPrivateUsage]
-from navigation import NavigationCompiler, NavigationStatement
+from navigation import NavigationEvaluator, NavigationCompiler
 from template import Missing
 
 
@@ -31,11 +31,11 @@ def make_child(parent: Frame, current):
     return Frame(env=parent.env, current=current, parent=parent, level=parent.level + 1, part_path="child")
 
 
-def nav(text: str, where="nav") -> NavigationStatement:
+def nav(text: str, where="nav") -> NavigationEvaluator:
     m = NavigationCompiler._NAV_RE.match(text) # pyright: ignore[reportPrivateUsage]
     assert m
     stmt = NavigationCompiler.parse_nav(m, None)
-    assert isinstance(stmt, NavigationStatement)
+    assert isinstance(stmt, NavigationEvaluator)
     return stmt
 
 

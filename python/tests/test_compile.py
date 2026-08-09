@@ -7,7 +7,7 @@ Run with:  python -m unittest test_compile.py -v
 from typing import Any
 import unittest
 
-from navigation import NavigationStatement
+from navigation import NavigationEvaluator
 from engine import JFTLEngine, LiteralStatement, ObjectEvaluator, ArrayEvaluator
 
 
@@ -51,12 +51,12 @@ class TestPathStatements(unittest.TestCase):
 
     def test_dollar_dot_string_becomes_path_statement(self):
         stmt = compile("$.user.name")
-        self.assertIsInstance(stmt, NavigationStatement)
+        self.assertIsInstance(stmt, NavigationEvaluator)
 
     def test_stripped_prefix_keeps_leading_dot(self):
         stmt = compile("$.user.name")
-        assert(isinstance(stmt, NavigationStatement))
-        self.assertIsInstance(stmt, NavigationStatement)
+        assert(isinstance(stmt, NavigationEvaluator))
+        self.assertIsInstance(stmt, NavigationEvaluator)
         self.assertEqual(stmt._start, "_data") # pyright: ignore[reportPrivateUsage]
         segments : list[Any] = stmt._segments # pyright: ignore[reportPrivateUsage]
         assert len(segments) == 2
@@ -66,7 +66,7 @@ class TestPathStatements(unittest.TestCase):
     def test_bare_dollar_dot_is_ok(self):
         # "$" alone — a dot with nothing after it is not a valid path segment
         stmt = compile("$")
-        self.assertIsInstance(stmt, NavigationStatement)
+        self.assertIsInstance(stmt, NavigationEvaluator)
 
     def test_malformed_path_compile_error(self):
         template = template_of("$.foo!bar")
@@ -74,7 +74,7 @@ class TestPathStatements(unittest.TestCase):
 
     def test_where_is_threaded_through_for_diagnostics(self):
         stmt = compile("$.name", where="macros.personCard")
-        assert(isinstance(stmt, NavigationStatement))
+        assert(isinstance(stmt, NavigationEvaluator))
         self.assertEqual(stmt.where, "macros.personCard")
 
 
@@ -101,7 +101,7 @@ class TestObjectStatements(unittest.TestCase):
         assert isinstance(stmt, ObjectEvaluator)
         inner_stmt = stmt.entries["outer"]
         assert isinstance(inner_stmt, ObjectEvaluator)
-        self.assertIsInstance(inner_stmt.entries["inner"], NavigationStatement)
+        self.assertIsInstance(inner_stmt.entries["inner"], NavigationEvaluator)
 
     def test_malformed_path_inside_nested_dict_raises(self):
         template = template_of({"a": {"b": "$.foo!bar"}})
@@ -111,7 +111,7 @@ class TestObjectStatements(unittest.TestCase):
         stmt = compile({"a": {"b": "$.x"}}, where="root")
         assert isinstance(stmt, ObjectEvaluator)
         assert isinstance(stmt.entries["a"], ObjectEvaluator)
-        assert isinstance(stmt.entries["a"].entries["b"], NavigationStatement)
+        assert isinstance(stmt.entries["a"].entries["b"], NavigationEvaluator)
         inner = stmt.entries["a"].entries["b"]
         self.assertEqual(inner.where, "root.a.b")
 
@@ -128,7 +128,7 @@ class TestArrayStatements(unittest.TestCase):
         assert isinstance(stmt, ArrayEvaluator)
         self.assertIsInstance(stmt.items[0], int)
         self.assertIsInstance(stmt.items[1], str)
-        self.assertIsInstance(stmt.items[2], NavigationStatement)
+        self.assertIsInstance(stmt.items[2], NavigationEvaluator)
 
     def test_list_of_dicts(self):
         stmt = compile([{"a": "$.x"}, {"b": "$.y"}])
@@ -144,7 +144,7 @@ class TestArrayStatements(unittest.TestCase):
     def test_where_includes_index(self):
         stmt = compile(["a", "$.x"], where="root")
         assert isinstance(stmt, ArrayEvaluator)
-        assert isinstance(stmt.items[1], NavigationStatement)
+        assert isinstance(stmt.items[1], NavigationEvaluator)
         self.assertEqual(stmt.items[1].where, "root[1]")
 
 
@@ -161,12 +161,12 @@ class TestMixedNesting(unittest.TestCase):
         }
         stmt = compile(source)
         assert isinstance(stmt, ObjectEvaluator)
-        self.assertIsInstance(stmt.entries["name"], NavigationStatement)
+        self.assertIsInstance(stmt.entries["name"], NavigationEvaluator)
         assert isinstance(stmt.entries["tags"], ArrayEvaluator)
         self.assertIsInstance(stmt.entries["tags"].items[0], str)
-        self.assertIsInstance(stmt.entries["tags"].items[1], NavigationStatement)
+        self.assertIsInstance(stmt.entries["tags"].items[1], NavigationEvaluator)
         assert isinstance(stmt.entries["address"], ObjectEvaluator)
-        self.assertIsInstance(stmt.entries["address"].entries["city"], NavigationStatement)
+        self.assertIsInstance(stmt.entries["address"].entries["city"], NavigationEvaluator)
         self.assertIsInstance(stmt.entries["address"].entries["zip"], str)
 
 
