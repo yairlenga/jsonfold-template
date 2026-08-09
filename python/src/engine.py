@@ -9,7 +9,7 @@ from logic import LogicCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 from template import Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, RUNTIME_VALUE_TYPES, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
 
 from typing import Any
 
@@ -591,6 +591,7 @@ class ObjectEvaluator(Evaluator):
             for k, v in entries.items()
         ]
 
+
     @staticmethod
     @my_profile
     def _eval_items(ctx:RuntimeContext, items: ITEM_LIST) -> RUNTIME_DOC:
@@ -605,14 +606,18 @@ class ObjectEvaluator(Evaluator):
 
             if not flag:
                 # Expression
-                if isinstance(value, JSON_VALUE_TYPES):
+                if isinstance(value, RUNTIME_VALUE_TYPES):
                     pass
-                elif isinstance(value, JFTLNotice):
+                elif isinstance(value, JFTLNotice): # pyright: ignore[reportUnnecessaryIsInstance]
                     return value
+                # There are 2 magical values: JFTL_SKIP, JFTL_BREAK, that can be emitted and require special handling
                 elif value is JFTL_SKIP:
                     continue  # silently dropped from objects, per locked sentinel rules
                 elif value is JFTL_BREAK:
                     break
+                else:
+                    # TODO: Add position indicator for bad item, may be display it.
+                    return JFTLNotice(code="ITEM-UNKNOWN-TYPE", message=f"Got unexpected value type {type(value)}")
             kv_list.append((key, value))
 
         result = dict(kv_list)

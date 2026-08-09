@@ -2,8 +2,8 @@
 # runtime.py
 from abc import ABC
 from dataclasses import dataclass
-from enum import Enum, auto
-from typing import Any, Literal
+from enum import Enum, StrEnum, auto
+from typing import Any
 
 from model import COMPILE_DOC, RUNTIME_DICT_TYPES, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler, my_profile
 from template import MISSING_VALUE, JFTLNotice, Missing
@@ -47,11 +47,17 @@ class VariableStatement(Evaluator):
             return ctx.vars[name]
         return ctx.lookup_var(name)
 
+class _NavStartFrom(StrEnum):
+    DATA = "_data"
+    FRAME = "_frame"
+    PARENT_DATA = "_parent._data"
+    INPUT = "_input"
+
 class NavigationEvaluator(Evaluator, ABC):
     """Compiled 'sel:' path — parsed once at compile time, walked at eval time."""
 
     def __init__(self, where: str, source_code: str, *,
-                 start: Literal["_data", "_frame", "_parent.data", "_input"] | str, 
+                 start: str, 
                  segments: list[PathSegment],
                  strict: bool
                  ):
@@ -60,28 +66,41 @@ class NavigationEvaluator(Evaluator, ABC):
         self._start = start
         self._segments = segments
         self._strict = strict
+        self._start_var = None
+
+        try:
+            self._nav_from = _NavStartFrom(start)
+        except:
+            self._nav_from = None
+            self._start_var = start
+
 
     NAV_STOP_TYPES = (Missing, JFTLNotice)
 
-    @staticmethod
+
     @my_profile
-    def _find_head(ctx: RuntimeContext, start) -> Any | RuntimeContext:
+    def _find_start(self, ctx: RuntimeContext) -> Any | RuntimeContext:
+
+        if (var := self._start_var):
+            return ctx.lookup_var(var)
+        
+        start = self._nav_from
         value = None
-        if start == "_data":
+        # Start from one of the predefined locations:        
+        if start == _NavStartFrom.DATA:
             value = ctx.current
-        elif start == "_frame":
+        elif start == _NavStartFrom.FRAME:
             value = ctx
-        elif start == "_input":
+        elif start == _NavStartFrom.INPUT:
             value = ctx.env.input
-        elif start == "_parent._data":
+        elif start == _NavStartFrom.PARENT_DATA:
             if not ctx.parent:
                 return JFTLNotice(code="NAV-NO-PARENT", message="Using '$%' is not valid at the top frame")
             value = ctx.parent.current
         else:
-            value = ctx.lookup_var(start)
+            return JFTLNotice(code="NAV-BAD-START", message= f"Unexpected navigation start location: {self._start}")
     
         return value
-    
 
 
 class _GenericNavEvaluator(NavigationEvaluator):
@@ -89,7 +108,8 @@ class _GenericNavEvaluator(NavigationEvaluator):
     @my_profile
     def _eval_nav(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
 
-        value = self._find_head(ctx, self._start)
+#        value = self._find_head(ctx, self._start)
+        value = self._find_start(ctx)
 
         traveled = "$"  # builds up the "location" string as we walk, for diagnostics
         nav_stop_types = (Missing, JFTLNotice)
@@ -140,7 +160,8 @@ class _KeyNavEvaluator(NavigationEvaluator):
     @my_profile
     # Evaluate $.key in non-strict mode.
     def eval_k(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
-        value = self._find_head(ctx, self._start)
+#        value = self._find_head(ctx, self._start)
+        value = self._find_start(ctx)
         if isinstance(value, self.NAV_STOP_TYPES):
             return value
 
@@ -158,7 +179,8 @@ class _IndexNavEvalulator(NavigationEvaluator):
     @my_profile
     # Evaluate $[123] in non-strict mode.
     def eval_n(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
-        value = self._find_head(ctx, self._start)
+#        value = self._find_head(ctx, self._start)
+        value = self._find_start(ctx)
         if isinstance(value, self.NAV_STOP_TYPES):
             return value
 
@@ -177,7 +199,8 @@ class _KeyKeyNavEvaluator(NavigationEvaluator):
     @my_profile
     # Evaluate $.key1.keys in non-strict mode.
     def eval_kk(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
-        value = self._find_head(ctx, self._start)
+#        value = self._find_head(ctx, self._start)
+        value = self._find_start(ctx)
         if isinstance(value, self.NAV_STOP_TYPES):
             return value
 
@@ -199,7 +222,8 @@ class _KeyIndexNavEvaluator(NavigationEvaluator):
     @my_profile
     # Evaluate $.key1[123] in non-strict mode.
     def eval_kn(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
-        value = self._find_head(ctx, self._start)
+#        value = self._find_head(ctx, self._start)
+        value = self._find_start(ctx)
         if isinstance(value, self.NAV_STOP_TYPES):
             return value
 

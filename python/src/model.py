@@ -66,6 +66,7 @@ RUNTIME_BOOL = bool | Missing | JFTLNotice | NoneType
 RUNTIME_LIST_TYPES = (list, tuple)
 RUNTIME_DICT_TYPES = (dict, Mapping)
 RUNTIME_NULL_TYPES = (NoneType, Missing)
+RUNTIME_VALUE_TYPES = (bool, int, float, str, dict, list, NoneType, Missing)
 
 # Template Class - represent compiled templates
 
