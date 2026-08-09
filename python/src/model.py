@@ -56,7 +56,7 @@ JFTL_BREAK : Final = Missing(code="BREAK", message= "Skip entry sentinel")
 JSON_LEAFS : TypeAlias = NoneType | bool | int | float | str
     # Tree of JSON Values.
 JSON_DOC = Tree[JSON_LEAFS]
-JSON_VALUE_TYPES= (bool, int, float, str, dict, list)
+JSON_VALUE_TYPES= (bool, int, float, str, dict, list, NoneType)
 
 RUNTIME_LEAFS : TypeAlias = JSON_LEAFS | Missing | JFTLNotice
     # Tree of RUNTIME Values, may include Missing or Notices (error nodes)
@@ -67,6 +67,7 @@ RUNTIME_LIST_TYPES = (list, tuple)
 RUNTIME_DICT_TYPES = (dict, Mapping)
 RUNTIME_NULL_TYPES = (NoneType, Missing)
 RUNTIME_VALUE_TYPES = (bool, int, float, str, dict, list, NoneType, Missing)
+
 
 # Template Class - represent compiled templates
 

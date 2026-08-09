@@ -571,6 +571,9 @@ class JFTLEngine(Engine):
         return result, status
 
 
+
+_RUNTIME_EXTRA_TYPES = (RuntimeContext, Missing)
+
 @dataclass(kw_only=True)
 class ObjectEvaluator(Evaluator):
 
@@ -591,7 +594,6 @@ class ObjectEvaluator(Evaluator):
             for k, v in entries.items()
         ]
 
-
     @staticmethod
     @my_profile
     def _eval_items(ctx:RuntimeContext, items: ITEM_LIST) -> RUNTIME_DOC:
@@ -606,7 +608,7 @@ class ObjectEvaluator(Evaluator):
 
             if not flag:
                 # Expression
-                if isinstance(value, RUNTIME_VALUE_TYPES):
+                if isinstance(value, JSON_VALUE_TYPES):
                     pass
                 elif isinstance(value, JFTLNotice): # pyright: ignore[reportUnnecessaryIsInstance]
                     return value
@@ -615,7 +617,8 @@ class ObjectEvaluator(Evaluator):
                     continue  # silently dropped from objects, per locked sentinel rules
                 elif value is JFTL_BREAK:
                     break
-                else:
+                # Also, there are few runtime types that are OK, may be we need to connect this with strict/safe mode ?
+                elif not isinstance(value, _RUNTIME_EXTRA_TYPES): # pyright: ignore[reportUnnecessaryIsInstance]
                     # TODO: Add position indicator for bad item, may be display it.
                     return JFTLNotice(code="ITEM-UNKNOWN-TYPE", message=f"Got unexpected value type {type(value)}")
             kv_list.append((key, value))
