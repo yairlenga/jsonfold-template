@@ -4,7 +4,7 @@ from types import NoneType
 from typing import Any, Optional, cast
 from dataclasses import dataclass
 
-from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompilerPlugin, DocCompiler, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer, my_profile
+from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompilerContext, CompilerPlugin, DocCompiler, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer, my_profile
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 @dataclass
@@ -55,7 +55,7 @@ class _ForeachPart():
 
 @dataclass(slots=True)
 class LogicStatement(Evaluator):
-
+    where: CompilerContext
     # Stage 1: setup "set", "check")
     _defines: Optional[list[_DefineVar]] = None
     _if: Optional[Condition] = None
@@ -308,14 +308,14 @@ class LogicStatement(Evaluator):
 @dataclass(slots=True)
 class LogicCompiler(StatementCompiler):
 
-    def compile_str(self, source: str, where: str = "" ) -> COMPILE_DOC :
+    def compile_str(self, source: str, where: CompilerContext ) -> COMPILE_DOC :
         return JFTLNotice(code="LOGIC-NO-STR", message="Logic Plugin does not accept strings")
 
     def _compile_expr(self, args: dict[str, JSON_DOC], tag: str, unset_value: Expression = JSON_UNSET, *, record: bool = False ) -> Expression:
         if not tag in args:
             return unset_value
                
-        expr = self.compiler.statement(args.pop(tag))
+        expr = self.compiler.statement(args.pop(tag), tag)
         if isinstance(expr, JFTLNotice) and record:
             self.compiler.record_notice(expr)
         return expr
@@ -324,7 +324,7 @@ class LogicCompiler(StatementCompiler):
         if not tag in args:
             return unset_value
         
-        expr = self.compiler.condition(args.pop(tag))
+        expr = self.compiler.condition(args.pop(tag), tag)
         return expr
     
 
@@ -452,7 +452,7 @@ class LogicCompiler(StatementCompiler):
         return v_foreach
 
 
-    def _compile_object(self, source_elem: dict[str, JSON_DOC], where: str = "") -> LogicStatement:
+    def _compile_object(self, source_elem: dict[str, JSON_DOC], where: CompilerContext) -> LogicStatement:
 
         source = dict(source_elem)
 
@@ -488,6 +488,7 @@ class LogicCompiler(StatementCompiler):
 
 
         stmt = LogicStatement(
+            where = where,
             _defines = v_defines,
             _if = v_if,
             _set_current = v_set_data,
@@ -507,7 +508,7 @@ class LogicCompiler(StatementCompiler):
              # Make sure no unprocessed attributes
         return stmt
     
-    def compile(self, source: JSON_DOC, where: str = "") -> LogicStatement | JFTLNotice:
+    def compile(self, source: JSON_DOC, where: CompilerContext) -> LogicStatement | JFTLNotice:
         if not isinstance(source, dict):
             return JFTLNotice(code="LOGIC-BAD-SOURCE", message=f"Logic expect object, got {type(source)}")
 

@@ -68,6 +68,7 @@ RUNTIME_DICT_TYPES = (dict, Mapping)
 RUNTIME_NULL_TYPES = (NoneType, Missing)
 RUNTIME_VALUE_TYPES = (bool, int, float, str, dict, list, NoneType, Missing)
 
+CompilerContext = str
 
 # Template Class - represent compiled templates
 
@@ -210,7 +211,7 @@ class RuntimeContext (Mapping, ABC):
         elif isinstance(result, JFTLNotice):
             return self._resolve(result, on_error)
 
-        elif isinstance(result, Missing):
+        elif isinstance(result, Missing): # pyright: ignore[reportUnnecessaryIsInstance]
             if on_missing is JFTL_RAISE or on_missing is JFTL_NOTICE:
                 error = JFTLNotice(
                     code="MISSING_VALUE",
@@ -330,10 +331,9 @@ class RuntimeContext (Mapping, ABC):
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-
 @dataclass
 class Evaluator(ABC):
-    where: str = ""
+    where: str
     source_code: Optional[str] = None           # Source code, if known
 
     @abstractmethod
@@ -371,9 +371,9 @@ class ErrorStatement(JFTLNotice, Evaluator):
 class BaseCompiler(ABC):
 
     @abstractmethod
-    def compile_str(self, source: str, where: str = "" ) -> COMPILE_DOC : ...
+    def compile_str(self, source: str, where: CompilerContext ) -> COMPILE_DOC : ...
 
-    def compile(self, source: JSON_DOC, where: str = "") -> COMPILE_DOC:
+    def compile(self, source: JSON_DOC, where: CompilerContext) -> COMPILE_DOC:
         if isinstance(source, str):
             return self.compile_str(source, where)
         return JFTLNotice(code="UNEXPECTED-BODY", message=f"Plugin {type(self)} expecting str, but got '{type(source)}'")
@@ -388,18 +388,18 @@ class StatementCompiler(BaseCompiler):
 class DocCompiler(BaseCompiler):
 
     @abstractmethod
-    def compile(self, source: JSON_DOC, where: str = "") -> COMPILE_DOC: ...
+    def compile(self, source: JSON_DOC, where: CompilerContext) -> COMPILE_DOC: ...
 
     # evaluated via the eval_condition
-    def condition(self, source: JSON_DOC, where: str = "") -> Condition:
+    def condition(self, source: JSON_DOC, where: CompilerContext) -> Condition:
         return self.compile(source, where)
 
     # Evaluated via eval
-    def statement(self, source: JSON_DOC, where: str = "") -> Statement:
+    def statement(self, source: JSON_DOC, where: CompilerContext) -> Statement:
         return self.compile(source, where)
 
     # Evaluated via eval
-    def expression(self, source: str, where: str = "") -> Expression:
+    def expression(self, source: str, where: CompilerContext) -> Expression:
         return self.compile(source, where)
     
     # Lookup plugin

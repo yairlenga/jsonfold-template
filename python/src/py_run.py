@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import types
 from typing import Any, Callable, Optional, cast
 
-from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompilerContext, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
 from template import JFTLNotice, Missing, MISSING_VALUE
 
 def _build_env(ctx: RuntimeContext) -> dict[str, Any]:
@@ -43,8 +43,8 @@ def _build_env(ctx: RuntimeContext) -> dict[str, Any]:
 class PyEvalEvaluator(Evaluator):
     """One compiled '$pyrun:' expression."""
 
-    def __init__(self, code: Any, source_text: str, where: str = ""):
-        super().__init__()
+    def __init__(self, code: Any, source_text: str, where: CompilerContext):
+        super().__init__(where)
         self._code = code
         self._source = source_text
         self._where = where
@@ -56,7 +56,7 @@ class PyEvalEvaluator(Evaluator):
         except Exception as e:
             return JFTLNotice(
                 code="PYEVAL_RUNTIME_ERROR",
-                where=self._where, location=None,
+                where=self._where,
                 message=f"error evaluating {self._source!r}: {e}",
             )
 
@@ -73,27 +73,27 @@ class PyEvalCompiler(StatementCompiler):
     template compilation, and returns a PyRunEvaluator."""
 
 
-    def _compile(self, source_text: str, where: str = "") -> COMPILE_DOC:
+    def _compile(self, source_text: str, where: CompilerContext) -> COMPILE_DOC:
         try:
             tree = ast.parse(source_text, mode="eval")
         except SyntaxError as e:
             return JFTLNotice(
-                code="INVALID_PYTHON", where=where, location=None,
+                code="INVALID_PYTHON", where=where,
                 message=f"invalid Python expression {source_text!r}: {e}",
             )
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Lambda):
                 return JFTLNotice(
-                    code="INVALID_PYTHON",where=where, location=None,
+                    code="INVALID_PYTHON",where=where,
                     message=f"lambda expressions are not allowed in {source_text!r}",
                 )
 
         code = compile(tree, filename="<jftl-pyrun-expr>", mode="eval")
         return PyEvalEvaluator(code, source_text, where)
 
-    def compile_str(self, source: str, where: str = "") -> COMPILE_DOC:
-        return self._compile(source)
+    def compile_str(self, source: str, where: CompilerContext) -> COMPILE_DOC:
+        return self._compile(source, where)
 
 
 class PyEvalPlugin(CompilerPlugin):
@@ -138,7 +138,7 @@ class PyRunEvaluator(Evaluator):
         except Exception as e:
             return JFTLNotice(
                 code="PYRUN_RUNTIME_ERROR",
-                where=self.where, location=None,
+                where=self.where,
                 message=f"error evaluating {self.source!r}: {e}",
             )
 
@@ -154,7 +154,7 @@ class PyRunCompiler(StatementCompiler):
     Stateless — compile() is called once per '$pyrun:' expression found during
     template compilation, and returns a PyRunEvaluator."""
 
-    def _compile(self, source_text: str, where:str = "") -> PyRunEvaluator:
+    def _compile(self, source_text: str, where:CompilerContext) -> PyRunEvaluator:
         # Parse the user's text as ordinary Python statements.
         filename = where if where else "<pyrun>"
         FUNC_NAME = "_pyrun_func"
@@ -220,8 +220,8 @@ class PyRunCompiler(StatementCompiler):
         return PyRunEvaluator(func_call=func_call, func_def=build_locals.get(FUNC_NAME), glob_env=eval_globals, where = where )
 
         
-    def compile_str(self, source: Any | str, where: str = "") -> COMPILE_DOC:
-        return self._compile(cast(str, source))
+    def compile_str(self, source: Any | str, where: CompilerContext) -> COMPILE_DOC:
+        return self._compile(cast(str, source), where)
 
 
 

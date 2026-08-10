@@ -15,13 +15,17 @@ class Severity(StrEnum):
     FATAL = "FATAL"
 
 @dataclass(kw_only=True)
+    # required parameter: code, message wnere where (source loc).
+    # Compile time: may be details (multiple errors same statement)
+    # runtime: location in the data (sometimes)
+    # finish: location of the bad data element.
 class JFTLNotice():
     severity: Severity = Severity.ERROR
-    phase: Optional[Literal["COMPILE", "RENDER"]] = None
-    code: str
+    phase: Optional[Literal["COMPILE", "RENDER", "FINISH"]] = None
+    code: str                                    # Code: "MODULE-CODE"
     message: str
     where: str = ""                              # Location in the template
-    location: Optional[str] = None               # Location in the data tree
+    location: Optional[str] = None               # Location in the data tree (Runtime Only)
     details: Optional[list["JFTLNotice"]] = None
 
 ERROR_VALUE = JFTLNotice(code="GENERIC-ERROR", message="Unspecific Error")

@@ -9,7 +9,7 @@ from logic import LogicCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 from template import Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, RUNTIME_VALUE_TYPES, CompileError, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompilerContext, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
 
 from typing import Any
 
@@ -88,7 +88,7 @@ class JFTLCompiler(DocCompiler):
     _expr_compilers: dict[str, Optional[StatementCompiler]] = field(default_factory=dict)
 
     # Compile single ex
-    def _compile_simple_str(self, source: Any, where: str = "") -> COMPILE_DOC:
+    def _compile_simple_str(self, source: Any, where: CompilerContext) -> COMPILE_DOC:
 
         m = self._NAV_RE.match(source)
         if m:
@@ -109,11 +109,11 @@ class JFTLCompiler(DocCompiler):
                     expr_compiler = self._expr_compilers[plugin_id] = plugin.createCompiler(self)
 
             if isinstance(expr_compiler, StatementCompiler):
-                expr = expr_compiler.compile_str(m.group("expr"))
+                expr = expr_compiler.compile_str(m.group("expr"), where)
                 return expr
 
         return JFTLNotice(
-            code="BAD_EXPRESSION", where=where, location=None,
+            code="BAD_EXPRESSION", where=where,
             message=f"Unknown Expression {source!r}",
             )
 
@@ -153,7 +153,7 @@ class JFTLCompiler(DocCompiler):
     | \$\{ (?P<inner>[^}]*) \}      # "${...}" — captures the inner expression
     """, re.VERBOSE)
 
-    def _compile_interpolated(self, source: str, where) -> COMPILE_DOC:
+    def _compile_interpolated(self, source: str, where: CompilerContext) -> COMPILE_DOC:
         """Splits `source` into literal and expression segments.
 
         Returns None if `source` contains no interpolation at all (caller
@@ -223,9 +223,9 @@ class JFTLCompiler(DocCompiler):
         if all(isinstance(item, str) for item in segments):
             return "".join(segments)
 
-        return StringJoinStatement(items=segments)
+        return StringJoinStatement(where, items=segments)
 
-    def _compile_str(self, source: str, where: str = "") -> COMPILE_DOC:
+    def _compile_str(self, source: str, where: CompilerContext) -> COMPILE_DOC:
 
         # Check if this is potential interpolation:
         int_pos = source.find("${")
@@ -302,7 +302,7 @@ class JFTLCompiler(DocCompiler):
         return stmt
 
 
-    def _compile_action(self, source: dict, where: str = "") -> COMPILE_DOC:
+    def _compile_action(self, source: dict, where: CompilerContext) -> COMPILE_DOC:
 
         action = source.get(self.config.action_tag, JSON_UNSET)
         if isinstance(action, dict):
@@ -331,14 +331,14 @@ class JFTLCompiler(DocCompiler):
         if action is False:
             if not "out" in source:
                 return JFTLNotice(code="MISSING-VALUE", message="Missing 'out' in Literal statements ('$' = False), value must be provided")
-            return LiteralStatement(value=source.get("out"))
+            return LiteralStatement(where, value=source.get("out"))
                                     
         else:
             action_name = f"'{action}'" if isinstance(action, str) else f"type={type(action)}"
             return JFTLNotice(code="LOGIC-ACTION", message=f"The action must be a string or boolean, got '$=:{action_name}'")
 
 
-    def _compile(self, source: Any, where: str = "") -> COMPILE_DOC :
+    def _compile(self, source: Any, where: CompilerContext) -> COMPILE_DOC :
 
         # Simple Literal returned here
         if isinstance(source, (int, float, bool, NoneType)):
@@ -363,7 +363,7 @@ class JFTLCompiler(DocCompiler):
     
             # If the all dict is constant, just use the original
             if all(isinstance(x, (NoneType, bool, int, float)) for x in source.values()):
-                return LiteralStatement(value=source)
+                return LiteralStatement(where, value=source)
 
             entries = {k: self._compile(v, where=f"{where}.{k}") for k, v in source.items()}            
             for err in ( e for e in entries.values() if isinstance(e, JFTLNotice)):
@@ -371,16 +371,16 @@ class JFTLCompiler(DocCompiler):
 
             # If it's all literals, unwrap and return a new literal.
             if all(isinstance(x, (NoneType, bool, int, float, str, LiteralStatement)) for x in entries.values()):
-                return LiteralStatement( value= dict({ k: self._unliteral(v) for k,v in source.items() }) )
+                return LiteralStatement(where, value= dict({ k: self._unliteral(v) for k,v in source.items() }) )
 
-            return ObjectEvaluator(entries=dict(entries))
+            return ObjectEvaluator(where, entries=dict(entries))
 
 
         if isinstance(source, list):
 
             # Unnested tree can be converted to literal quickly
             if all(isinstance(x, (NoneType, bool, int, float)) for x in source):
-                return LiteralStatement(value=source)
+                return LiteralStatement(where, value=source)
 
 
 
@@ -390,9 +390,9 @@ class JFTLCompiler(DocCompiler):
 
             # If it's all literals, unwrap and return a new literal.
             if all(isinstance(x, (NoneType, bool, int, float, str, LiteralStatement)) for x in items):
-                return LiteralStatement(value=list(self._unliteral(x) for x in items))
+                return LiteralStatement(where, value=list(self._unliteral(x) for x in items))
 
-            return ArrayEvaluator(items=items)
+            return ArrayEvaluator(where, items=items)
 
         # Scalar Cases - string
         if isinstance(source, str):
@@ -400,16 +400,16 @@ class JFTLCompiler(DocCompiler):
         
         # Non string source
         return JFTLNotice(
-            code="BAD_NODE", where=where, location=None,
+            code="BAD_NODE", where=where,
             message=f"Unknown node {source!r}",
             )
    
     # Compile is called from plugins that need generic compilation.
     # It also capture exceptions, and convert them to error
-    def compile_str(self, source: str, where: str = "") -> COMPILE_DOC:
+    def compile_str(self, source: str, where: CompilerContext) -> COMPILE_DOC:
         return self._compile_str(source, where)
 
-    def compile(self, source: Any, where: str = "", record: bool = False) -> COMPILE_DOC:
+    def compile(self, source: Any, where: CompilerContext, record: bool = False) -> COMPILE_DOC:
         try:
             compiled = self._compile(source, where)
             if isinstance(compiled, JFTLNotice) and record:
@@ -420,7 +420,7 @@ class JFTLCompiler(DocCompiler):
             self._errors.append(ex.notice)
             self._error_count += 1
 
-    def compile_root(self, source: Any, where: str = "") -> tuple[Any, bool, list[JFTLNotice]]:
+    def compile_root(self, source: Any, where: CompilerContext) -> tuple[Any, bool, list[JFTLNotice]]:
         self._fail = False
         compiled = self.compile(source, where)
         ok = not self._fail and self._error_count == 0
@@ -503,13 +503,13 @@ class JFTLEngine(Engine):
         
         self._plugins[prefix] = plugin
 
-    def compile(self, source: str | dict | list, *, main_only: bool = False, where: str = "",  **kwargs) -> tuple[JFTLTemplate, list[JFTLNotice]]:
+    def compile(self, source: str | dict | list, *, main_only: bool = False, filename: str = "",  **kwargs) -> tuple[JFTLTemplate, list[JFTLNotice]]:
         top = cast(dict, { "main": source } if main_only else source)
         config = JFTLConfig(**top.get("config", {}))
 
 
         compiler = JFTLCompiler(config, self._plugins)
-        compiled, valid, errors = compiler.compile_root(top["main"], where)
+        compiled, valid, errors = compiler.compile_root(top["main"], filename)
         first_error = next((e for e in errors if e.severity in (Severity.FATAL, Severity.ERROR)), None) 
 
         if not isinstance((datasets := top.get("datasets", {}) or {}) , dict):
@@ -610,7 +610,7 @@ class ObjectEvaluator(Evaluator):
                 # Expression
                 if isinstance(value, JSON_VALUE_TYPES):
                     pass
-                elif isinstance(value, JFTLNotice): # pyright: ignore[reportUnnecessaryIsInstance]
+                elif isinstance(value, JFTLNotice):
                     return value
                 # There are 2 magical values: JFTL_SKIP, JFTL_BREAK, that can be emitted and require special handling
                 elif value is JFTL_SKIP:

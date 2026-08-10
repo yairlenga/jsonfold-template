@@ -18,7 +18,6 @@ import unittest
 
 from model import JSON_UNSET, DocCompiler, Statement, Transformer
 from logic import _CaseEvaluator, _CaseItem, _ForeachPart, LogicCompiler, LogicStatement
-from transform import _FlattenningTransformer, _MergeTransformer
 
 
 class Tagged:
@@ -43,10 +42,10 @@ class FakeTransformer(Transformer, Tagged):
 
 class FakeCompiler(DocCompiler):
 
-    def compile_str(self, source: Any, where: str = "", **kwards) -> None:
+    def compile_str(self, source: Any, where = "", **kwards) -> None:
         return None
 
-    def compile(self, source: Any, where: str = "", **kwards) -> None:
+    def compile(self, source: Any, where = "", **kwards) -> None:
         return None
 
     def expression(self, source, where):
@@ -55,15 +54,15 @@ class FakeCompiler(DocCompiler):
     def condition(self, source, where = ""):
         return Tagged("condition", source)
 
-    def statement(self, source, where: str = "") -> Statement | Tagged:
+    def statement(self, source, where = "") -> Statement | Tagged:
         return Tagged("statement", source)
 
     def plugin(self, name: str) -> Any:
         return FakeTransformer("plugin", name)
 
 
-def compile_logic(args: dict) -> LogicStatement:
-    return cast(LogicStatement, LogicCompiler(FakeCompiler()).compile(args))
+def compile_logic(args: dict, where = "") -> LogicStatement:
+    return cast(LogicStatement, LogicCompiler(FakeCompiler()).compile(args, where))
 
 
 class TestEmptyInput(unittest.TestCase):
