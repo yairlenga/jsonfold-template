@@ -40,24 +40,21 @@ def _build_env(ctx: RuntimeContext) -> dict[str, Any]:
     return env
 
 
+@dataclass(slots=True, frozen=True, kw_only=True)
 class PyEvalEvaluator(Evaluator):
     """One compiled '$pyrun:' expression."""
 
-    def __init__(self, code: Any, source_text: str, where: CompilerContext):
-        super().__init__(where)
-        self._code = code
-        self._source = source_text
-        self._where = where
+    code: Any                 # Precompiled Python code, passed to eval
 
     def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
         env = _build_env(ctx)
         try:
-            return eval(self._code, env)
+            return eval(self.code, env)
         except Exception as e:
             return JFTLNotice(
                 code="PYEVAL_RUNTIME_ERROR",
-                where=self._where,
-                message=f"error evaluating {self._source!r}: {e}",
+                where=self.where,
+                message=f"error evaluating {self.source_code!r}: {e}",
             )
 
     def eval_bool(self, ctx: RuntimeContext) -> RUNTIME_BOOL:
@@ -90,7 +87,7 @@ class PyEvalCompiler(StatementCompiler):
                 )
 
         code = compile(tree, filename="<jftl-pyrun-expr>", mode="eval")
-        return PyEvalEvaluator(code, source_text, where)
+        return PyEvalEvaluator(where, source_text, code=code)
 
     def compile_str(self, source: str, where: CompilerContext) -> COMPILE_DOC:
         return self._compile(source, where)
@@ -104,7 +101,7 @@ from types import CodeType
 from typing import Any
 
 
-@dataclass(kw_only=True)
+@dataclass(slots=True, frozen=True, kw_only=True)
 class PyRunEvaluator(Evaluator):
     func_call: CodeType
     func_def: Callable | Any

@@ -18,7 +18,7 @@ class _CaseItem:
     body: Statement
 
 
-@dataclass(kw_only=True)
+@dataclass(slots=True, frozen=True, kw_only=True)
 class _CaseEvaluator(Evaluator):
     cases: list[_CaseItem | JFTLNotice]
     default_case: Optional[Statement]
@@ -53,7 +53,7 @@ class _ForeachPart():
     stop: Optional[Statement] = None
     limit: Optional[Statement] = None
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True, kw_only=True)
 class LogicStatement(Evaluator):
     where: CompilerContext
     # Stage 1: setup "set", "check")

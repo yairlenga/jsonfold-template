@@ -14,11 +14,11 @@ class Severity(StrEnum):
     MISSING = "MISSING"
     FATAL = "FATAL"
 
-@dataclass(kw_only=True)
     # required parameter: code, message wnere where (source loc).
     # Compile time: may be details (multiple errors same statement)
     # runtime: location in the data (sometimes)
     # finish: location of the bad data element.
+@dataclass(frozen=True, kw_only=True)
 class JFTLNotice():
     severity: Severity = Severity.ERROR
     phase: Optional[Literal["COMPILE", "RENDER", "FINISH"]] = None
@@ -35,7 +35,7 @@ class JFTLError(Exception):
         super().__init__(notice.message)
         self.notice = notice
 
-@dataclass
+@dataclass(slots=True,frozen=True)
 class Missing():
     code: str = "MISSING"
     message: Optional[str] = None
@@ -50,7 +50,6 @@ class Missing():
         return self
     
 MISSING_VALUE : Final = Missing(code="MISSING", message="Unspecific MISSING")
-
 
 @dataclass
 class RenderStatus:
@@ -77,7 +76,7 @@ def add_default_plugin(name: str, plugin: Callable, replace: Optional[bool] = Fa
         raise TypeError(f"Expecting callable, got {type(plugin)}")
     plugin_registry[name] = plugin
 
-@dataclass
+@dataclass(slots=True)
 class Engine(ABC):
     _datasets: dict[str, Any] = field(default_factory=dict)
 

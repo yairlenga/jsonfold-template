@@ -131,7 +131,7 @@ class Environment:
     cache: dict[Any, Any] = field(default_factory=dict)
 
 
-@dataclass
+@dataclass(slots=True)
 class RuntimeContext (Mapping, ABC):
 
     _NULL_ENVIRONMENT : ClassVar = Environment(_NULL_TEMPLATE, None)
@@ -335,7 +335,7 @@ class RuntimeContext (Mapping, ABC):
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-@dataclass
+@dataclass(slots=True, frozen=True)
 class Evaluator(ABC):
     where: str
     source_code: Optional[str] = None           # Source code, if known
@@ -364,7 +364,8 @@ Condition = COMPILE_DOC | NoValueType         # Expression yielding boolean
 Statement = COMPILE_DOC | NoValueType         # Statement, returning any value
 
 # core.py (or wherever feels like the right shared home — maybe alongside Diagnostic/Error in template.py)
-@dataclass
+
+@dataclass(slots=True, frozen=True, kw_only=True)
 class ErrorStatement(JFTLNotice, Evaluator):
     statement: COMPILE_DOC = None
 
@@ -426,7 +427,7 @@ class RenderError(JFTLError):
 
            
 # Helper to transform Literal values
-@dataclass(kw_only=True)
+@dataclass(slots=True, frozen=True, kw_only=True)
 class LiteralStatement(Evaluator):
     value: Any
 

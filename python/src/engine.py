@@ -492,7 +492,7 @@ class JFTLRenderer():
         raise RenderError(
             JFTLNotice(code="BAD-RESULT", message=f"Result contained unknown type {type(value)}"))
 
-@dataclass
+@dataclass(slots=True)
 class JFTLEngine(Engine):
     
     _plugins: dict[str, Any] = field(default_factory=dict)
@@ -574,13 +574,13 @@ class JFTLEngine(Engine):
 
 _RUNTIME_EXTRA_TYPES = (RuntimeContext, Missing)
 
-@dataclass(kw_only=True)
+@dataclass(slots=True, frozen=True, kw_only=True)
 class ObjectEvaluator(Evaluator):
 
-    # The 'flag' indicate the status of each entry:
-    # True - Constant, valid JSON output
-    # False - Constant, special value
-    # None - Dynamic, check result type
+    # Each item capture the attribute of the expression
+    # True - dynamic expression (isinstance(v, Evaluator)
+    # False - constant - valid JSON (int, str, ...)
+    # False - constant - special value (SKIP, BREAK, ...)
 
     ITEM_LIST = list[tuple[str, COMPILE_DOC, Optional[bool]]]
 
@@ -590,7 +590,7 @@ class ObjectEvaluator(Evaluator):
     @staticmethod
     def _dict_to_items( entries: dict[str, COMPILE_DOC] ) -> ITEM_LIST :
        return [
-            (k, v, None if isinstance(v, Evaluator) else isinstance(v, JSON_VALUE_TYPES))
+            (k, v, True if isinstance(v, Evaluator) else False if isinstance(v, JSON_VALUE_TYPES) else None)
             for k, v in entries.items()
         ]
 
@@ -598,16 +598,12 @@ class ObjectEvaluator(Evaluator):
     @my_profile
     def _eval_items(ctx:RuntimeContext, items: ITEM_LIST) -> RUNTIME_DOC:
         kv_list = []
-        for key, doc, flag in items:
-                # Expression or special constant
-            if flag is None:
-                value = cast(Evaluator, doc).eval(ctx)
-            # Constant potentially, with magic value
-            else:
-                value = cast(RUNTIME_DOC, doc)
+        for key, doc, dynamic in items:
+            value = cast(Evaluator, doc).eval(ctx) if dynamic else cast(RUNTIME_DOC, doc)
 
-            if not flag:
-                # Expression
+            # Constant potentially, with magic value
+            if dynamic is not False:
+                # Validate Expression.
                 if isinstance(value, RUNTIME_VALUE_TYPES):
                     pass
                 # There are 2 magical values: JFTL_SKIP, JFTL_BREAK, that can be emitted and require special handling
@@ -627,7 +623,8 @@ class ObjectEvaluator(Evaluator):
         return result
 
     def __post_init__(self):
-        self._items = self._dict_to_items(self.entries)
+        self._items.clear()
+        self._items.extend(self._dict_to_items(self.entries))
 
     @classmethod
     def eval_object(cls, ctx: RuntimeContext, doc: dict[str, COMPILE_DOC]) -> RUNTIME_DOC:
@@ -637,7 +634,7 @@ class ObjectEvaluator(Evaluator):
     def eval(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
         return self._eval_items(ctx, self._items)
 
-@dataclass(kw_only=True)
+@dataclass(slots=True, frozen=True, kw_only=True)
 class ArrayEvaluator(Evaluator):
     items: list[COMPILE_DOC]
 
@@ -658,7 +655,7 @@ class ArrayEvaluator(Evaluator):
     def eval(self, ctx: RuntimeContext) -> RUNTIME_DOC:
         return self.eval_array(ctx, self.items)
 
-@dataclass(kw_only=True)
+@dataclass(slots=True, frozen=True, kw_only=True)
 class ValueFormatStatement(Evaluator):
     expr: Any
     format_spec: Optional[str]
@@ -674,7 +671,7 @@ class ValueFormatStatement(Evaluator):
         formatted = format(value, self.format_spec) if self.format_spec else str(value)
         return formatted
 
-@dataclass(kw_only=True)
+@dataclass(slots=True, frozen=True, kw_only=True)
 class StringJoinStatement(Evaluator):
     items: list[Expression]
     separator: str = ""

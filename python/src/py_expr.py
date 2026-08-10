@@ -48,7 +48,7 @@ def _create_simple_eval() -> SimpleEval:
     return se
 
 
-@dataclass(kw_only=True)
+@dataclass(slots=True, frozen=True, kw_only=True)
 class SimpleEvalEvaluator(Evaluator):
     se: SimpleEval
     source: str

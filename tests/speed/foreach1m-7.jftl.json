@@ -4,7 +4,7 @@
 	"data": "TOP-DATA",
         "set": {
             "n": 1000,
-            "m": 10,
+            "m": 100,
             "t": "$py=n*m",
             "v": 1,
 	    "flag": { "item": true },
@@ -25,8 +25,8 @@
                 "out": { "v": "$v", "t": "$_", "z": "z", "data": "$", "top": "$^", "parent": "$<", "here": "$",
 		        "var.k": "$obj.kv", "var.kk": "$obj.k.kv", "var.kkk": "$obj.k.k.kv",
 		        "var": "$arr[2]", "var.kn": "$obj.n[2]", "var.kkn": "$obj.k.n[2]" ,
-                "missing.k": "$missing.missing",
-			"missing": "$_missing", "skip": "$_skip", "break": "$_break",
+                	"missing.k": "$missing.missing",
+			"missing": "$_missing", "skip": "$_skip", "after": "after", "break": "$_break",
 			"break-error": true
 	        }
             },

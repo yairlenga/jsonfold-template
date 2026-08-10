@@ -57,8 +57,8 @@ class TestPathStatements(unittest.TestCase):
         stmt = compile("$.user.name")
         assert(isinstance(stmt, NavigationEvaluator))
         self.assertIsInstance(stmt, NavigationEvaluator)
-        self.assertEqual(stmt._start, "_data") # pyright: ignore[reportPrivateUsage]
-        segments : list[Any] = stmt._segments # pyright: ignore[reportPrivateUsage]
+        self.assertEqual(stmt.start_var, "$") 
+        segments : list[Any] = stmt.segments
         assert len(segments) == 2
         self.assertEqual(segments[0].name, "user") 
         self.assertEqual(segments[1].name, "name")
