@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/python/scripts/jf_template.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/python",
-            "args": [ "-v", "--all-plugins", "-fjsonl", "--target=tmp", "-map=-", "data/copy.jftl.json", "obj1.jsonl"  ],
+            "args": [ "-v", "--all-plugins", "../tests/basic/skip_var.jftl.json"  ],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
             }
@@ -23,7 +23,7 @@
             "program": "${workspaceFolder}/python/scripts/jf_template.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/tests",
-            "args": [ "-v", "--all-plugins", "speed/foreach1m-3.jftl.json"],
+            "args": [ "-v", "--all-plugins", "speed/foreach1m-7.jftl.json"],
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
             }
@@ -33,7 +33,7 @@
             "name": "Python: test",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/python/tests/test_logic_elem.py",
+            "program": "${workspaceFolder}/python/tests/test_nav_node.py",
             "console": "integratedTerminal",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/python/src"
