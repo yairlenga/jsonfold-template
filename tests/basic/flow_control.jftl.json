@@ -1,7 +1,7 @@
 {
     "main": {
-        "array_mixed": [ 1, 2, 3, "$_skip", 4, 5, 6, "$_skip", 7, 8, 9, "$_break", "$_error", 10],
-        "object_mixed": { "a": 1, "b": 2, "c": 3, "d": "$_skip", "e": 4, "f": 5, "g": 6, "h:": "$_skip", "i": 7, "j": 8, "k": 9, "l": "$_break", "m": "$_error", "n": 10},
+        "array_mixed": [ 1, 2, 3, "$_skip", 4, 5, 6, "$_skip", 7, null, "$_missing", 9, "$_break", "$_error", 10],
+        "object_mixed": { "a": 1, "b": 2, "c": 3, "d": "$_skip", "e": 4, "f": 5, "g": 6, "h:": "$_skip", "i": 7, "j": null, "k": "$_missing", "l": "$_break", "m": "$_error", "n": 10},
         "_": "_"
     }
 }

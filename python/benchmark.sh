@@ -13,7 +13,7 @@ function run () {
 	python3 "$CODE" "$@" > benchmark.out
 #	python3 -m trace --count --coverdir=prof "$CODE" "$@" > prof/count.out
 	echo "Running cProfile"
-	python3 -m cProfile -o prof/cprof.prof "$CODE" "$@"
+	python3 -m cProfile -o prof/cprof.prof "$CODE" "$@" > prof/cprof.out
 	printf "sort tottime\nstats 30\nquit\n" | python3 -m pstats prof/cprof.prof > prof/cprof-tot.out
 	printf "sort cumtime\nstats 40\nquit\n" | python3 -m pstats prof/cprof.prof > prof/cprof-cum.out
 	printf "sort ncalls\nstats 30\nquit\n" | python3 -m pstats prof/cprof.prof > prof/cprof-ncalls.out

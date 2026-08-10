@@ -154,26 +154,26 @@ class _GenericNavEvaluator(NavigationEvaluator):
 
     eval = _eval_nav
 
+_DICT_OR_MISSING = (*RUNTIME_DICT_TYPES, Missing)
 
 class _KeyNavEvaluator(NavigationEvaluator):
 
-    @my_profile
     # Evaluate $.key in non-strict mode.
+    @my_profile
     def eval_k(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
-#        value = self._find_head(ctx, self._start)
         value = self._find_start(ctx)
-        if isinstance(value, self.NAV_STOP_TYPES):
-            return value
 
-        value = (
-            value.get(self._segments[0].name, MISSING_VALUE)
-            if isinstance(value, RUNTIME_DICT_TYPES)
+        result = (
+            value.get(self._segments[0].name, MISSING_VALUE) if isinstance(value, _DICT_OR_MISSING)
+            else value if isinstance(value, JFTLNotice)
             else MISSING_VALUE
         )
+        return result
 
-        return value
-    
     eval = eval_k
+
+
+    
 class _IndexNavEvalulator(NavigationEvaluator):
 
     @my_profile
@@ -181,15 +181,15 @@ class _IndexNavEvalulator(NavigationEvaluator):
     def eval_n(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
 #        value = self._find_head(ctx, self._start)
         value = self._find_start(ctx)
-        if isinstance(value, self.NAV_STOP_TYPES):
-            return value
-
-        traveled = "_"  # builds up the "location" string as we walk, for diagnostics
         index1 = self._segments[0].index
-        value = value[index1] if isinstance(value, RUNTIME_LIST_TYPES) and -len(value) <= index1 < len(value) else MISSING_VALUE
-        traveled += f"[{index1}]"
 
-        return value
+        result = (
+            value[index1] if isinstance(value, RUNTIME_LIST_TYPES) and -len(value) <= index1 < len(value)
+            else value if isinstance(value, JFTLNotice)
+            else MISSING_VALUE
+        )
+
+        return result
     
     eval = eval_n
 
@@ -198,6 +198,7 @@ class _KeyKeyNavEvaluator(NavigationEvaluator):
 
     @my_profile
     # Evaluate $.key1.keys in non-strict mode.
+
     def eval_kk(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
 #        value = self._find_head(ctx, self._start)
         value = self._find_start(ctx)
@@ -213,6 +214,7 @@ class _KeyKeyNavEvaluator(NavigationEvaluator):
         )
 
         return value
+
 
     eval = eval_kk
 

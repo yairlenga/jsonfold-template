@@ -9,7 +9,7 @@ from logic import LogicCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 from template import Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompilerContext, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, RUNTIME_VALUE_TYPES, CompileError, CompilerContext, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
 
 from typing import Any
 
@@ -608,16 +608,16 @@ class ObjectEvaluator(Evaluator):
 
             if not flag:
                 # Expression
-                if isinstance(value, JSON_VALUE_TYPES):
+                if isinstance(value, RUNTIME_VALUE_TYPES):
                     pass
-                elif isinstance(value, JFTLNotice):
-                    return value
                 # There are 2 magical values: JFTL_SKIP, JFTL_BREAK, that can be emitted and require special handling
                 elif value is JFTL_SKIP:
                     continue  # silently dropped from objects, per locked sentinel rules
                 elif value is JFTL_BREAK:
                     break
                 # Also, there are few runtime types that are OK, may be we need to connect this with strict/safe mode ?
+                elif isinstance(value, JFTLNotice): # pyright: ignore[reportUnnecessaryIsInstance]
+                    return value
                 elif not isinstance(value, _RUNTIME_EXTRA_TYPES): # pyright: ignore[reportUnnecessaryIsInstance]
                     # TODO: Add position indicator for bad item, may be display it.
                     return JFTLNotice(code="ITEM-UNKNOWN-TYPE", message=f"Got unexpected value type {type(value)}")

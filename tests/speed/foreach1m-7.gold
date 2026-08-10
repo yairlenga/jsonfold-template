@@ -4,7 +4,16 @@
     "v": 1,
     "t": 99999,
     "z": "z",
-    "obj": "baz",
-    "arr": "c"
+    "data": 99999,
+    "top": null,
+    "parent": "TOP-DATA",
+    "here": 99999,
+    "var.k": "=k",
+    "var.kk": "=kk",
+    "var.kkk": "=kkv",
+    "var": "=3",
+    "var.kn": "=n3",
+    "var.kkn": "=kn3",
+    "missing": null
   }
 ]

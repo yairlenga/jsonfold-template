@@ -46,6 +46,9 @@ class Missing():
     def __getitem__(self, key: Any) -> "Missing":
         return self
     
+    def get(self, key, default=None):
+        return self
+    
 MISSING_VALUE : Final = Missing(code="MISSING", message="Unspecific MISSING")
 
 
