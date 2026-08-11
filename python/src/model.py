@@ -72,8 +72,6 @@ RUNTIME_DICT_TYPES : Final = (dict, Mapping)
 RUNTIME_NULL_TYPES : Final = (NoneType, Missing)
 RUNTIME_VALUE_TYPES : Final = (bool, int, float, str, dict, list, NoneType, Missing)
 
-CompilerContext = str
-
 # Runtime Objects
 
 @dataclass(slots=True)
@@ -372,6 +370,50 @@ class ErrorStatement(JFTLNotice, Evaluator):
     def eval(self, ctx: RuntimeContext) -> JFTLNotice:
         return self
 
+from dataclasses import dataclass
+from typing import ClassVar, Optional, TypeAlias
+
+@dataclass(frozen=True, slots=True)
+class SegmentTag:
+    name: str
+    def fmt(self) -> str:
+        return f":{self.name}"
+
+CompilePathSegment: TypeAlias = str | int | SegmentTag   # str = object key, int = array index, Tag = grammar keyword
+
+def _fmt_segment(seg: CompilePathSegment) -> str:
+    if isinstance(seg, SegmentTag):
+        return seg.fmt()
+    if isinstance(seg, int):
+        return f"[{seg}]"
+    return f".{seg}" if seg.isidentifier() else f'["{seg}"]'
+
+
+@dataclass(frozen=True, slots=True)
+class CompileContext:
+    segment: CompilePathSegment
+    parent: Optional[CompileContext] = None
+
+    ROOT: ClassVar[CompileContext]
+
+    def child(self, segment: CompilePathSegment) -> CompileContext:
+        return CompileContext(segment, self)
+
+    def where(self) -> str:
+        parts: list[str] = []
+        ctx: Optional[CompileContext] = self
+        while ctx is not None:
+            parts.append(_fmt_segment(ctx.segment))
+            ctx = ctx.parent
+        return "".join(reversed(parts))
+
+    def __str__(self) -> str:
+        return self.where()
+
+
+CompileContext.ROOT = CompileContext(segment="")
+
+CompilerContext = str
 
 class BaseCompiler(ABC):
 
