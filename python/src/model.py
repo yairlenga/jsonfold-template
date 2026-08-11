@@ -364,6 +364,24 @@ class Evaluator(ABC):
         return self.cc.where
     
 
+def RuntimeNotice(
+        expr: Evaluator,
+        code: str,
+        message: str,
+        *,
+        severity: NoticeSeverity = NoticeSeverity.ERROR,
+    ):
+    return JFTLNotice(
+        severity=severity,
+        phase= 'RENDER',
+        code=code,
+        message = message,
+        source = expr.source_code,
+        where = expr.cc.where
+    )
+
+
+
 #---------------------------------------------------------------------
 # Compilation Support
 #---------------------------------------------------------------------
@@ -445,7 +463,7 @@ class BaseCompiler(ABC):
     def compile(self, source: JSON_DOC, cc: CompileContext) -> COMPILE_DOC:
         if isinstance(source, str):
             return self.compile_str(source, cc)
-        return JFTLNotice(code="UNEXPECTED-BODY", message=f"Plugin {type(self)} expecting str, but got '{type(source)}'")
+        return CompileNotice(cc, "UNEXPECTED-BODY", f"Plugin {type(self)} expecting str, but got '{type(source)}'")
 
 
 @dataclass

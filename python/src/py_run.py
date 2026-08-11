@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import types
 from typing import Any, Callable, Optional
 
-from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, RuntimeNotice, StatementCompiler
 from template import JFTLNotice, Missing, MISSING_VALUE
 
 def _build_env(ctx: RuntimeContext) -> dict[str, Any]:
@@ -51,10 +51,8 @@ class PyEvalEvaluator(Evaluator):
         try:
             return eval(self.code, env)
         except Exception as e:
-            return JFTLNotice(
-                code="PYEVAL_RUNTIME_ERROR",
-                where=self.where,
-                message=f"error evaluating {self.source_code!r}: {e}",
+            return RuntimeNotice(self, "PYEVAL_RUNTIME_ERROR",
+                f"error evaluating {self.source_code!r}: {e}",
             )
 
     def eval_bool(self, ctx: RuntimeContext) -> RUNTIME_BOOL:
@@ -133,10 +131,8 @@ class PyRunEvaluator(Evaluator):
         try:
             return eval(self.func_call, g)
         except Exception as e:
-            return JFTLNotice(
-                code="PYRUN_RUNTIME_ERROR",
-                where=self.where,
-                message=f"error evaluating {self.source!r}: {e}",
+            return RuntimeNotice(self, "PYRUN_RUNTIME_ERROR",
+                f"Python eval failed: {e}",
             )
 
     def eval_bool(self, ctx: RuntimeContext) -> RUNTIME_BOOL:

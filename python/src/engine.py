@@ -9,7 +9,7 @@ from logic import LogicCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 from template import NoticeSeverity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, RUNTIME_VALUE_TYPES, CompileError, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, RUNTIME_VALUE_TYPES, CompileError, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, RuntimeNotice, StatementCompiler, my_profile
 
 from typing import Any
 
@@ -669,7 +669,7 @@ class ValueFormatStatement(Evaluator):
         if isinstance(value, Missing):
             return "null"
         if not isinstance(value, (NoneType, bool, int, float, str)):
-            return JFTLNotice(code="CANT-STRINGIFY", message=f"Result contained unknown type {type(value)}")
+            return RuntimeNotice(self, "CANT-STRINGIFY", f"Result contained unknown type {type(value)}")
         formatted = format(value, self.format_spec) if self.format_spec else str(value)
         return formatted
 
@@ -692,7 +692,7 @@ class StringJoinStatement(Evaluator):
                 value = str(value)
 
             if not isinstance(value, str):
-                return JFTLNotice(code="JOIN-STR-VALUE", message=f"Expecting string got {type(value)}")
+                return RuntimeNotice(self, "JOIN-STR-VALUE", "Expecting string got {type(value)}")
 
             result.append(value)
         return "".join(result)

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
 from typing import Any
 
-from model import COMPILE_DOC, RUNTIME_DICT_TYPES, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, RUNTIME_DICT_TYPES, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, RuntimeNotice, StatementCompiler, my_profile
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 
@@ -81,10 +81,10 @@ class NavigationEvaluator(Evaluator, ABC):
             value = ctx.env.input
         elif start == _NavStart.PARENT_DATA:
             if not ctx.parent:
-                return JFTLNotice(code="NAV-NO-PARENT", message="Using '$%' is not valid at the top frame")
+                return RuntimeNotice(self, "NAV-NO-PARENT", "Using '$%' is not valid at the top frame")
             value = ctx.parent.current
         else:
-            return JFTLNotice(code="NAV-BAD-START", message= f"Unexpected navigation start location: {start}")
+            return RuntimeNotice(self, "NAV-BAD-START", message= f"Unexpected navigation start location: {start}")
     
         return value
 
@@ -108,7 +108,7 @@ class _GenericNavEvaluator(NavigationEvaluator):
                 case NavType.KEY:
                     value = (
                         value.get(seg.name, MISSING_VALUE) if isinstance(value, RUNTIME_DICT_TYPES)
-                        else JFTLNotice(code="NAV-NOT-OBJECT", message=f"string keys can only be used on objects, found {type(value)} path {'traveled'}") if self.strict
+                        else RuntimeNotice(self, "NAV-NOT-OBJECT", f"string keys can only be used on objects, found {type(value)} path {'traveled'}") if self.strict
                         else MISSING_VALUE
                     )
                     traveled += f".{seg.name}"
@@ -116,7 +116,7 @@ class _GenericNavEvaluator(NavigationEvaluator):
                 case NavType.INDEX:
                     value = (
                         value[seg.index] if isinstance(value, RUNTIME_LIST_TYPES) and -len(value) <= seg.index < len(value)
-                        else JFTLNotice(code="NAV-NOT-ARRAY", message=f"integer indices can only be used on array/null, at {type(value)}") if self.strict
+                        else RuntimeNotice(self, "NAV-NOT-ARRAY", f"integer indices can only be used on array/null, at {type(value)}") if self.strict
                         else MISSING_VALUE
                     )
                     traveled += f"[{seg.index}]"
@@ -134,7 +134,7 @@ class _GenericNavEvaluator(NavigationEvaluator):
                     elif not self.strict or isinstance(key, RUNTIME_NULL_TYPES):
                         value = MISSING_VALUE
                     else:
-                        value = JFTLNotice(code="NAV-VAR-KEY", message=f"Key type '{type(key)}' can not be used to access elements of type {type(value)}")
+                        value = RuntimeNotice(self, "NAV-VAR-KEY", f"Key type '{type(key)}' can not be used to access elements of type {type(value)}")
 
         return value
 
@@ -319,15 +319,15 @@ class NavigationCompiler(StatementCompiler):
         expr = _GenericNavEvaluator(cc, source_code, start=nav_start, start_var=start_name, segments=segments, strict=strict)
         return expr
 
-    def _parse(self, source, where):
+    def _parse(self, source, cc: CompileContext):
 
         m = self._NAV_RE.match(source)
         if not m:
-            return JFTLNotice(code="BAD-NAV-SYNTAX", message=f"Unknown navigation: '${source}", where=where)
+            return CompileNotice(cc, "BAD-NAV-PATTERN", f"Unknown navigation:", source=source)
         
-        expr = self.parse_nav(m, where, strict = self.strict)
+        expr = self.parse_nav(m, cc, strict = self.strict)
         if not expr:
-            return JFTLNotice(code="BAD-NAV-EXPR", message=f"Unknown navigation: '${source}", where=where)
+            return CompileNotice(cc, "BAD-NAV-EXPR", f"Unknown navigation", source=source)
         
         return expr
 

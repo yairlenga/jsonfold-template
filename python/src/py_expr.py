@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes, InvalidExpression
 
-from model import COMPILE_DOC, RUNTIME_DOC, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_DOC, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, RuntimeNotice, StatementCompiler
 from template import JFTLNotice, Missing
 
 def _create_simple_eval() -> SimpleEval:
@@ -85,12 +85,7 @@ class SimpleEvalEvaluator(Evaluator):
         try:
             return se.eval(self.source, self.compiled)
         except Exception as e:
-            return JFTLNotice(
-                code="PYEXPR_RUNTIME_ERROR",
-                where=self.where,
-                message=f"{e}",
-                source=self.source
-            )
+            return RuntimeNotice(self, "PYEXPR_RUNTIME_ERROR", message=f"{e}", )
     
         # Using Python rules for falsyness. Can still return Missing, Error
     def eval_cond(self, ctx: RuntimeContext) -> Any | JFTLNotice | Missing:
