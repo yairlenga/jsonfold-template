@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import types
 from typing import Any, Callable, Optional
 
-from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, RuntimeNotice, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompileContext, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, RuntimeNotice, StatementCompiler
 from template import JFTLNotice, Missing, MISSING_VALUE
 
 def _build_env(ctx: RuntimeContext) -> dict[str, Any]:
@@ -72,16 +72,14 @@ class PyEvalCompiler(StatementCompiler):
         try:
             tree = ast.parse(source_text, mode="eval")
         except SyntaxError as e:
-            return CompileNotice(cc, "INVALID_PYTHON",
+            return cc.notice("INVALID_PYTHON",
                 message=f"invalid Python expression {source_text!r}: {e}",
                 source = source_text
             )
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Lambda):
-                return CompileNotice(cc, "INVALID_PYTHON",
-                    message=f"lambda expressions are not allowed in {source_text!r}",
-                )
+                return cc.notice("LAMBDA_NOT_ALLOWED", f"lambda expressions are not allowed in {source_text!r}" )
 
         code = compile(tree, filename="<jftl-pyrun-expr>", mode="eval")
         return PyEvalEvaluator(cc, source_text, code=code)

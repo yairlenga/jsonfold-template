@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes, InvalidExpression
 
-from model import COMPILE_DOC, RUNTIME_DOC, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, RuntimeNotice, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_DOC, CompileContext, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, RuntimeNotice, StatementCompiler
 from template import JFTLNotice, Missing
 
 def _create_simple_eval() -> SimpleEval:
@@ -109,13 +109,13 @@ class SimpleEvalCompiler(StatementCompiler):
         try:
             compiled = self._se.parse(source)
         except SyntaxError as e:
-            return CompileNotice(cc, "PYEXPR-SYNTAX",
+            return cc.notice("PYEXPR-SYNTAX",
                 f"error evaluating {source!r}: {e}",
                 source = source
             )            
 
         except InvalidExpression as e:
-            return CompileNotice(cc, "PYEXPR-INVALID",
+            return cc.notice("PYEXPR-INVALID",
                                  f"error evaluating {source!r}: {e}",
                                  source = source
             )            

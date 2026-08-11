@@ -437,6 +437,21 @@ class CompileContext:
             else seg
         )
 
+    def notice(self, code: str, message: str, *,
+        severity: NoticeSeverity = NoticeSeverity.ERROR,
+        source: Optional[str] = None,
+        details: Optional[list["JFTLNotice"]] = None
+    ):
+        return JFTLNotice(
+            severity=severity,
+            phase= 'COMPILE',
+            code=code,
+            message = message,
+            source = source,
+            where = self.where,
+            details = details,
+        )        
+
 
     def _where(self) -> str:
         label = self._segment_label()
@@ -463,7 +478,7 @@ class BaseCompiler(ABC):
     def compile(self, source: JSON_DOC, cc: CompileContext) -> COMPILE_DOC:
         if isinstance(source, str):
             return self.compile_str(source, cc)
-        return CompileNotice(cc, "UNEXPECTED-BODY", f"Plugin {type(self)} expecting str, but got '{type(source)}'")
+        return cc.notice("UNEXPECTED-BODY", f"Plugin {type(self)} expecting str, but got '{type(source)}'")
 
 
 @dataclass

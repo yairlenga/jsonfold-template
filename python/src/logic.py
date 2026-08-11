@@ -4,7 +4,7 @@ from types import NoneType
 from typing import Any, Optional, cast
 from dataclasses import dataclass
 
-from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Evaluator, Expression, RuntimeContext, Condition, RuntimeNotice, SegmentTag, Statement, StatementCompiler, Transformer, my_profile
+from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileContext, CompilerPlugin, DocCompiler, Evaluator, Expression, RuntimeContext, Condition, RuntimeNotice, SegmentTag, Statement, StatementCompiler, Transformer, my_profile
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 @dataclass
@@ -306,7 +306,7 @@ class LogicStatement(Evaluator):
 class LogicCompiler(StatementCompiler):
 
     def compile_str(self, source: str, cc: CompileContext ) -> COMPILE_DOC :
-        return CompileNotice(cc, "LOGIC-NO-STR", "Logic Plugin does not accept strings")
+        return cc.notice("LOGIC-NO-STR", "Logic Plugin does not accept strings")
 
     def _compile_expr(self, args: dict[str, JSON_DOC], tag: str, cc: CompileContext,  *, unset_value: Expression = JSON_UNSET, record: bool = False ) -> Expression:
         if not tag in args:
@@ -333,7 +333,7 @@ class LogicCompiler(StatementCompiler):
 
         if "out" in source:
             if not cases in (None, []):
-                return CompileNotice(cc, "OUT-CASE-CONFLICT", "Either 'out' or 'case' are allowed, but not both")
+                return cc.notice("OUT-CASE-CONFLICT", "Either 'out' or 'case' are allowed, but not both")
 
             return self._compile_expr(source, "out", cc, record=True)
         
@@ -341,7 +341,7 @@ class LogicCompiler(StatementCompiler):
             return None
 
         if not isinstance(cases, list):
-            return CompileNotice(cc, "LOGIC-BAD-CASE", f"Logic `case` expecting list of cases, got {type(cases)}")
+            return cc.notice("LOGIC-BAD-CASE", f"Logic `case` expecting list of cases, got {type(cases)}")
 
         # The last case can be 'else': 'expr', and is converted to 'when': True, 'then': 'expr'
         default_case = None
@@ -355,7 +355,7 @@ class LogicCompiler(StatementCompiler):
                 body = self._compile_expr(case, "then", cc),
             )
             if isinstance(case, dict) and len(case) == 2 and "when" in case and "then" in case
-            else CompileNotice(cc, "LOGIC-BAD-CASE", f"Logic `case` expecting dict with when/then {type(case)}")
+            else cc.notice("LOGIC-BAD-CASE", f"Logic `case` expecting dict with when/then {type(case)}")
             for case in cases
             ]
 
@@ -366,10 +366,10 @@ class LogicCompiler(StatementCompiler):
 
     def _parse_var(self, var_name, label: str, cc: CompileContext) -> str | None:
         if not isinstance(var_name, str):
-            self.compiler.record_notice(CompileNotice(cc, "LOGIC-BAD-ID", f"Expecting variable name for '{label}', got '{type(var_name)}'"))
+            self.compiler.record_notice(cc.notice("LOGIC-BAD-ID", f"Expecting variable name for '{label}', got '{type(var_name)}'"))
             return None
         if not self._TOKEN_RE.fullmatch(var_name):
-            self.compiler.record_notice(CompileNotice(cc, "LOGIC-BAD-ID", f"Invalid variable name for '{label}', got 'var_name'"))
+            self.compiler.record_notice(cc.notice("LOGIC-BAD-ID", f"Invalid variable name for '{label}', got 'var_name'"))
             return None
         return var_name
 
@@ -401,7 +401,7 @@ class LogicCompiler(StatementCompiler):
             return None
 
         if not isinstance( set_body, dict ):
-            self.compiler.record_notice(CompileNotice(cc, "LOGIC-BAD-SET", f"Logic {tag} expecting dictionary, got {type(source)}"))
+            self.compiler.record_notice(cc.notice("LOGIC-BAD-SET", f"Logic {tag} expecting dictionary, got {type(source)}"))
             return None
         
         return self._parse_set_var(set_body, cc.child(tag))
@@ -442,7 +442,7 @@ class LogicCompiler(StatementCompiler):
         )
 
         if source:
-            self._record_notice(CompileNotice(cc, "FOREACH-UNKNOWN-TAGS",
+            self._record_notice(cc.notice("FOREACH-UNKNOWN-TAGS",
                     f"Found {len(source)} unknown attributes: { list(source.keys())[:3] }",
                 ))
 
@@ -467,8 +467,8 @@ class LogicCompiler(StatementCompiler):
         if isinstance(v_loop, dict):
             v_foreach = self._compile_foreach(v_loop, cc.child(self.FOREACH_TAG))
         elif v_loop is not None:
-            self._record_notice(CompileNotice(cc.child(self.FOREACH_TAG), "BAD_FOREACH",
-                    f"foreach should be an object, got {type(v_loop)}",
+            self._record_notice(
+                cc.child(self.FOREACH_TAG).notice("BAD_FOREACH", f"foreach should be an object, got {type(v_loop)}",
             ))
 
         v_transformer = None
@@ -476,7 +476,7 @@ class LogicCompiler(StatementCompiler):
             plugin = self.compiler.plugin(transform)
             v_transformer = plugin if isinstance(plugin, Transformer) else None
             if not v_transformer:
-                self._record_notice(CompileNotice(cc, "BAD_TRANSFORM",
+                self._record_notice(cc.notice("BAD_TRANSFORM",
                         f"Unknown transformation {transform}",
                 ))
 
@@ -497,7 +497,7 @@ class LogicCompiler(StatementCompiler):
         )
 
         if source:
-            self._record_notice(CompileNotice(cc, "LOGIC-UNKNOWN-TAGS",
+            self._record_notice(cc.notice("LOGIC-UNKNOWN-TAGS",
                     f"Found {len(source)} unknown attributes: { list(source.keys())[:3] }",
                 ))
 
@@ -506,7 +506,7 @@ class LogicCompiler(StatementCompiler):
     
     def compile(self, source: JSON_DOC, cc: CompileContext) -> LogicStatement | JFTLNotice:
         if not isinstance(source, dict):
-            return CompileNotice(cc, "LOGIC-BAD-SOURCE", f"Logic expect object, got {type(source)}")
+            return cc.notice("LOGIC-BAD-SOURCE", f"Logic expect object, got {type(source)}")
 
         return self._compile_object(source, cc)
 
