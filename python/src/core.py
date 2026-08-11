@@ -7,7 +7,7 @@ from template import ERROR_VALUE, MISSING_VALUE
 
 # Runtime Objects
 
-@dataclass
+@dataclass(slots=True)
 class Frame (RuntimeContext):
 
     # Cached value, including inherited, calculated, ...
@@ -24,14 +24,14 @@ class Frame (RuntimeContext):
     @my_profile
     def set_current(self, current: Any):
         pass
-        super().set_current(current)
+        self._set_current(current)
         self._update_current()
         return
 
     def set_state_data(self, current: Any):
         self.vars["_data"] = current
 
-    def _set_frame_vars(self):
+    def _init_frame_vars(self):
         self.vars["_level"] = self.level
         self._cache["_local"] = self.vars
 
@@ -56,7 +56,7 @@ class Frame (RuntimeContext):
         # variable names from the local variables, injected variables, and parent chain. There are
         # NOT stored in the 'var' space to avoid cycles, and will resolve to null at materialization
         # time, if they somehow become part of the result.
-        frame._set_frame_vars()
+        frame._init_frame_vars()
         frame._update_current()
         return frame
 
@@ -73,7 +73,7 @@ class Frame (RuntimeContext):
             global_ctx = self.global_ctx
         )
         frame._cache["_parent"] = frame.parent
-        frame._set_frame_vars()
+        frame._init_frame_vars()
         frame._update_current()
         return frame
     

@@ -58,27 +58,25 @@ JFTL_SKIP : Final = ControlSignal(code="_SKIP_")
 JFTL_BREAK : Final = ControlSignal(code="_BREAK_")
 
 JSON_LEAFS : TypeAlias = NoneType | bool | int | float | str
-    # Tree of JSON Values.
 JSON_DOC = Tree[JSON_LEAFS]
-JSON_VALUE_TYPES= (bool, int, float, str, dict, list, NoneType)
+
+JSON_VALUE_TYPES : Final = (bool, int, float, str, dict, list, NoneType)
 
 RUNTIME_LEAFS : TypeAlias = JSON_LEAFS | Missing | JFTLNotice
     # Tree of RUNTIME Values, may include Missing or Notices (error nodes)
-RUNTIME_DOC = Tree[RUNTIME_LEAFS]
-RUNTIME_BOOL = bool | Missing | JFTLNotice | NoneType
+RUNTIME_DOC : TypeAlias = Tree[RUNTIME_LEAFS]
+RUNTIME_BOOL : TypeAlias = bool | Missing | JFTLNotice | NoneType
 
-RUNTIME_LIST_TYPES = (list, tuple)
-RUNTIME_DICT_TYPES = (dict, Mapping)
-RUNTIME_NULL_TYPES = (NoneType, Missing)
-RUNTIME_VALUE_TYPES = (bool, int, float, str, dict, list, NoneType, Missing)
+RUNTIME_LIST_TYPES : Final = (list, tuple)
+RUNTIME_DICT_TYPES : Final = (dict, Mapping)
+RUNTIME_NULL_TYPES : Final = (NoneType, Missing)
+RUNTIME_VALUE_TYPES : Final = (bool, int, float, str, dict, list, NoneType, Missing)
 
 CompilerContext = str
 
-# Template Class - represent compiled templates
-
 # Runtime Objects
 
-@dataclass
+@dataclass(slots=True)
 class JFTLConfig:
         # Default engine to use for '$=...'
     default_expr_engine: str = ""
@@ -109,7 +107,7 @@ _NULL_TEMPLATE : Final = JFTLTemplate(valid=False)
 
 
 # Shared environment - created at the root.
-@dataclass
+@dataclass(slots=True)
 class Environment:
 
     # Template in use
@@ -163,11 +161,13 @@ class RuntimeContext (Mapping, ABC):
             ctx = ctx.parent if ctx.level > 0 else None
         return " ".join(reversed(paths))
 
-    @my_profile
-    def set_current(self, current: Any):
+
+    def _set_current(self, current: Any):
         pass
         self.current = current
         return
+
+    set_current = _set_current
 
     def set_state_data(self, current: Any) -> None: ...
 

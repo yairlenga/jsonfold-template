@@ -50,7 +50,7 @@ test:
 
 check:
 	mkdir -p log
-	make speed-test | tee log/$(shell date +%F).speed.log
+	make speed-test | tee $@.log log/$(shell date +%F).speed.log
 
 package:
 	rm -f dist/jsonfold-$(VERSION)[.-]*
