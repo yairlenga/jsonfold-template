@@ -543,7 +543,7 @@ def main() -> int:
 
     if compile_errors:
         for err in compile_errors:
-            error(f"{template_label}: [{err.severity}] {err.code}: {err.message}")
+            error(f"{template_label}({err.where}): [{err.severity}] {err.code}: {err.message}")
         if any(e.severity == "ERROR" for e in compile_errors):
             return ExitCode.COMPILE_ERROR
 

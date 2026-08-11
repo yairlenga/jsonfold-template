@@ -502,6 +502,7 @@ class LogicCompiler(StatementCompiler):
             self._record_notice(JFTLNotice(
                     code="LOGIC-UNKNOWN-TAGS",
                     message=f"Found {len(source)} unknown attributes: { list(source.keys())[:3] }",
+                    where = cc.where
                 ))
 
              # Make sure no unprocessed attributes

@@ -7,7 +7,7 @@ import re
 from core import Frame
 from logic import LogicCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
-from template import Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
+from template import NoticeSeverity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
 from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, RUNTIME_VALUE_TYPES, CompileError, CompileContext, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
 
@@ -45,13 +45,13 @@ class JFTLCompiler(DocCompiler):
         keep_msg = False
         stop_now = False
         match error.severity:
-            case Severity.DEBUG:
+            case NoticeSeverity.DEBUG:
                 self._debug_count += 1
                 keep_msg = self._debug_count < self._max_debug
-            case Severity.INFO:
+            case NoticeSeverity.INFO:
                 self._info_count += 1
                 keep_msg = self._info_count < self._max_info
-            case Severity.WARNING:
+            case NoticeSeverity.WARNING:
                 self._warn_count += 1
                 keep_msg = self._warn_count < self._max_warn
             # Everything else is considered ERROR, including FATAL
@@ -59,7 +59,7 @@ class JFTLCompiler(DocCompiler):
                 self._fail = True
                 self._error_count += 1
                 keep_msg = self._error_count < self._max_errors
-                stop_now = not keep_msg or error.severity == Severity.FATAL
+                stop_now = not keep_msg or error.severity == NoticeSeverity.FATAL
 
         if stop_now:
             self._fail = True
@@ -510,12 +510,14 @@ class JFTLEngine(Engine):
         self._plugins[prefix] = plugin
 
     def compile(self, source: str | dict | list, *, main_only: bool = False, filename: str = "",  **kwargs) -> tuple[JFTLTemplate, list[JFTLNotice]]:
-        top = cast(dict, { "main": source } if main_only else source)
+        MAIN_ENTRY = "main"
+        top = cast(dict, { MAIN_ENTRY: source } if main_only else source)
         config = JFTLConfig(**top.get("config", {}))
+        root_name = filename if filename else "root" if main_only else MAIN_ENTRY
 
         compiler = JFTLCompiler(config, self._plugins)
-        compiled, valid, errors = compiler.compile_root(top["main"], CompileContext.root(filename))
-        first_error = next((e for e in errors if e.severity in (Severity.FATAL, Severity.ERROR)), None) 
+        compiled, valid, errors = compiler.compile_root(top[MAIN_ENTRY], CompileContext.root(root_name))
+        first_error = next((e for e in errors if e.severity in (NoticeSeverity.FATAL, NoticeSeverity.ERROR)), None) 
 
         if not isinstance((datasets := top.get("datasets", {}) or {}) , dict):
             raise CompileError(

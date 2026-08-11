@@ -73,9 +73,9 @@ class TestPathStatements(unittest.TestCase):
         self.assertFalse(template.valid)
 
     def test_where_is_threaded_through_for_diagnostics(self):
-        stmt = compile("$.name", where="personCard")
+        stmt = compile("$.name")
         assert(isinstance(stmt, NavigationEvaluator))
-        self.assertEqual(stmt.where, "personCard")
+        self.assertEqual(stmt.where, "root")
 
 
 class TestObjectStatements(unittest.TestCase):
@@ -108,7 +108,7 @@ class TestObjectStatements(unittest.TestCase):
         self.assertFalse(template.valid)
 
     def test_where_includes_key_path(self):
-        stmt = compile({"a": {"b": "$.x"}}, where="root")
+        stmt = compile({"a": {"b": "$.x"}})
         assert isinstance(stmt, ObjectEvaluator)
         assert isinstance(stmt.entries["a"], ObjectEvaluator)
         assert isinstance(stmt.entries["a"].entries["b"], NavigationEvaluator)
