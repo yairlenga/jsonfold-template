@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from model import JFTL_BREAK, JFTL_SKIP, Environment, RuntimeContext, my_profile
-from template import ERROR_VALUE, MISSING_VALUE
+from template import ERROR_VALUE, FATAL_VALUE, MISSING_VALUE
 
 # Runtime Objects
 
@@ -44,6 +44,7 @@ class Frame (RuntimeContext):
             "_break": JFTL_BREAK,
             "_input" : env.input,
             "_datasets": env.datasets,
+            "_die" : FATAL_VALUE,
             "_": env.input,
         }
         frame = cls(env=env, current=env.input, level=0, parent=None, vars=top_vars, part_path="")
@@ -101,9 +102,6 @@ class Frame (RuntimeContext):
         frame = self
         chain = []
         while frame is not None:
-# TODO: Check if dict.get outperform in/getitem            
-#   if (v := frame._cache.get(name, JFTL_NONE) is not JFTL_NONE or (v := frame.vars.get(name, JFTL_NONE)) is not JFTL_NONE:
-#   return v
             if name in frame._cache:
                 return frame._cache[name]
             if name in frame.vars:

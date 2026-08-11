@@ -1,15 +1,15 @@
 from __future__ import annotations
 from types import NoneType
 from typing import Any, Optional, cast
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import re
 
 from core import Frame
 from logic import LogicCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
-from template import NoticeSeverity, Template, RenderStatus, JFTLNotice, Engine, Missing
+from template import FATAL_VALUE, NoticeSeverity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, RUNTIME_VALUE_TYPES, CompileError, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, RuntimeNotice, StatementCompiler, my_profile
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, RUNTIME_VALUE_TYPES, CompileError, CompileContext, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, RuntimeNotice, StatementCompiler, my_profile
 
 from typing import Any
 
@@ -614,6 +614,7 @@ class ObjectEvaluator(Evaluator):
                     break
                 # Also, there are few runtime types that are OK, may be we need to connect this with strict/safe mode ?
                 elif isinstance(value, JFTLNotice): # pyright: ignore[reportUnnecessaryIsInstance]
+                    ctx.stop_on_fatal(value, doc)
                     return value
                 elif not isinstance(value, _RUNTIME_EXTRA_TYPES): # pyright: ignore[reportUnnecessaryIsInstance]
                     # TODO: Add position indicator for bad item, may be display it.
@@ -645,6 +646,7 @@ class ArrayEvaluator(Evaluator):
         for item in items:
             value = item.eval(ctx) if isinstance(item, Evaluator) else item
             if isinstance(value, JFTLNotice):
+                ctx.stop_on_fatal(value, item)
                 return value
             elif value is JFTL_SKIP:
                 continue

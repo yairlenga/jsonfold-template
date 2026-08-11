@@ -31,8 +31,8 @@ class JFTLNotice():
     details: Optional[list["JFTLNotice"]] = None
 
 
-
 ERROR_VALUE = JFTLNotice(code="GENERIC-ERROR", message="Unspecific Error")
+FATAL_VALUE = JFTLNotice(severity=NoticeSeverity.FATAL, code="DIE", message="User Abort")
 
 class JFTLError(Exception):
     def __init__(self, notice: JFTLNotice):

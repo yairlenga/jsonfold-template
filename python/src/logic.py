@@ -73,17 +73,20 @@ class LogicStatement(Evaluator):
     def _eval_foreach(self, ctx: RuntimeContext) -> list[RUNTIME_DOC] | dict[str, RUNTIME_DOC] | JFTLNotice | Missing:
         pass
         foreach = cast(_ForeachPart, self._foreach)
+
         items = ctx.eval_value(foreach.items) if foreach.items is not JSON_UNSET else ctx.current
 
         ix_start = ctx.eval_value(foreach.start)
         if not isinstance(ix_start, (NoneType, int)) or isinstance(ix_start, bool):
             return RuntimeNotice(self, "FOREACH_START",
                     f"foreach 'start' must be an integer value, got {type(ix_start).__name__}",
+                    item_expr=foreach.start
                 ) 
         ix_stop = ctx.eval_value(foreach.stop)
         if not isinstance(ix_stop, (NoneType, int)) or isinstance(ix_stop, bool):
             return RuntimeNotice(self, "FOREACH_STOP",
                     message=f"foreach 'stop' must be an integer value, got {type(ix_stop).__name__}",
+                    item_expr=foreach.stop
                 ) 
 
         ix_limit = ctx.eval_value(foreach.limit)
@@ -91,6 +94,7 @@ class LogicStatement(Evaluator):
             return RuntimeNotice(self, 
                     code="FOREACH_LIMIT",
                     message=f"foreach 'stop' must be an integer value, got {type(ix_limit).__name__}",
+                    item_expr=foreach.limit
                 ) 
 
         start_index = ix_start if ix_start is not None else 0
@@ -109,7 +113,9 @@ class LogicStatement(Evaluator):
 
         elif isinstance(items, int) and not isinstance(items, bool):
             if items < 0:
-                return RuntimeNotice(self, "FOREACH_NEGATIVE", f"foreach 'in' accept only non-negative integer, got {items}")
+                return RuntimeNotice(self, "FOREACH_NEGATIVE",
+                    f"foreach 'in' accept only non-negative integer, got {items}",
+                    item_expr = foreach.items)
             count = items - start_index
             loop_iter = enumerate(range(start_index, items))
             ix_stop = ix_stop - start_index if ix_stop else None
@@ -117,7 +123,10 @@ class LogicStatement(Evaluator):
         elif isinstance(items, RUNTIME_NULL_TYPES):
             return MISSING_VALUE
         else:
-            return RuntimeNotice(self, "FOREACH_IN", f"foreach expecting list/dict/int, got {type(items)}")
+            return RuntimeNotice(self, "FOREACH_IN",
+                    f"foreach expecting list/dict/int, got {type(items)}",
+                    item_expr = foreach.items
+                    )
 
         # Support negative indexes if count is known.
         stop_index = ix_stop
@@ -199,6 +208,7 @@ class LogicStatement(Evaluator):
                 elif item is JFTL_BREAK:
                     break
                 elif isinstance(item, JFTLNotice):
+                    ctx.stop_on_fatal(item, v_out)
                     return item
 
             if do_dict:
@@ -460,7 +470,6 @@ class LogicCompiler(StatementCompiler):
             
         v_if = self._compile_cond(source, "check", cc, unset_value=True)
         v_set_data = self._compile_expr(source, "data", cc)
-
 
         v_loop = source.pop(self.FOREACH_KEY, None)
         v_foreach = None

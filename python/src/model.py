@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from types import NoneType
 from typing import (Any, Callable, ClassVar, Final, Optional, TextIO, TypeAlias, TypeVar,
                     cast)
 
-from template import (MISSING_VALUE, JFTLError, JFTLNotice, Missing, NoticeSeverity, Template)
+from template import (FATAL_VALUE, MISSING_VALUE, JFTLError, JFTLNotice, Missing, NoticeSeverity, Template)
 
 
 # Enable inlining for faster performance. Disable for troubleshooting/debug.
@@ -176,13 +176,20 @@ class RuntimeContext (Mapping, ABC):
     def set_state_data(self, current: Any) -> None: ...
 
     def _resolve(self, notice: JFTLNotice, on: Any) -> Any:
-        if on is JFTL_RAISE:
+        if on is JFTL_RAISE or notice.severity is NoticeSeverity.FATAL:
             raise JFTLError(notice)
         if on is JFTL_NOTICE:
             return notice
         return on
 
     _good_result = ()
+
+    def stop_on_fatal(self, notice: JFTLNotice, expr: Any) -> None:
+        if notice.severity is NoticeSeverity.FATAL:
+            if isinstance(expr, Evaluator):
+                notice = replace(notice, source = expr.source_code, where = expr.cc.where)
+            raise RenderError(notice)
+        return
 
 
     @my_profile
@@ -217,6 +224,9 @@ class RuntimeContext (Mapping, ABC):
             return result
 
         elif isinstance(result, JFTLNotice):
+            if result.severity == NoticeSeverity.FATAL:
+                self.stop_on_fatal(result, stmt)
+
             return self._resolve(result, on_error)
 
         elif isinstance(result, Missing): # pyright: ignore[reportUnnecessaryIsInstance]
@@ -370,7 +380,10 @@ def RuntimeNotice(
         message: str,
         *,
         severity: NoticeSeverity = NoticeSeverity.ERROR,
+        item_expr: Any = None
     ):
+    if isinstance(item_expr, Evaluator):
+        expr = item_expr
     return JFTLNotice(
         severity=severity,
         phase= 'RENDER',
