@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
 from typing import Any
 
-from model import COMPILE_DOC, RUNTIME_DICT_TYPES, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompileContext, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, RUNTIME_DICT_TYPES, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler, my_profile
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 
@@ -245,13 +245,11 @@ class NavigationCompiler(StatementCompiler):
     def _parse_segments(cc: CompileContext, path_text: str) -> list[PathSegment]:
 
         segments: list[PathSegment] = []
-        where = cc.where
         pos = 0
 
         for m in _SEGMENT_RE.finditer(path_text):
             if m.start() != pos:
-                raise CompileError(JFTLNotice(
-                    code="INVALID_PATH", where=where,
+                raise CompileError(CompileNotice(cc, "INVALID_PATH",
                     message=f"unexpected text at position {pos} in {path_text!r}"))
             pos = m.end()
 
@@ -266,15 +264,13 @@ class NavigationCompiler(StatementCompiler):
             elif m.group("var") is not None:
                 seg = PathSegment(NavType.VAR, m.group("var"), 0)
             else:
-                raise CompileError(JFTLNotice(
-                    code="INVALID_PATH",where=where,
+                raise CompileError(CompileNotice(cc, "INVALID_PATH",
                     message=f"Unknown navigation segment position {pos} in {path_text!r}"))
 
             segments.append(seg)
 
         if pos != len(path_text):
-            raise CompileError(JFTLNotice(
-                code="INVALID_PATH",where=where,
+            raise CompileError(CompileNotice(cc, "INVALID_PATH",
                 message=f"trailing unparsed text at position {pos} in {path_text!r}"))
 
         return segments    
@@ -301,7 +297,7 @@ class NavigationCompiler(StatementCompiler):
                 return VariableStatement(cc, name=start_name)
             nav_start = _NavStart.VARS
         else:
-            return JFTLNotice(code="BAD-NAV-SYNTAX", message=f"Unknown nav: name='{source_code}'", where=cc.where)
+            return CompileNotice(cc, "BAD-NAV-SYNTAX", f"Unknown nav: name='{source_code}'", source = source_code)
             
         segments = cls._parse_segments(cc, segments_part)
         source_code : str = m[0]
@@ -335,9 +331,9 @@ class NavigationCompiler(StatementCompiler):
         
         return expr
 
-    def compile_str(self, source: Any | str, where: CompileContext) -> COMPILE_DOC:
+    def compile_str(self, source: Any | str, cc: CompileContext) -> COMPILE_DOC:
         assert isinstance(source, str)
-        expr = self._parse(source, where)
+        expr = self._parse(source, cc)
         return expr
     
 

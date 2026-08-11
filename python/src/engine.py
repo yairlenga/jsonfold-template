@@ -9,7 +9,7 @@ from logic import LogicCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 from template import NoticeSeverity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, RUNTIME_VALUE_TYPES, CompileError, CompileContext, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, RUNTIME_VALUE_TYPES, CompileError, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
 
 from typing import Any
 
@@ -90,8 +90,6 @@ class JFTLCompiler(DocCompiler):
     # Compile single ex
     def _compile_simple_str(self, source: Any, cc: CompileContext) -> COMPILE_DOC:
 
-        where = cc.where
-
         m = self._NAV_RE.match(source)
         if m:
             if self._nav_compiler is None:
@@ -114,10 +112,8 @@ class JFTLCompiler(DocCompiler):
                 expr = expr_compiler.compile_str(m.group("expr"), cc)
                 return expr
 
-        return JFTLNotice(
-            code="BAD_EXPRESSION", where=where,
-            message=f"Unknown Expression {source!r}",
-            )
+        return CompileNotice(code="BAD_EXPRESSION", cc=cc,
+            message=f"Unknown Expression {source!r}" )
 
 # --- navigation grammar, mirrors Navigation.md ---
     # Interpolation only supports navigation expressions this round —
@@ -166,7 +162,6 @@ class JFTLCompiler(DocCompiler):
         if "${" not in source:
             return None   # fast path — nothing to do
 
-        where = cc.where
         segments: list = []
         pos = 0
 
@@ -177,9 +172,8 @@ class JFTLCompiler(DocCompiler):
             if m.start() > pos:
                 chunk = source[pos:m.start()]
                 if "${" in chunk:
-                    return JFTLNotice(
-                        code="BAD_INTERPOLATION", where=where,
-                        message=f"nested or unclosed interpolation before position {m.start()}",
+                    return CompileNotice(cc, "BAD_INTERPOLATION",
+                        f"nested or unclosed interpolation before position {m.start()}",
                     )
                 literal += chunk
 
@@ -189,13 +183,11 @@ class JFTLCompiler(DocCompiler):
             else:
                 inner = m.group("inner")
                 if "${" in inner:
-                    return JFTLNotice(
-                        code="BAD_INTERPOLATION", where=where,
+                    return CompileNotice(cc, "BAD_INTERPOLATION",
                         message=f"nested or unclosed interpolation: '{inner!r}'",
                     )
                 if not self._NAV_ONLY_RE.match(inner):
-                    return JFTLNotice(
-                        code="BAD_INTERPOLATION", where=where,
+                    return CompileNotice(cc, "BAD_INTERPOLATION",
                         message=f"Unrecognized interpolation '{inner!r}'",
                     )
                 inner_expr = self._compile_str("$" + inner, cc)
@@ -214,9 +206,8 @@ class JFTLCompiler(DocCompiler):
         if pos < len(source):
             tail = source[pos:]
             if "${" in tail:
-                return JFTLNotice(
-                    code="BAD_INTERPOLATION", where=where,
-                    message=f"nested or unclosed interpolation at end of string: {tail!r}",
+                return CompileNotice(cc, "BAD_INTERPOLATION",
+                    f"nested or unclosed interpolation at end of string: {tail!r}",
                 )
             segments.append(tail)
 
@@ -262,14 +253,16 @@ class JFTLCompiler(DocCompiler):
         # 4. last element of cases (if any) does not have "else"
         cases = action.get("cases")
         if len(source) == 1:
-            return JFTLNotice(code="BAD-OBJECT-LOGIC", message=f'Object Statement must have additional attributes, not just {{ "$": {{ ... }}')
+            return CompileNotice(cc, "BAD-OBJECT-LOGIC",
+                                 f'Object Statement must have additional attributes, not just {{ "$": {{ ... }}')
 
         if ( "foreach" in action
             or "transform" in action
             or "out" in action
             or (isinstance(cases, list) and cases and cases[-1].get("else") is not None)
         ):
-            return JFTLNotice(code="BAD-OBJECT-STATEMENT", message=f"Object logic can not have 'foreach', 'transform', 'output', or 'cases' with 'else')")
+            return CompileNotice(cc, "BAD-OBJECT-STATEMENT",
+                                 f"Object logic can not have 'foreach', 'transform', 'output', or 'cases' with 'else')")
 
         # Rebuild the logic statement, setting out/cases
         stmt = dict(action)
@@ -285,14 +278,14 @@ class JFTLCompiler(DocCompiler):
     def _parse_array_statement(self, source: list, cc: CompileContext, action: dict, out: Any) -> dict | JFTLNotice:
         foreach = action.get("foreach")
         if not isinstance(foreach, dict):
-            return JFTLNotice(code="BAD-ARRAY-FOREACH", message=f"Must have 'foreach' when using building arrays)")
+            return CompileNotice(cc, "BAD-ARRAY-FOREACH", f"Must have 'foreach' when using building arrays)")
         
         cases = foreach.get("cases")
         if ( "transform" in action
             or "out" in action
             or (isinstance(cases, list) and cases and cases[-1].get("else") is not None)
         ):
-            return JFTLNotice(code="BAD-ARRAY-STATEMENT", message=f"Object logic can not have 'foreach', 'transform', 'output', or 'cases' with 'else')")
+            return CompileNotice(cc, "BAD-ARRAY-STATEMENT", f"Object logic can not have 'foreach', 'transform', 'output', or 'cases' with 'else')")
 
         stmt = dict(action)
         new_foreach = dict(foreach)
@@ -329,18 +322,22 @@ class JFTLCompiler(DocCompiler):
                 # If the error_count was breached, we convert the dictionary to 'ErrorStatement'
                 # which will result in runtime error, should the template be executed, with
                 # the original template available as attribute.
-                return ErrorStatement(cc, notice = JFTLNotice(code="BAD-LOGIC", message="Logic Element did not compile"), statement=expr)
+                notice = CompileNotice(cc, "BAD-LOGIC",
+                    message="Logic Element did not compile")
+                return ErrorStatement(cc, notice = notice, statement=expr)
 
             return expr
         
         if action is False:
             if not "out" in source:
-                return JFTLNotice(code="MISSING-VALUE", message="Missing 'out' in Literal statements ('$' = False), value must be provided")
+                return CompileNotice(cc, "MISSING-VALUE",
+                    "Missing 'out' in Literal statements ('$' = False), value must be provided")
             return LiteralStatement(cc, value=source.get("out"))
                                     
         else:
             action_name = f"'{action}'" if isinstance(action, str) else f"type={type(action)}"
-            return JFTLNotice(code="LOGIC-ACTION", message=f"The action must be a string or boolean, got '$=:{action_name}'")
+            return CompileNotice(cc, "LOGIC-ACTION",
+                f"The action must be a string or boolean, got '$=:{action_name}'")
 
 
     def _compile(self, source: Any, cc: CompileContext) -> COMPILE_DOC :
@@ -349,7 +346,6 @@ class JFTLCompiler(DocCompiler):
         if isinstance(source, (int, float, bool, NoneType)):
             return source
 
-        where = cc.where
         # Special case - array constructor
         if (isinstance(source, list)
             and len(source) == 2
@@ -405,19 +401,18 @@ class JFTLCompiler(DocCompiler):
             return self._compile_str(source, cc)
         
         # Non string source
-        return JFTLNotice(
-            code="BAD_NODE", where=where,
+        return CompileNotice(cc, "BAD_NODE",
             message=f"Unknown node {source!r}",
             )
    
     # Compile is called from plugins that need generic compilation.
     # It also capture exceptions, and convert them to error
-    def compile_str(self, source: str, where: CompileContext) -> COMPILE_DOC:
-        return self._compile_str(source, where)
+    def compile_str(self, source: str, cc: CompileContext) -> COMPILE_DOC:
+        return self._compile_str(source, cc)
 
-    def compile(self, source: Any, where: CompileContext, record: bool = False) -> COMPILE_DOC:
+    def compile(self, source: Any, cc: CompileContext, record: bool = False) -> COMPILE_DOC:
         try:
-            compiled = self._compile(source, where)
+            compiled = self._compile(source, cc)
             if isinstance(compiled, JFTLNotice) and record:
                 self._add_error(compiled)
             return compiled

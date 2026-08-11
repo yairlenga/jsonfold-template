@@ -307,7 +307,7 @@ class LogicStatement(Evaluator):
 @dataclass(slots=True)
 class LogicCompiler(StatementCompiler):
 
-    def compile_str(self, source: str, where: CompileContext ) -> COMPILE_DOC :
+    def compile_str(self, source: str, cc: CompileContext ) -> COMPILE_DOC :
         return JFTLNotice(code="LOGIC-NO-STR", message="Logic Plugin does not accept strings")
 
     def _compile_expr(self, args: dict[str, JSON_DOC], tag: str, cc: CompileContext,  *, unset_value: Expression = JSON_UNSET, record: bool = False ) -> Expression:
@@ -508,11 +508,11 @@ class LogicCompiler(StatementCompiler):
              # Make sure no unprocessed attributes
         return stmt
     
-    def compile(self, source: JSON_DOC, where: CompileContext) -> LogicStatement | JFTLNotice:
+    def compile(self, source: JSON_DOC, cc: CompileContext) -> LogicStatement | JFTLNotice:
         if not isinstance(source, dict):
             return JFTLNotice(code="LOGIC-BAD-SOURCE", message=f"Logic expect object, got {type(source)}")
 
-        return self._compile_object(source, where)
+        return self._compile_object(source, cc)
 
 class LoginPlugin(CompilerPlugin):
 

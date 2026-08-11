@@ -16,9 +16,9 @@ if input objects carry real Python methods, those ARE callable from here.
 import ast
 from dataclasses import dataclass
 import types
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Optional
 
-from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompileContext, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompileContext, CompileNotice, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
 from template import JFTLNotice, Missing, MISSING_VALUE
 
 def _build_env(ctx: RuntimeContext) -> dict[str, Any]:
@@ -71,27 +71,26 @@ class PyEvalCompiler(StatementCompiler):
 
 
     def _compile(self, source_text: str, cc: CompileContext) -> COMPILE_DOC:
-        where = cc.where
         try:
             tree = ast.parse(source_text, mode="eval")
         except SyntaxError as e:
-            return JFTLNotice(
-                code="INVALID_PYTHON", where=where,
+            return CompileNotice(cc, "INVALID_PYTHON",
                 message=f"invalid Python expression {source_text!r}: {e}",
+                source = source_text
             )
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Lambda):
-                return JFTLNotice(
-                    code="INVALID_PYTHON",where=where,
+                return CompileNotice(cc, "INVALID_PYTHON",
                     message=f"lambda expressions are not allowed in {source_text!r}",
                 )
 
         code = compile(tree, filename="<jftl-pyrun-expr>", mode="eval")
         return PyEvalEvaluator(cc, source_text, code=code)
 
-    def compile_str(self, source: str, where: CompileContext) -> COMPILE_DOC:
-        return self._compile(source, where)
+
+    def compile_str(self, source: str, cc: CompileContext ) -> COMPILE_DOC :
+        return self._compile(source, cc)
 
 
 class PyEvalPlugin(CompilerPlugin):
@@ -218,10 +217,8 @@ class PyRunCompiler(StatementCompiler):
 
         return PyRunEvaluator(cc, func_call=func_call, func_def=build_locals.get(FUNC_NAME), glob_env=eval_globals)
 
-        
-    def compile_str(self, source: Any | str, where: CompileContext) -> COMPILE_DOC:
-        return self._compile(cast(str, source), where)
-
+    def compile_str(self, source: str, cc: CompileContext ) -> COMPILE_DOC:
+        return self._compile(source, cc)
 
 
 class PyRunPlugin(CompilerPlugin):

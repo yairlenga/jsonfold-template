@@ -7,8 +7,7 @@ from types import NoneType
 from typing import (Any, Callable, ClassVar, Final, Optional, TextIO, TypeAlias, TypeVar,
                     cast)
 
-from template import (MISSING_VALUE, JFTLError, JFTLNotice, Missing,
-                      Template)
+from template import (MISSING_VALUE, JFTLError, JFTLNotice, Missing, NoticeSeverity, Template)
 
 
 # Enable inlining for faster performance. Disable for troubleshooting/debug.
@@ -62,17 +61,10 @@ JSON_DOC = Tree[JSON_LEAFS]
 
 JSON_VALUE_TYPES : Final = (bool, int, float, str, dict, list, NoneType)
 
-RUNTIME_LEAFS : TypeAlias = JSON_LEAFS | Missing | JFTLNotice
-    # Tree of RUNTIME Values, may include Missing or Notices (error nodes)
-RUNTIME_DOC : TypeAlias = Tree[RUNTIME_LEAFS]
-RUNTIME_BOOL : TypeAlias = bool | Missing | JFTLNotice | NoneType
 
-RUNTIME_LIST_TYPES : Final = (list, tuple)
-RUNTIME_DICT_TYPES : Final = (dict, Mapping)
-RUNTIME_NULL_TYPES : Final = (NoneType, Missing)
-RUNTIME_VALUE_TYPES : Final = (bool, int, float, str, dict, list, NoneType, Missing)
-
-# Runtime Objects
+#---------------------------------------------------------------------
+# Template
+#---------------------------------------------------------------------
 
 @dataclass(slots=True)
 class JFTLConfig:
@@ -103,8 +95,22 @@ _NULL_TEMPLATE : Final = JFTLTemplate(valid=False)
 #    functions: dict[str, Function] = field(default_factory=dict)
 #    expr_engines: dict[str, ExprEngine] = field(default_factory=dict)
 
+#---------------------------------------------------------------------
+# Runtime Support
+#---------------------------------------------------------------------
 
-# Shared environment - created at the root.
+
+RUNTIME_LEAFS : TypeAlias = JSON_LEAFS | Missing | JFTLNotice
+    # Tree of RUNTIME Values, may include Missing or Notices (error nodes)
+RUNTIME_DOC : TypeAlias = Tree[RUNTIME_LEAFS]
+RUNTIME_BOOL : TypeAlias = bool | Missing | JFTLNotice | NoneType
+
+RUNTIME_LIST_TYPES : Final = (list, tuple)
+RUNTIME_DICT_TYPES : Final = (dict, Mapping)
+RUNTIME_NULL_TYPES : Final = (NoneType, Missing)
+RUNTIME_VALUE_TYPES : Final = (bool, int, float, str, dict, list, NoneType, Missing)
+
+
 @dataclass(slots=True)
 class Environment:
 
@@ -356,6 +362,12 @@ class Evaluator(ABC):
     @property
     def where(self)->str:
         return self.cc.where
+    
+
+#---------------------------------------------------------------------
+# Compilation Support
+#---------------------------------------------------------------------
+
 
 COMPILE_LEAFS : TypeAlias = Evaluator | JSON_LEAFS | Missing | JFTLNotice | Missing
     # Tree of compiled object, may include values, Missing nodes, to-bd-evaluated nodes, and error notice nodes.
@@ -375,17 +387,11 @@ class ErrorStatement(Evaluator):
     def eval(self, ctx: RuntimeContext) -> JFTLNotice:
         return self.notice
     
-
-from dataclasses import dataclass
-from typing import ClassVar, Optional, TypeAlias
-
 @dataclass(frozen=True, slots=True)
 class SegmentTag:
     name: str
 
 CompilePathSegment: TypeAlias = str | int | SegmentTag   # str = object key, int = array index, Tag = grammar keyword
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -434,11 +440,11 @@ CompileContext.ROOT = CompileContext(segment="")
 class BaseCompiler(ABC):
 
     @abstractmethod
-    def compile_str(self, source: str, where: CompileContext ) -> COMPILE_DOC : ...
+    def compile_str(self, source: str, cc: CompileContext ) -> COMPILE_DOC : ...
 
-    def compile(self, source: JSON_DOC, where: CompileContext) -> COMPILE_DOC:
+    def compile(self, source: JSON_DOC, cc: CompileContext) -> COMPILE_DOC:
         if isinstance(source, str):
-            return self.compile_str(source, where)
+            return self.compile_str(source, cc)
         return JFTLNotice(code="UNEXPECTED-BODY", message=f"Plugin {type(self)} expecting str, but got '{type(source)}'")
 
 
@@ -451,7 +457,7 @@ class StatementCompiler(BaseCompiler):
 class DocCompiler(BaseCompiler):
 
     @abstractmethod
-    def compile(self, source: JSON_DOC, where: CompileContext) -> COMPILE_DOC: ...
+    def compile(self, source: JSON_DOC, cc: CompileContext) -> COMPILE_DOC: ...
 
     # evaluated via the eval_condition
     def condition(self, source: JSON_DOC, where: CompileContext) -> Condition:
@@ -471,6 +477,25 @@ class DocCompiler(BaseCompiler):
 
     # Record error (or warning/info) during compilation 
     def record_notice(self, error: JFTLNotice) -> JFTLNotice: ...
+
+def CompileNotice(
+        cc: CompileContext,
+        code: str,
+        message: str,
+        *,
+        severity: NoticeSeverity = NoticeSeverity.ERROR,
+        source: Optional[str] = None,
+        details: Optional[list["JFTLNotice"]] = None
+):
+    return JFTLNotice(
+        severity=severity,
+        phase= 'COMPILE',
+        code=code,
+        message = message,
+        source = source,
+        where = cc.where,
+        details = details,
+    )
 
  
 class CompileError(JFTLError):

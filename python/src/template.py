@@ -26,6 +26,7 @@ class JFTLNotice():
     code: str                                    # Code: "MODULE-CODE"
     message: str
     where: str = ""                              # Location in the template
+    source: Optional[str] = None                             # Source statement (string only)
     location: Optional[str] = None               # Location in the data tree (Runtime Only)
     details: Optional[list["JFTLNotice"]] = None
 
