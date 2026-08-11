@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 from simpleeval import SimpleEval, DEFAULT_NAMES, EvalWithCompoundTypes
 
-from model import COMPILE_DOC, RUNTIME_DOC, CompilerContext, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_DOC, CompileContext, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
 from template import JFTLNotice, Missing
 
 def _create_simple_eval() -> SimpleEval:
@@ -108,7 +108,7 @@ class SimpleEvalCompiler(StatementCompiler):
         self._se = self.simple_eval if self.simple_eval else _create_simple_eval()
 
 
-    def compile_str(self, source: Any | str, where: CompilerContext) -> COMPILE_DOC:
+    def compile_str(self, source: Any | str, where: CompileContext) -> COMPILE_DOC:
         assert isinstance(source, str)
         compiled = self._se.parse(source)
         return SimpleEvalEvaluator(where, se=self._se, source=source, compiled=compiled)

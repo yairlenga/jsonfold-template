@@ -151,7 +151,7 @@ class RuntimeContext (Mapping, ABC):
     vars: dict[str, Any] = field(default_factory=dict)
     # Cached value, including inherited, calculated, ...
 
-    def where(self, where: Optional[str] = None):
+    def where(self, where: Optional[str] = None) -> str:
         paths = [ where ] if where else []
         ctx = self
         while ctx:
@@ -335,7 +335,7 @@ from typing import Any, Optional
 
 @dataclass(slots=True, frozen=True)
 class Evaluator(ABC):
-    where: str
+    cc: CompileContext
     source_code: Optional[str] = None           # Source code, if known
 
     @abstractmethod
@@ -352,6 +352,10 @@ class Evaluator(ABC):
         context. Override for engine-specific truthiness."""
         result = self.eval(ctx)
         return result if isinstance(result, (bool, Missing, JFTLNotice, NoneType)) else True
+    
+    @property
+    def where(self)->str:
+        return self.cc.where
 
 COMPILE_LEAFS : TypeAlias = Evaluator | JSON_LEAFS | Missing | JFTLNotice | Missing
     # Tree of compiled object, may include values, Missing nodes, to-bd-evaluated nodes, and error notice nodes.
@@ -364,11 +368,13 @@ Statement = COMPILE_DOC | NoValueType         # Statement, returning any value
 # core.py (or wherever feels like the right shared home — maybe alongside Diagnostic/Error in template.py)
 
 @dataclass(slots=True, frozen=True, kw_only=True)
-class ErrorStatement(JFTLNotice, Evaluator):
+class ErrorStatement(Evaluator):
     statement: COMPILE_DOC = None
+    notice: JFTLNotice
 
     def eval(self, ctx: RuntimeContext) -> JFTLNotice:
-        return self
+        return self.notice
+    
 
 from dataclasses import dataclass
 from typing import ClassVar, Optional, TypeAlias
@@ -376,51 +382,61 @@ from typing import ClassVar, Optional, TypeAlias
 @dataclass(frozen=True, slots=True)
 class SegmentTag:
     name: str
-    def fmt(self) -> str:
-        return f":{self.name}"
 
 CompilePathSegment: TypeAlias = str | int | SegmentTag   # str = object key, int = array index, Tag = grammar keyword
 
-def _fmt_segment(seg: CompilePathSegment) -> str:
-    if isinstance(seg, SegmentTag):
-        return seg.fmt()
-    if isinstance(seg, int):
-        return f"[{seg}]"
-    return f".{seg}" if seg.isidentifier() else f'["{seg}"]'
+
 
 
 @dataclass(frozen=True, slots=True)
 class CompileContext:
     segment: CompilePathSegment
     parent: Optional[CompileContext] = None
+    where: str = ""
 
     ROOT: ClassVar[CompileContext]
 
     def child(self, segment: CompilePathSegment) -> CompileContext:
         return CompileContext(segment, self)
+    
+    @staticmethod
+    def root(name: str = ""):
+        return CompileContext(name, None)
 
-    def where(self) -> str:
-        parts: list[str] = []
-        ctx: Optional[CompileContext] = self
-        while ctx is not None:
-            parts.append(_fmt_segment(ctx.segment))
-            ctx = ctx.parent
-        return "".join(reversed(parts))
+    def _segment_label(self) -> str:
+        seg = self.segment
+        return (
+            f"[{seg}]" if isinstance(seg, int)
+            else f":{seg.name}" if isinstance(seg, SegmentTag)
+            else f'["{seg}"]' if isinstance(seg, str) and not seg.isidentifier() # pyright: ignore[reportUnnecessaryIsInstance]
+            else f".{seg}" if self.parent
+            else seg
+        )
+
+
+    def _where(self) -> str:
+        label = self._segment_label()
+        full_name = (self.parent.where if self.parent else "") + label
+        return full_name
+
+    def __post_init__(self):
+        if not self.where:
+            object.__setattr__(self, "where", self._where())
+        return self.where
 
     def __str__(self) -> str:
-        return self.where()
+        return self.where
+
 
 
 CompileContext.ROOT = CompileContext(segment="")
 
-CompilerContext = str
-
 class BaseCompiler(ABC):
 
     @abstractmethod
-    def compile_str(self, source: str, where: CompilerContext ) -> COMPILE_DOC : ...
+    def compile_str(self, source: str, where: CompileContext ) -> COMPILE_DOC : ...
 
-    def compile(self, source: JSON_DOC, where: CompilerContext) -> COMPILE_DOC:
+    def compile(self, source: JSON_DOC, where: CompileContext) -> COMPILE_DOC:
         if isinstance(source, str):
             return self.compile_str(source, where)
         return JFTLNotice(code="UNEXPECTED-BODY", message=f"Plugin {type(self)} expecting str, but got '{type(source)}'")
@@ -435,18 +451,18 @@ class StatementCompiler(BaseCompiler):
 class DocCompiler(BaseCompiler):
 
     @abstractmethod
-    def compile(self, source: JSON_DOC, where: CompilerContext) -> COMPILE_DOC: ...
+    def compile(self, source: JSON_DOC, where: CompileContext) -> COMPILE_DOC: ...
 
     # evaluated via the eval_condition
-    def condition(self, source: JSON_DOC, where: CompilerContext) -> Condition:
+    def condition(self, source: JSON_DOC, where: CompileContext) -> Condition:
         return self.compile(source, where)
 
     # Evaluated via eval
-    def statement(self, source: JSON_DOC, where: CompilerContext) -> Statement:
+    def statement(self, source: JSON_DOC, where: CompileContext) -> Statement:
         return self.compile(source, where)
 
     # Evaluated via eval
-    def expression(self, source: str, where: CompilerContext) -> Expression:
+    def expression(self, source: str, where: CompileContext) -> Expression:
         return self.compile(source, where)
     
     # Lookup plugin

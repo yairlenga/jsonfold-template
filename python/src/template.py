@@ -81,7 +81,7 @@ class Engine(ABC):
     _datasets: dict[str, Any] = field(default_factory=dict)
 
     @abstractmethod
-    def compile(self, source: str | dict, *, main_only: bool = False, where: str = "", **kwargs) -> tuple[Template, list[JFTLNotice]]: ...
+    def compile(self, source: str | dict, *, main_only: bool = False, filename: str = "", **kwargs) -> tuple[Template, list[JFTLNotice]]: ...
 
     def compile_from(self, source: str | Path | TextIO, **kwargs ) -> tuple[Template, list[JFTLNotice]]:
         if isinstance(source, TextIOBase):

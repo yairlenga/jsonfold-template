@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
 from typing import Any
 
-from model import COMPILE_DOC, RUNTIME_DICT_TYPES, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompilerContext, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, RUNTIME_DICT_TYPES, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileError, CompileContext, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler, my_profile
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 
@@ -242,10 +242,10 @@ class NavigationCompiler(StatementCompiler):
     _NAV_RE = re.compile("^" + NAV_RE_STR + "$", re.VERBOSE)
 
     @staticmethod
-    def _parse_segments(where: str, path_text: str) -> list[PathSegment]:
+    def _parse_segments(cc: CompileContext, path_text: str) -> list[PathSegment]:
 
         segments: list[PathSegment] = []
-
+        where = cc.where
         pos = 0
 
         for m in _SEGMENT_RE.finditer(path_text):
@@ -280,7 +280,7 @@ class NavigationCompiler(StatementCompiler):
         return segments    
 
     @classmethod
-    def parse_nav(cls, m: re.Match[str], where, *, strict: bool = False) -> NavigationEvaluator | VariableStatement | JFTLNotice:
+    def parse_nav(cls, m: re.Match[str], cc: CompileContext, *, strict: bool = False) -> NavigationEvaluator | VariableStatement | JFTLNotice:
 
         source_code : str = m[0]
         start_part = m.group("start")
@@ -298,29 +298,29 @@ class NavigationCompiler(StatementCompiler):
         elif (start_name := m.group("vars")):
             # Convert $foo.bar to .foo.bar, starting with implied "_.vars"
             if not segments_part:
-                return VariableStatement(where, name=start_name)
+                return VariableStatement(cc, name=start_name)
             nav_start = _NavStart.VARS
         else:
-            return JFTLNotice(code="BAD-NAV-SYNTAX", message=f"Unknown nav: name='{source_code}'", where=where)
+            return JFTLNotice(code="BAD-NAV-SYNTAX", message=f"Unknown nav: name='{source_code}'", where=cc.where)
             
-        segments = cls._parse_segments(where, segments_part)
+        segments = cls._parse_segments(cc, segments_part)
         source_code : str = m[0]
 
         if len(segments) == 1 and segments[0].type == NavType.KEY and not strict:
-            return _KeyNavEvaluator(where, source_code, start=nav_start, start_var=start_name, segments=segments, strict=strict)
+            return _KeyNavEvaluator(cc, source_code, start=nav_start, start_var=start_name, segments=segments, strict=strict)
         elif len(segments) == 1 and segments[0].type == NavType.INDEX and not strict:
-            return _IndexNavEvalulator(where, source_code, start=nav_start, start_var=start_name, segments=segments, strict=strict)
+            return _IndexNavEvalulator(cc, source_code, start=nav_start, start_var=start_name, segments=segments, strict=strict)
         elif len(segments) == 2 and segments[0].type == NavType.KEY and segments[1].type == NavType.KEY and not strict:
-            return _KeyKeyNavEvaluator(where, source_code, start=nav_start, start_var=start_name, segments=segments, strict=strict)
+            return _KeyKeyNavEvaluator(cc, source_code, start=nav_start, start_var=start_name, segments=segments, strict=strict)
         elif len(segments) == 2 and segments[0].type == NavType.KEY and segments[1].type == NavType.INDEX and not strict:
-            return _KeyIndexNavEvaluator(where, source_code, start=nav_start, start_var=start_name, segments=segments, strict=strict)
+            return _KeyIndexNavEvaluator(cc, source_code, start=nav_start, start_var=start_name, segments=segments, strict=strict)
 #        elif len(segments) == 3 and segments[0].type == NavType.KEY and segments[1].type == NavType.KEY and segments[2].type == NavType.KEY and not strict:
 #            return _KeyKeyKeyNavEvaluator(where, source_code, start=start, segments=segments, strict=strict)
 #        elif len(segments) == 2 and segments[0].type == NavType.KEY and segments[1].type == NavType.INDEX and not strict:
 #            return _KeyKeyIndexNavEvaluator(where, source_code, start=start, segments=segments, strict=strict)
            
         # Fallback - does not match any existinng pattern
-        expr = _GenericNavEvaluator(where, source_code, start=nav_start, start_var=start_name, segments=segments, strict=strict)
+        expr = _GenericNavEvaluator(cc, source_code, start=nav_start, start_var=start_name, segments=segments, strict=strict)
         return expr
 
     def _parse(self, source, where):
@@ -335,7 +335,7 @@ class NavigationCompiler(StatementCompiler):
         
         return expr
 
-    def compile_str(self, source: Any | str, where: CompilerContext) -> COMPILE_DOC:
+    def compile_str(self, source: Any | str, where: CompileContext) -> COMPILE_DOC:
         assert isinstance(source, str)
         expr = self._parse(source, where)
         return expr

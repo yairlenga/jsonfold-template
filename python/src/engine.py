@@ -9,7 +9,7 @@ from logic import LogicCompiler
 from navigation import NAV_RE_STR, NavigationCompiler
 from template import Severity, Template, RenderStatus, JFTLNotice, Engine, Missing
 
-from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, RUNTIME_VALUE_TYPES, CompileError, CompilerContext, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
+from model import COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, RUNTIME_VALUE_TYPES, CompileError, CompileContext, CompilerPlugin, DocCompiler, Environment, ErrorStatement, Evaluator, Expression, JFTLConfig, JFTLTemplate, LiteralStatement, RenderError, RuntimeContext, StatementCompiler, my_profile
 
 from typing import Any
 
@@ -88,13 +88,15 @@ class JFTLCompiler(DocCompiler):
     _expr_compilers: dict[str, Optional[StatementCompiler]] = field(default_factory=dict)
 
     # Compile single ex
-    def _compile_simple_str(self, source: Any, where: CompilerContext) -> COMPILE_DOC:
+    def _compile_simple_str(self, source: Any, cc: CompileContext) -> COMPILE_DOC:
+
+        where = cc.where
 
         m = self._NAV_RE.match(source)
         if m:
             if self._nav_compiler is None:
                 self._nav_compiler = NavigationCompiler(self)
-            expr  = self._nav_compiler.parse_nav(m, where)
+            expr  = self._nav_compiler.parse_nav(m, cc)
             return expr
 
         # Consider python expression engines (hardcoded for now)
@@ -109,7 +111,7 @@ class JFTLCompiler(DocCompiler):
                     expr_compiler = self._expr_compilers[plugin_id] = plugin.createCompiler(self)
 
             if isinstance(expr_compiler, StatementCompiler):
-                expr = expr_compiler.compile_str(m.group("expr"), where)
+                expr = expr_compiler.compile_str(m.group("expr"), cc)
                 return expr
 
         return JFTLNotice(
@@ -153,7 +155,7 @@ class JFTLCompiler(DocCompiler):
     | \$\{ (?P<inner>[^}]*) \}      # "${...}" — captures the inner expression
     """, re.VERBOSE)
 
-    def _compile_interpolated(self, source: str, where: CompilerContext) -> COMPILE_DOC:
+    def _compile_interpolated(self, source: str, cc: CompileContext) -> COMPILE_DOC:
         """Splits `source` into literal and expression segments.
 
         Returns None if `source` contains no interpolation at all (caller
@@ -164,6 +166,7 @@ class JFTLCompiler(DocCompiler):
         if "${" not in source:
             return None   # fast path — nothing to do
 
+        where = cc.where
         segments: list = []
         pos = 0
 
@@ -195,7 +198,7 @@ class JFTLCompiler(DocCompiler):
                         code="BAD_INTERPOLATION", where=where,
                         message=f"Unrecognized interpolation '{inner!r}'",
                     )
-                inner_expr = self._compile_str("$" + inner, where)
+                inner_expr = self._compile_str("$" + inner, cc)
 
             # Combine literal segments together to avoid re-joining at run time.
             if literal:
@@ -223,9 +226,9 @@ class JFTLCompiler(DocCompiler):
         if all(isinstance(item, str) for item in segments):
             return "".join(segments)
 
-        return StringJoinStatement(where, items=segments)
+        return StringJoinStatement(cc, items=segments)
 
-    def _compile_str(self, source: str, where: CompilerContext) -> COMPILE_DOC:
+    def _compile_str(self, source: str, where: CompileContext) -> COMPILE_DOC:
 
         # Check if this is potential interpolation:
         int_pos = source.find("${")
@@ -250,7 +253,7 @@ class JFTLCompiler(DocCompiler):
     
     _logicCompiler : Optional[LogicCompiler] = None
 
-    def _parse_object_statement(self, source: dict, where: str, action: dict) -> dict | JFTLNotice:
+    def _parse_object_statement(self, source: dict, cc: CompileContext, action: dict) -> dict | JFTLNotice:
 
         # Validate object constructor
         # 1. no foreach
@@ -279,7 +282,7 @@ class JFTLCompiler(DocCompiler):
             stmt["out"]  = new_out
         return stmt
 
-    def _parse_array_statement(self, source: list, where: str, action: dict, out: Any) -> dict | JFTLNotice:
+    def _parse_array_statement(self, source: list, cc: CompileContext, action: dict, out: Any) -> dict | JFTLNotice:
         foreach = action.get("foreach")
         if not isinstance(foreach, dict):
             return JFTLNotice(code="BAD-ARRAY-FOREACH", message=f"Must have 'foreach' when using building arrays)")
@@ -302,11 +305,13 @@ class JFTLCompiler(DocCompiler):
         return stmt
 
 
-    def _compile_action(self, source: dict, where: CompilerContext) -> COMPILE_DOC:
+    def _compile_action(self, source: dict, cc: CompileContext) -> COMPILE_DOC:
+
+#        where = cc.where
 
         action = source.get(self.config.action_tag, JSON_UNSET)
         if isinstance(action, dict):
-            new_source = self._parse_object_statement(source, where, action)
+            new_source = self._parse_object_statement(source, cc, action)
             if isinstance(new_source, JFTLNotice):
                 return new_source
             source = new_source            
@@ -319,31 +324,32 @@ class JFTLCompiler(DocCompiler):
 
             logic_elem = dict(source)
             logic_elem.pop(self.config.action_tag)
-            expr = self._logicCompiler.compile(logic_elem, where)
+            expr = self._logicCompiler.compile(logic_elem, cc)
             if self._error_count > error_count and not isinstance(expr, JFTLNotice):
                 # If the error_count was breached, we convert the dictionary to 'ErrorStatement'
                 # which will result in runtime error, should the template be executed, with
                 # the original template available as attribute.
-                return ErrorStatement(code="BAD-LOGIC", message="Logic Element did not compile", statement=expr)
+                return ErrorStatement(cc, notice = JFTLNotice(code="BAD-LOGIC", message="Logic Element did not compile"), statement=expr)
 
             return expr
         
         if action is False:
             if not "out" in source:
                 return JFTLNotice(code="MISSING-VALUE", message="Missing 'out' in Literal statements ('$' = False), value must be provided")
-            return LiteralStatement(where, value=source.get("out"))
+            return LiteralStatement(cc, value=source.get("out"))
                                     
         else:
             action_name = f"'{action}'" if isinstance(action, str) else f"type={type(action)}"
             return JFTLNotice(code="LOGIC-ACTION", message=f"The action must be a string or boolean, got '$=:{action_name}'")
 
 
-    def _compile(self, source: Any, where: CompilerContext) -> COMPILE_DOC :
+    def _compile(self, source: Any, cc: CompileContext) -> COMPILE_DOC :
 
         # Simple Literal returned here
         if isinstance(source, (int, float, bool, NoneType)):
             return source
 
+        where = cc.where
         # Special case - array constructor
         if (isinstance(source, list)
             and len(source) == 2
@@ -351,7 +357,7 @@ class JFTLCompiler(DocCompiler):
             and len(first) == 1
             and isinstance(action := first.get(self.config.action_tag), dict)
         ):
-            new_source = self._parse_array_statement(source, where, action, source[1])
+            new_source = self._parse_array_statement(source, cc, action, source[1])
             source = new_source
 
         # Handle Dictionary objects. Use '$' attribute to classify into logic, literal, macro or other.
@@ -359,44 +365,44 @@ class JFTLCompiler(DocCompiler):
 
             # If there is '$', this is action/call
             if self.config.action_tag in source:
-                return self._compile_action(source, "")
+                return self._compile_action(source, cc)
     
             # If the all dict is constant, just use the original
             if all(isinstance(x, (NoneType, bool, int, float)) for x in source.values()):
-                return LiteralStatement(where, value=source)
+                return LiteralStatement(cc, value=source)
 
-            entries = {k: self._compile(v, where=f"{where}.{k}") for k, v in source.items()}            
+            entries = {k: self._compile(v, cc.child(k)) for k, v in source.items()}            
             for err in ( e for e in entries.values() if isinstance(e, JFTLNotice)):
                 self._add_error(err)
 
             # If it's all literals, unwrap and return a new literal.
             if all(isinstance(x, (NoneType, bool, int, float, str, LiteralStatement)) for x in entries.values()):
-                return LiteralStatement(where, value= dict({ k: self._unliteral(v) for k,v in source.items() }) )
+                return LiteralStatement(cc, value= dict({ k: self._unliteral(v) for k,v in source.items() }) )
 
-            return ObjectEvaluator(where, entries=dict(entries))
+            return ObjectEvaluator(cc, entries=dict(entries))
 
 
         if isinstance(source, list):
 
             # Unnested tree can be converted to literal quickly
             if all(isinstance(x, (NoneType, bool, int, float)) for x in source):
-                return LiteralStatement(where, value=source)
+                return LiteralStatement(cc, value=source)
 
 
 
-            items = [self._compile(v, where=f"{where}[{i}]") for i, v in enumerate(source)]
+            items = [self._compile(v, cc.child(i)) for i, v in enumerate(source)]
             for err in ( e for e in items if isinstance(e, JFTLNotice)):
                 self._add_error(err)
 
             # If it's all literals, unwrap and return a new literal.
             if all(isinstance(x, (NoneType, bool, int, float, str, LiteralStatement)) for x in items):
-                return LiteralStatement(where, value=list(self._unliteral(x) for x in items))
+                return LiteralStatement(cc, value=list(self._unliteral(x) for x in items))
 
-            return ArrayEvaluator(where, items=items)
+            return ArrayEvaluator(cc, items=items)
 
         # Scalar Cases - string
         if isinstance(source, str):
-            return self._compile_str(source, where)
+            return self._compile_str(source, cc)
         
         # Non string source
         return JFTLNotice(
@@ -406,10 +412,10 @@ class JFTLCompiler(DocCompiler):
    
     # Compile is called from plugins that need generic compilation.
     # It also capture exceptions, and convert them to error
-    def compile_str(self, source: str, where: CompilerContext) -> COMPILE_DOC:
+    def compile_str(self, source: str, where: CompileContext) -> COMPILE_DOC:
         return self._compile_str(source, where)
 
-    def compile(self, source: Any, where: CompilerContext, record: bool = False) -> COMPILE_DOC:
+    def compile(self, source: Any, where: CompileContext, record: bool = False) -> COMPILE_DOC:
         try:
             compiled = self._compile(source, where)
             if isinstance(compiled, JFTLNotice) and record:
@@ -420,7 +426,7 @@ class JFTLCompiler(DocCompiler):
             self._errors.append(ex.notice)
             self._error_count += 1
 
-    def compile_root(self, source: Any, where: CompilerContext) -> tuple[Any, bool, list[JFTLNotice]]:
+    def compile_root(self, source: Any, where: CompileContext) -> tuple[Any, bool, list[JFTLNotice]]:
         self._fail = False
         compiled = self.compile(source, where)
         ok = not self._fail and self._error_count == 0
@@ -507,9 +513,8 @@ class JFTLEngine(Engine):
         top = cast(dict, { "main": source } if main_only else source)
         config = JFTLConfig(**top.get("config", {}))
 
-
         compiler = JFTLCompiler(config, self._plugins)
-        compiled, valid, errors = compiler.compile_root(top["main"], filename)
+        compiled, valid, errors = compiler.compile_root(top["main"], CompileContext.root(filename))
         first_error = next((e for e in errors if e.severity in (Severity.FATAL, Severity.ERROR)), None) 
 
         if not isinstance((datasets := top.get("datasets", {}) or {}) , dict):

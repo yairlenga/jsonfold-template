@@ -73,9 +73,9 @@ class TestPathStatements(unittest.TestCase):
         self.assertFalse(template.valid)
 
     def test_where_is_threaded_through_for_diagnostics(self):
-        stmt = compile("$.name", where="macros.personCard")
+        stmt = compile("$.name", where="personCard")
         assert(isinstance(stmt, NavigationEvaluator))
-        self.assertEqual(stmt.where, "macros.personCard")
+        self.assertEqual(stmt.where, "personCard")
 
 
 class TestObjectStatements(unittest.TestCase):

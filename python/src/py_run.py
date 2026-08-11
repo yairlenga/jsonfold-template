@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import types
 from typing import Any, Callable, Optional, cast
 
-from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompilerContext, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
+from model import COMPILE_DOC, RUNTIME_BOOL, RUNTIME_DOC, CompileContext, CompilerPlugin, DocCompiler, Evaluator, RuntimeContext, StatementCompiler
 from template import JFTLNotice, Missing, MISSING_VALUE
 
 def _build_env(ctx: RuntimeContext) -> dict[str, Any]:
@@ -70,7 +70,8 @@ class PyEvalCompiler(StatementCompiler):
     template compilation, and returns a PyRunEvaluator."""
 
 
-    def _compile(self, source_text: str, where: CompilerContext) -> COMPILE_DOC:
+    def _compile(self, source_text: str, cc: CompileContext) -> COMPILE_DOC:
+        where = cc.where
         try:
             tree = ast.parse(source_text, mode="eval")
         except SyntaxError as e:
@@ -87,9 +88,9 @@ class PyEvalCompiler(StatementCompiler):
                 )
 
         code = compile(tree, filename="<jftl-pyrun-expr>", mode="eval")
-        return PyEvalEvaluator(where, source_text, code=code)
+        return PyEvalEvaluator(cc, source_text, code=code)
 
-    def compile_str(self, source: str, where: CompilerContext) -> COMPILE_DOC:
+    def compile_str(self, source: str, where: CompileContext) -> COMPILE_DOC:
         return self._compile(source, where)
 
 
@@ -151,8 +152,9 @@ class PyRunCompiler(StatementCompiler):
     Stateless — compile() is called once per '$pyrun:' expression found during
     template compilation, and returns a PyRunEvaluator."""
 
-    def _compile(self, source_text: str, where:CompilerContext) -> PyRunEvaluator:
+    def _compile(self, source_text: str, cc:CompileContext) -> PyRunEvaluator:
         # Parse the user's text as ordinary Python statements.
+        where = cc.where
         filename = where if where else "<pyrun>"
         FUNC_NAME = "_pyrun_func"
         MISSING_VAR = "_MISSING"
@@ -214,10 +216,10 @@ class PyRunCompiler(StatementCompiler):
         func_call = compile(FUNC_NAME + "()", filename, "eval")
         eval_globals[FUNC_NAME] = build_locals[FUNC_NAME]
 
-        return PyRunEvaluator(func_call=func_call, func_def=build_locals.get(FUNC_NAME), glob_env=eval_globals, where = where )
+        return PyRunEvaluator(cc, func_call=func_call, func_def=build_locals.get(FUNC_NAME), glob_env=eval_globals)
 
         
-    def compile_str(self, source: Any | str, where: CompilerContext) -> COMPILE_DOC:
+    def compile_str(self, source: Any | str, where: CompileContext) -> COMPILE_DOC:
         return self._compile(cast(str, source), where)
 
 

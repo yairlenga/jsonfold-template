@@ -4,7 +4,7 @@ from types import NoneType
 from typing import Any, Optional, cast
 from dataclasses import dataclass
 
-from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompilerContext, CompilerPlugin, DocCompiler, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer, my_profile
+from model import FAST_INLINE, COMPILE_DOC, JFTL_BREAK, JFTL_SKIP, JSON_DOC, JSON_VALUE_TYPES, JSON_UNSET, RUNTIME_DOC, RUNTIME_LIST_TYPES, RUNTIME_NULL_TYPES, CompileContext, CompilerPlugin, DocCompiler, Evaluator, Expression, RuntimeContext, Condition, Statement, StatementCompiler, Transformer, my_profile
 from template import MISSING_VALUE, JFTLNotice, Missing
 
 @dataclass
@@ -55,7 +55,6 @@ class _ForeachPart():
 
 @dataclass(slots=True, frozen=True, kw_only=True)
 class LogicStatement(Evaluator):
-    where: CompilerContext
     # Stage 1: setup "set", "check")
     _defines: Optional[list[_DefineVar]] = None
     _if: Optional[Condition] = None
@@ -308,28 +307,28 @@ class LogicStatement(Evaluator):
 @dataclass(slots=True)
 class LogicCompiler(StatementCompiler):
 
-    def compile_str(self, source: str, where: CompilerContext ) -> COMPILE_DOC :
+    def compile_str(self, source: str, where: CompileContext ) -> COMPILE_DOC :
         return JFTLNotice(code="LOGIC-NO-STR", message="Logic Plugin does not accept strings")
 
-    def _compile_expr(self, args: dict[str, JSON_DOC], tag: str, unset_value: Expression = JSON_UNSET, *, record: bool = False ) -> Expression:
+    def _compile_expr(self, args: dict[str, JSON_DOC], tag: str, cc: CompileContext,  *, unset_value: Expression = JSON_UNSET, record: bool = False ) -> Expression:
         if not tag in args:
             return unset_value
                
-        expr = self.compiler.statement(args.pop(tag), tag)
+        expr = self.compiler.statement(args.pop(tag), cc.child(tag))
         if isinstance(expr, JFTLNotice) and record:
             self.compiler.record_notice(expr)
         return expr
     
-    def _compile_cond(self, args: dict[str, JSON_DOC], tag: str, unset_value: Expression = JSON_UNSET ) -> Condition:
+    def _compile_cond(self, args: dict[str, JSON_DOC], tag: str, cc: CompileContext, *, unset_value: Expression = JSON_UNSET ) -> Condition:
         if not tag in args:
             return unset_value
         
-        expr = self.compiler.condition(args.pop(tag), tag)
+        expr = self.compiler.condition(args.pop(tag), cc.child(tag))
         return expr
     
 
     # Compile the 'out' statement or a 'case' statement with chain if if-elif-elif-else.
-    def _compile_out_or_case(self, source: dict[str, JSON_DOC], where="") -> Expression:
+    def _compile_out_or_case(self, source: dict[str, JSON_DOC], cc: CompileContext) -> Expression:
 
         # If 'out' is present, make sure no 'case' exists (OK to hav case=None!)
         cases = source.pop("case", None)
@@ -338,7 +337,7 @@ class LogicCompiler(StatementCompiler):
             if not cases in (None, []):
                 return JFTLNotice(code="OUT-CASE-CONFLICT", message="Either 'out' or 'case' are allowed, but not both")
 
-            return self._compile_expr(source, "out", record=True)
+            return self._compile_expr(source, "out", cc, record=True)
         
         if cases in (None, []):
             return None
@@ -350,19 +349,19 @@ class LogicCompiler(StatementCompiler):
         default_case = None
         else_case = cases.pop() if cases and isinstance(cases[-1], dict) and len(cases[-1]) == 1 and "else" in cases[-1] else None
         if isinstance(else_case, dict):
-            default_case = self._compile_expr(else_case, "else")
+            default_case = self._compile_expr(else_case, "else", cc)
            
         v_cases = [
             _CaseItem(
-                cond = self._compile_cond(case, "when"),
-                body = self._compile_expr(case, "then"),
+                cond = self._compile_cond(case, "when", cc),
+                body = self._compile_expr(case, "then", cc),
             )
             if isinstance(case, dict) and len(case) == 2 and "when" in case and "then" in case
             else JFTLNotice(code="LOGIC-BAD-CASE", message=f"Logic `case` expecting dict with when/then {type(case)}")
             for case in cases
             ]
 
-        return _CaseEvaluator(where=where, source_code=None, cases=v_cases, default_case=default_case)
+        return _CaseEvaluator(cc, source_code=None, cases=v_cases, default_case=default_case)
 
 
     _TOKEN_RE = re.compile(r"^[A-Za-z]\w*$", re.ASCII)
@@ -382,19 +381,12 @@ class LogicCompiler(StatementCompiler):
             return fallback
         return self._parse_var(args.pop(tag), tag)
     
-    def _parse_set_var(self, source: JSON_DOC, label: str) -> Optional[list[_DefineVar]]:
-
-        if source is None:
-            return None
-
-        if not isinstance( source, dict ):
-            self.compiler.record_notice(JFTLNotice(code="LOGIC-BAD-SET", message=f"Logic {label} expecting dictionary, got {type(source)}"))
-            return None
+    def _parse_set_var(self, source: dict[str, JSON_DOC], cc: CompileContext) -> Optional[list[_DefineVar]]:
 
         set_list = [
             (
                 self._parse_var(name, f"{pos+1}"),
-                self.compiler.statement(expr, f"set({name})"),
+                self.compiler.statement(expr, cc.child(name)),
             )
             for pos, [name, expr] in enumerate(source.items())
         ]
@@ -402,16 +394,24 @@ class LogicCompiler(StatementCompiler):
         var_list = [ _DefineVar(name= n, expr= e ) for n, e in set_list if isinstance(n, str)]
         return var_list
 
-    def _compile_set_vars(self, source: dict[str, JSON_DOC], tag: str) -> Optional[list[_DefineVar]]:
+    def _compile_set_vars(self, source: dict[str, JSON_DOC], tag: str, cc: CompileContext) -> Optional[list[_DefineVar]]:
         if not tag in source:
             return None
         
-        return self._parse_set_var(source.pop(tag), tag)
+        set_body = source.pop(tag)
+        if set_body is None:
+            return None
+
+        if not isinstance( set_body, dict ):
+            self.compiler.record_notice(JFTLNotice(code="LOGIC-BAD-SET", message=f"Logic {tag} expecting dictionary, got {type(source)}"))
+            return None
+        
+        return self._parse_set_var(set_body, cc.child(tag))
 
     def _record_notice(self, notice: JFTLNotice):
         return self.compiler.record_notice(notice)
 
-    def _compile_foreach(self, source_elem: dict[str, JSON_DOC]) -> _ForeachPart:
+    def _compile_foreach(self, source_elem: dict[str, JSON_DOC], cc: CompileContext) -> _ForeachPart:
 
         source = dict(source_elem)
         v_foreach_key = self._get_named_var(source, "key", "_key")
@@ -419,14 +419,14 @@ class LogicCompiler(StatementCompiler):
 #            v_foreach_iter = self._get_named_var(v_loop, "var")
 
         # Runtime expressions
-        v_foreach_in = self._compile_expr(source, "in")
-        v_foreach_start = self._compile_expr(source, "start", 0)
-        v_foreach_stop = self._compile_expr(source, "stop", None)
-        v_foreach_limit = self._compile_expr(source, "limit", None)
+        v_foreach_in = self._compile_expr(source, "in", cc)
+        v_foreach_start = self._compile_expr(source, "start", cc, unset_value=0)
+        v_foreach_stop = self._compile_expr(source, "stop", cc, unset_value=None)
+        v_foreach_limit = self._compile_expr(source, "limit", cc, unset_value=None)
 
-        v_foreach_cond = self._compile_cond(source, "if", True)
-        v_foreach_out = self._compile_out_or_case(source, "out")
-        v_foreach_update = self._compile_set_vars(source, "update")
+        v_foreach_cond = self._compile_cond(source, "if", cc, unset_value=True)
+        v_foreach_out = self._compile_out_or_case(source, cc)
+        v_foreach_update = self._compile_set_vars(source, "update", cc)
         
         v_foreach = _ForeachPart(
             key_var = v_foreach_key,
@@ -452,20 +452,20 @@ class LogicCompiler(StatementCompiler):
         return v_foreach
 
 
-    def _compile_object(self, source_elem: dict[str, JSON_DOC], where: CompilerContext) -> LogicStatement:
+    def _compile_object(self, source_elem: dict[str, JSON_DOC], cc: CompileContext) -> LogicStatement:
 
         source = dict(source_elem)
 
         v_defines = None
-        v_defines = self._compile_set_vars(source, "set")
+        v_defines = self._compile_set_vars(source, "set", cc)
             
-        v_if = self._compile_cond(source, "check", True)
-        v_set_data = self._compile_expr(source, "data")
+        v_if = self._compile_cond(source, "check", cc, unset_value=True)
+        v_set_data = self._compile_expr(source, "data", cc)
         
         v_loop = source.pop("foreach", None)
         v_foreach = None
         if isinstance(v_loop, dict):
-            v_foreach = self._compile_foreach(v_loop)
+            v_foreach = self._compile_foreach(v_loop, cc.child("foreach"))
         elif v_loop is not None:
             self._record_notice(JFTLNotice(
                     code="BAD_FOREACH",
@@ -482,13 +482,12 @@ class LogicCompiler(StatementCompiler):
                         message=f"Unknown transformation {transform}",
                 ))
 
-        v_out = self._compile_out_or_case(source, "out")
-        v_default =  self._compile_expr(source, "fallback")
-        v_error =  self._compile_expr(source, "error")
+        v_out = self._compile_out_or_case(source, cc)
+        v_default =  self._compile_expr(source, "fallback", cc)
+        v_error =  self._compile_expr(source, "error", cc)
 
 
-        stmt = LogicStatement(
-            where = where,
+        stmt = LogicStatement(cc,
             _defines = v_defines,
             _if = v_if,
             _set_current = v_set_data,
@@ -508,7 +507,7 @@ class LogicCompiler(StatementCompiler):
              # Make sure no unprocessed attributes
         return stmt
     
-    def compile(self, source: JSON_DOC, where: CompilerContext) -> LogicStatement | JFTLNotice:
+    def compile(self, source: JSON_DOC, where: CompileContext) -> LogicStatement | JFTLNotice:
         if not isinstance(source, dict):
             return JFTLNotice(code="LOGIC-BAD-SOURCE", message=f"Logic expect object, got {type(source)}")
 

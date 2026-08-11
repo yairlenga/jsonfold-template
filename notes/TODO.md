@@ -16,7 +16,7 @@
 None. None will indicate no body.
 10. Basic format for stringification of numbers - decimals, grouping, percent, 
 11. Add condition specific prefixes: not: empty: null: array: object:, disallow plain values in condition.
-
+13. Separate root name vs file name, may be
 
 Long Term:
 1. Extend the "Expression" to allow caller to specify allowed return types, automatically raising an error on type mismatch

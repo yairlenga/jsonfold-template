@@ -26,7 +26,8 @@ def test1():
         }
     }
     engine = create_engine(all_plugins=True)
-    status, result, errors = engine.compile_and_render(template, None, main_only=True)
+    result, status, errors = engine.compile_and_render(template, None, main_only=True)
+    assert status.ok and not errors
     print(result)
 
 

@@ -14,7 +14,7 @@ Assumes the bug fixes discussed:
 import unittest
 
 from core import Frame, Environment
-from model import _NULL_TEMPLATE, CompileError # pyright: ignore[reportPrivateUsage]
+from model import _NULL_TEMPLATE, CompileError, CompileContext # pyright: ignore[reportPrivateUsage]
 from navigation import NavigationEvaluator, NavigationCompiler
 from template import Missing
 
@@ -34,7 +34,7 @@ def make_child(parent: Frame, current):
 def nav(text: str, where="nav") -> NavigationEvaluator:
     m = NavigationCompiler._NAV_RE.match(text) # pyright: ignore[reportPrivateUsage]
     assert m
-    stmt = NavigationCompiler.parse_nav(m, None)
+    stmt = NavigationCompiler.parse_nav(m, CompileContext.root())
     assert isinstance(stmt, NavigationEvaluator)
     return stmt
 

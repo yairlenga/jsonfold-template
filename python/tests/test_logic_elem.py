@@ -16,7 +16,7 @@ from dataclasses import asdict
 from typing import Any, cast
 import unittest
 
-from model import JSON_UNSET, DocCompiler, Statement, Transformer
+from model import JSON_UNSET, CompileContext, DocCompiler, Statement, Transformer
 from logic import _CaseEvaluator, _CaseItem, _ForeachPart, LogicCompiler, LogicStatement
 
 
@@ -62,7 +62,7 @@ class FakeCompiler(DocCompiler):
 
 
 def compile_logic(args: dict, where = "") -> LogicStatement:
-    return cast(LogicStatement, LogicCompiler(FakeCompiler()).compile(args, where))
+    return cast(LogicStatement, LogicCompiler(FakeCompiler()).compile(args, CompileContext.root()))
 
 
 class TestEmptyInput(unittest.TestCase):
