@@ -1115,7 +1115,6 @@ JFTL = {{{
 }}}
 
 [066-basic]
-SKIP = JQ1.7 error
 LEVEL=py
 JQ = {{{
 [-foreach -.[] as $x (0; . + $x)]
@@ -1127,7 +1126,7 @@ GOLD = {{{
 [6]
 }}}
 JFTL = {{{
-{"main": ["$py=sum(_)"]}
+{"main": ["$py= - sum( -x for x in _)"]}
 }}}
 COMMENT=Original test really exercises unary-minus-before-keyword parsing; only the numeric result is reproduced.
 
@@ -1144,7 +1143,6 @@ GOLD = {{{
 SKIP=cartesian division-generator plus state threading; not confident in jq's exact iteration order to assert equivalence.
 
 [068-basic]
-SKIP = JQ1.7 error
 LEVEL=eval
 JQ = {{{
 [foreach .[] as $x (0; . + $x) as $x | $x]
@@ -1156,7 +1154,12 @@ GOLD = {{{
 [1,3,6]
 }}}
 JFTL = {{{
-{"main": "$pyeval=list(__import__('itertools').accumulate(_))"}
+{ "main":
+    [ 
+        { "$": { "set": { "sum": 0 }, "foreach": { "update": { "sum": "$" }}}},
+        "$py= sum + _"
+    ]
+}
 }}}
 
 [069-basic]
@@ -1249,7 +1252,6 @@ JFTL = {{{
 }}}
 
 [075-basic]
-SKIP = JQ1.7 does not ahve 2 parameters skip
 LEVEL=py
 JQ = {{{
 [skip(3; .[])]
@@ -1623,7 +1625,6 @@ JFTL = {{{
 
 [099-basic]
 LEVEL=py
-SKIP=Bug in JQ.
 JQ = {{{
 "x" as $x | "a"+"y" as $y | $x+","+$y
 }}}

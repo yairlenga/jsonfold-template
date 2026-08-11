@@ -263,7 +263,7 @@ class JFTLCompiler(DocCompiler):
 
         if ( "foreach" in action
             or "transform" in action
-            or "output" in action
+            or "out" in action
             or (isinstance(cases, list) and cases and cases[-1].get("else") is not None)
         ):
             return JFTLNotice(code="BAD-OBJECT-STATEMENT", message=f"Object logic can not have 'foreach', 'transform', 'output', or 'cases' with 'else')")
@@ -286,7 +286,7 @@ class JFTLCompiler(DocCompiler):
         
         cases = foreach.get("cases")
         if ( "transform" in action
-            or "output" in action
+            or "out" in action
             or (isinstance(cases, list) and cases and cases[-1].get("else") is not None)
         ):
             return JFTLNotice(code="BAD-ARRAY-STATEMENT", message=f"Object logic can not have 'foreach', 'transform', 'output', or 'cases' with 'else')")
