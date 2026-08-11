@@ -88,7 +88,8 @@ class SimpleEvalEvaluator(Evaluator):
             return JFTLNotice(
                 code="PYEXPR_RUNTIME_ERROR",
                 where=self.where,
-                message=f"error evaluating {self.source!r}: {e}",
+                message=f"{e}",
+                source=self.source
             )
     
         # Using Python rules for falsyness. Can still return Missing, Error

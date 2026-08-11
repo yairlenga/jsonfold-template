@@ -169,8 +169,16 @@ def _process_record(args, engine, compiled, record: Any, dest: TextIO, *, input_
 
     if not status.ok:
         err = status.notice
-        msg = f"[{err.severity}] {err.code}: {err.message}" if err else "render failed"
-        error(f"{input_label}: {msg}")
+        msg = f"Error Processing {input_label}"
+        if input_desc:
+            msg += f" ({input_desc})"
+        msg += f" at ({err.where}): [{err.severity}] {err.code}: {err.message}" if err else "render failed"
+        if (source := err.source if err else ""):
+            if len(source) > 40:
+                source = source[:20] + "..." + source[-20:]
+            msg += f", source: '{source}'"
+
+        error(msg)
         return False, None
 
     if not args.split:
@@ -358,8 +366,8 @@ def _process_file(args, engine, compiled, input_path: Optional[str], input_label
             case _:
                 error(f"Unknown input_format={args.input_format}")
                 raise ProcessingException(ExitCode.BAD_SYNTAX)
-    else:            
-        input, desc = _read_empty_doc()
+    else:
+        desc = "None"
 
     if records:
         t1 = time.perf_counter()
@@ -562,7 +570,7 @@ def main() -> int:
     summary_map = {}
     
     for input_path in input_sources:
-        input_label = "(stdin)" if input_path == "-" else input_path if input_path else "(none)"
+        input_label = "(stdin)" if input_path == "-" else input_path if input_path else "/dev/null"
         input_id = input_path or ""
         summary = {}
         message = None
